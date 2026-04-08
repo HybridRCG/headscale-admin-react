@@ -18,13 +18,19 @@ export const Navigation: React.FC<NavigationProps> = ({ isDarkMode, setIsDarkMod
           <li><Link to="/dashboard" className="navbar-link">Home</Link></li>
           <li><Link to="/users" className="navbar-link">Users</Link></li>
           <li><Link to="/nodes" className="navbar-link">Nodes</Link></li>
+          <li><Link to="/routes" className="navbar-link">Routes</Link></li>
           <li><Link to="/acl" className="navbar-link">ACL Editor</Link></li>
           <li><Link to="/dns" className="navbar-link">DNS</Link></li>
           <li><Link to="/settings" className="navbar-link">Settings</Link></li>
         </ul>
-        <button className="theme-toggle" onClick={() => setIsDarkMode(!isDarkMode)} title={isDarkMode ? 'Light Mode' : 'Dark Mode'}>
-          {isDarkMode ? '☀️' : '🌙'}
-        </button>
+        <div className="theme-toggle-wrapper">
+          <span className="toggle-label">☀️</span>
+          <label className="toggle-switch">
+            <input type="checkbox" checked={isDarkMode} onChange={(e) => setIsDarkMode(e.target.checked)} />
+            <span className="slider"></span>
+          </label>
+          <span className="toggle-label">🌙</span>
+        </div>
       </div>
     </nav>
   );

@@ -8,12 +8,11 @@ interface SummaryCard {
   border: string;
   icon: string;
   path?: string;
-  isNav?: boolean;
 }
 
 export const HomePage: React.FC = () => {
   const navigate = useNavigate();
-  const { users, nodes, fetchUsers, fetchNodes } = useHeadscaleStore();
+  const { fetchUsers, fetchNodes } = useHeadscaleStore();
 
   useEffect(() => {
     const fetchData = async () => {
@@ -41,25 +40,28 @@ export const HomePage: React.FC = () => {
       path: '/nodes',
     },
     {
-      title: 'ACL Editor',
+      title: 'Routes',
       border: 'border-green-700',
+      icon: '🛣️',
+      path: '/routes',
+    },
+    {
+      title: 'ACL Editor',
+      border: 'border-orange-700',
       icon: '📋',
       path: '/acl',
-      isNav: true,
     },
     {
       title: 'DNS',
-      border: 'border-orange-700',
+      border: 'border-red-700',
       icon: '🌐',
       path: '/dns',
-      isNav: true,
     },
     {
       title: 'Settings',
       border: 'border-gray-700',
       icon: '⚙️',
       path: '/settings',
-      isNav: true,
     },
   ];
 

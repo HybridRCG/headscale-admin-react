@@ -5,6 +5,7 @@ import { LoginPage } from './pages/LoginPage';
 import { HomePage } from './pages/HomePage';
 import { UsersPage } from './pages/UsersPage';
 import { NodesPage } from './pages/NodesPage';
+import { RoutesPage } from './pages/RoutesPage';
 import { AclPage } from './pages/AclPage';
 import { DnsPage } from './pages/DnsPage';
 import { SettingsPage } from './pages/SettingsPage';
@@ -51,6 +52,7 @@ function App() {
         <Route path="/dashboard" element={<PrivateRoute><HomePage /></PrivateRoute>} />
         <Route path="/users" element={<PrivateRoute><UsersPage /></PrivateRoute>} />
         <Route path="/nodes" element={<PrivateRoute><NodesPage /></PrivateRoute>} />
+        <Route path="/routes" element={<PrivateRoute><RoutesPage /></PrivateRoute>} />
         <Route path="/acl" element={<PrivateRoute><AclPage /></PrivateRoute>} />
         <Route path="/dns" element={<PrivateRoute><DnsPage /></PrivateRoute>} />
         <Route path="/settings" element={<PrivateRoute><SettingsPage /></PrivateRoute>} />
