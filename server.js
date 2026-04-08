@@ -178,3 +178,19 @@ app.use('/admin', (req, res) => {
 app.get('/', (req, res) => res.redirect('/admin'));
 
 app.listen(PORT, () => console.log(`✅ Server running on port ${PORT}`));
+
+app.post('/api/headscale/user/update-email', authenticateToken, async (req, res) => {
+  const { username, email } = req.body;
+  if (!username || !email) return res.status(400).json({ message: 'Username and email required' });
+  
+  try {
+    console.log(`\n[UPDATE-EMAIL] Setting email for ${username}: ${email}`);
+    const cmd = `docker exec headscale headscale users update --name '${username}' --email '${email}'`;
+    const output = execSync(cmd, { encoding: 'utf-8' });
+    console.log(`[UPDATE-EMAIL] Success`);
+    res.json({ message: 'Email updated', output });
+  } catch (error) {
+    console.error('Failed to update email:', error.message);
+    res.status(500).json({ message: error.message });
+  }
+});
