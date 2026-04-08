@@ -1,46 +1,103 @@
-# Getting Started with Create React App
+# Headscale Admin - React Edition
 
-This project was bootstrapped with [Create React App](https://github.com/facebook/create-react-app).
+A modern, email-based administration dashboard for Headscale built with React, TypeScript, Zustand, and Express.
 
-## Available Scripts
+## Overview
 
-In the project directory, you can run:
+Headscale Admin React is a complete rewrite moving from Svelte to React for better stability and performance. It provides a clean interface for managing Headscale with email-based authentication and role-based access control.
 
-### `npm start`
+## Features
 
-Runs the app in the development mode.\
-Open [http://localhost:3000](http://localhost:3000) to view it in the browser.
+✅ Email-Based Authentication - No passwords, just email verification
+✅ Role-Based Access Control - Admin, Manager, Viewer roles from Headscale ACL
+✅ Modern React Stack - React 18, TypeScript, Zustand, React Router
+✅ Express Backend - Proper Node.js server with SPA routing
+✅ Docker Ready - Production-ready containerization
+✅ Traefik Compatible - Works seamlessly at /admin/ path
 
-The page will reload if you make edits.\
-You will also see any lint errors in the console.
+## Current Status - v0.1 (MVP)
 
-### `npm test`
+### Implemented
+- Login page with email authentication
+- Dashboard with user info and role display
+- Logout functionality
+- Proper Traefik routing support
+- Persistent authentication state
 
-Launches the test runner in the interactive watch mode.\
-See the section about [running tests](https://facebook.github.io/create-react-app/docs/running-tests) for more information.
+### In Development
+- Nodes list and management
+- Users management
+- ACL policy viewer and editor
+- Pre-auth keys management
 
-### `npm run build`
+## Tech Stack
 
-Builds the app for production to the `build` folder.\
-It correctly bundles React in production mode and optimizes the build for the best performance.
+- React 18 + TypeScript
+- Zustand for state management
+- Express backend
+- Docker + Alpine Linux
+- Headscale REST API
 
-The build is minified and the filenames include the hashes.\
-Your app is ready to be deployed!
+## Getting Started
 
-See the section about [deployment](https://facebook.github.io/create-react-app/docs/deployment) for more information.
+### Development
+```bash
+PUBLIC_URL=/admin npm start
+```
 
-### `npm run eject`
+### Production
+```bash
+PUBLIC_URL=/admin npm run build
+docker build -t headscale-admin-react:latest .
+```
 
-**Note: this is a one-way operation. Once you `eject`, you can’t go back!**
+## Architecture
 
-If you aren’t satisfied with the build tool and configuration choices, you can `eject` at any time. This command will remove the single build dependency from your project.
+Frontend: React with Zustand state management, React Router for routing
+Backend: Express server serving React build files with SPA fallback
+API: Headscale REST API integration for user validation and ACL policies
 
-Instead, it will copy all the configuration files and the transitive dependencies (webpack, Babel, ESLint, etc) right into your project so you have full control over them. All of the commands except `eject` will still work, but they will point to the copied scripts so you can tweak them. At this point you’re on your own.
+## Authentication Flow
 
-You don’t have to ever use `eject`. The curated feature set is suitable for small and middle deployments, and you shouldn’t feel obligated to use this feature. However we understand that this tool wouldn’t be useful if you couldn’t customize it when you are ready for it.
+1. User enters email on login page
+2. Server validates against Headscale user database (/api/v1/user)
+3. Server reads ACL policy to determine role (/api/v1/policy)
+4. User logged in with API key stored in localStorage
+5. Redirect to dashboard on success
+6. Logout clears all session data
 
-## Learn More
+## Headscale API Integration
 
-You can learn more in the [Create React App documentation](https://facebook.github.io/create-react-app/docs/getting-started).
+- GET /api/v1/user - Fetch and validate users
+- GET /api/v1/policy - Get ACL policy for role determination
+- GET /api/v1/node - Fetch nodes (coming soon)
 
-To learn React, check out the [React documentation](https://reactjs.org/).
+## Docker Configuration
+
+Multi-stage build with Alpine Linux
+Express server with static file serving
+Proper SPA routing support for React Router
+
+## Integration with Traefik
+
+Works seamlessly with Traefik reverse proxy:
+- Traefik strips /admin prefix before forwarding
+- PUBLIC_URL=/admin configures asset loading
+- Proper routing for all API requests
+
+## Contributing
+
+Contributions welcome! Fork, create feature branch, commit, and submit pull request.
+
+## License
+
+MIT License
+
+## Author
+
+Riaan Grobler (HybridRCG)
+riaan@groblers.co.uk
+
+Built with ❤️ for the Headscale community
+
+Status: Early development v0.1 MVP - Ready for testing and feedback!
