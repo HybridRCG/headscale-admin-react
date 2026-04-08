@@ -210,13 +210,13 @@ app.use('/api/headscale', authenticateToken, async (req, res) => {
 });
 
 const buildPath = path.join(__dirname, 'build');
-app.use('/admin/static', express.static(path.join(buildPath, 'static')));
-app.use('/admin', express.static(buildPath, { index: false }));
-app.use('/admin', (req, res) => {
+app.use('/static', express.static(path.join(buildPath, 'static')));
+app.use('/', express.static(buildPath, { index: false }));
+app.use('/', (req, res) => {
   res.sendFile(path.join(buildPath, 'index.html'));
 });
 
-app.get('/', (req, res) => res.redirect('/admin'));
+;
 
 app.listen(PORT, () => console.log(`✅ Server running on port ${PORT}`));
 
