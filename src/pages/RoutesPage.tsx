@@ -45,6 +45,9 @@ export const RoutesPage: React.FC = () => {
       } else {
         await axios.post('http://localhost:3000/api/headscale/approve-route', { nodeId, route });
       }
+      
+      // Wait a moment for the backend to update, then refetch
+      await new Promise(resolve => setTimeout(resolve, 500));
       await fetchRoutes();
     } catch (error) {
       console.error('Failed to toggle route:', error);

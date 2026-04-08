@@ -3,6 +3,7 @@ const axios = require('axios');
 const jwt = require('jsonwebtoken');
 const cors = require('cors');
 const path = require('path');
+const { execSync } = require('child_process');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -86,7 +87,7 @@ app.post('/api/headscale/approve-route', authenticateToken, async (req, res) => 
   try {
     console.log(`\n[APPROVE] Route: ${route}, NodeId: ${nodeId}`);
     
-    // First get the node to get current approved routes
+    // Get node to determine all currently approved routes
     const nodeResponse = await axios.get(
       `${tokenData.headscaleUrl}/api/v1/node/${nodeId}`,
       { headers: { Authorization: `Bearer ${tokenData.apiKey}` }, timeout: 10000 }
@@ -95,21 +96,18 @@ app.post('/api/headscale/approve-route', authenticateToken, async (req, res) => 
     const node = nodeResponse.data.node;
     const currentApproved = new Set(node.approvedRoutes || []);
     currentApproved.add(route);
-    const newRoutes = Array.from(currentApproved);
+    const routesStr = Array.from(currentApproved).join(',');
     
-    console.log(`[APPROVE] New approved routes:`, newRoutes);
+    console.log(`[APPROVE] Using CLI with routes: ${routesStr}`);
     
-    const response = await axios.post(
-      `${tokenData.headscaleUrl}/api/v1/node/${nodeId}/approve_routes`,
-      { routes: newRoutes },
-      { headers: { Authorization: `Bearer ${tokenData.apiKey}` }, timeout: 10000 }
-    );
+    const cmd = `docker exec headscale headscale nodes approve-routes --identifier ${nodeId} --routes '${routesStr}'`;
+    const output = execSync(cmd, { encoding: 'utf-8' });
     
-    console.log(`[APPROVE] Success (${response.status})`);
-    res.json({ message: 'Route approved', data: response.data });
+    console.log(`[APPROVE] Success`);
+    res.json({ message: 'Route approved', output });
   } catch (error) {
-    console.error(`[APPROVE] Error (${error.response?.status}):`, error.message);
-    res.status(error.response?.status || 500).json({ message: error.message });
+    console.error(`[APPROVE] Error:`, error.message);
+    res.status(500).json({ message: error.message });
   }
 });
 
@@ -125,7 +123,7 @@ app.post('/api/headscale/disapprove-route', authenticateToken, async (req, res) 
   try {
     console.log(`\n[DISAPPROVE] Route: ${route}, NodeId: ${nodeId}`);
     
-    // First get the node to get current approved routes
+    // Get node to determine all currently approved routes
     const nodeResponse = await axios.get(
       `${tokenData.headscaleUrl}/api/v1/node/${nodeId}`,
       { headers: { Authorization: `Bearer ${tokenData.apiKey}` }, timeout: 10000 }
@@ -134,21 +132,18 @@ app.post('/api/headscale/disapprove-route', authenticateToken, async (req, res) 
     const node = nodeResponse.data.node;
     const currentApproved = new Set(node.approvedRoutes || []);
     currentApproved.delete(route);
-    const newRoutes = Array.from(currentApproved);
+    const routesStr = Array.from(currentApproved).join(',');
     
-    console.log(`[DISAPPROVE] New approved routes:`, newRoutes);
+    console.log(`[DISAPPROVE] Using CLI with routes: ${routesStr}`);
     
-    const response = await axios.post(
-      `${tokenData.headscaleUrl}/api/v1/node/${nodeId}/approve_routes`,
-      { routes: newRoutes },
-      { headers: { Authorization: `Bearer ${tokenData.apiKey}` }, timeout: 10000 }
-    );
+    const cmd = `docker exec headscale headscale nodes approve-routes --identifier ${nodeId} --routes '${routesStr}'`;
+    const output = execSync(cmd, { encoding: 'utf-8' });
     
-    console.log(`[DISAPPROVE] Success (${response.status})`);
-    res.json({ message: 'Route disapproved', data: response.data });
+    console.log(`[DISAPPROVE] Success`);
+    res.json({ message: 'Route disapproved', output });
   } catch (error) {
-    console.error(`[DISAPPROVE] Error (${error.response?.status}):`, error.message);
-    res.status(error.response?.status || 500).json({ message: error.message });
+    console.error(`[DISAPPROVE] Error:`, error.message);
+    res.status(500).json({ message: error.message });
   }
 });
 
