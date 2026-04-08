@@ -12,6 +12,7 @@ interface Node {
 export const RoutesPage: React.FC = () => {
   const [nodes, setNodes] = useState<Node[]>([]);
   const [loading, setLoading] = useState(true);
+  const [approving, setApproving] = useState<string>('');
 
   useEffect(() => {
     fetchRoutes();
@@ -33,6 +34,23 @@ export const RoutesPage: React.FC = () => {
       console.error('Failed to fetch routes:', error);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleToggleRoute = async (nodeId: string, route: string, isApproved: boolean) => {
+    setApproving(`${nodeId}-${route}`);
+    try {
+      if (isApproved) {
+        await axios.post('http://localhost:3000/api/headscale/disapprove-route', { nodeId, route });
+      } else {
+        await axios.post('http://localhost:3000/api/headscale/approve-route', { nodeId, route });
+      }
+      await fetchRoutes();
+    } catch (error) {
+      console.error('Failed to toggle route:', error);
+      alert('Failed to update route. Check console for details.');
+    } finally {
+      setApproving('');
     }
   };
 
@@ -81,6 +99,7 @@ export const RoutesPage: React.FC = () => {
                   {node.availableRoutes && node.availableRoutes.length > 0 ? (
                     node.availableRoutes.map((route) => {
                       const isApproved = node.approvedRoutes?.includes(route);
+                      const isApproving = approving === `${node.id}-${route}`;
                       return (
                         <div
                           key={route}
@@ -97,14 +116,17 @@ export const RoutesPage: React.FC = () => {
                         >
                           <span style={{ fontFamily: 'monospace', flex: 1 }}>{route}</span>
                           <div
+                            onClick={() => handleToggleRoute(node.id, route, isApproved)}
                             style={{
                               width: '20px',
                               height: '12px',
                               backgroundColor: isApproved ? '#86efac' : '#ef5350',
                               borderRadius: '6px',
-                              cursor: 'pointer',
+                              cursor: isApproving ? 'not-allowed' : 'pointer',
+                              opacity: isApproving ? 0.5 : 1,
+                              transition: 'all 0.2s',
                             }}
-                            title={isApproved ? 'Approved' : 'Not Approved'}
+                            title={isApproved ? 'Click to disapprove' : 'Click to approve'}
                           />
                         </div>
                       );

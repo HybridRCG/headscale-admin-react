@@ -33,14 +33,11 @@ const getUserRoleFromACL = (email, aclPolicy) => {
   }
   
   const adminGroups = aclPolicy.tagOwners?.['tag:admin'] || [];
-  console.log(`${email} checking against admin groups:`, adminGroups);
   
   for (const groupName in aclPolicy.groups) {
     const members = aclPolicy.groups[groupName];
     if (members.includes(email)) {
-      console.log(`✓ ${email} in ${groupName}`);
       if (adminGroups.includes(groupName)) {
-        console.log(`✓ ${groupName} is admin -> ADMIN ROLE`);
         return 'admin';
       }
     }
@@ -86,6 +83,60 @@ app.post('/api/auth/logout', authenticateToken, (req, res) => {
 
 app.get('/api/auth/me', authenticateToken, (req, res) => {
   res.json({ user: { email: req.user?.email, role: req.user?.role, id: req.user?.email } });
+});
+
+app.post('/api/headscale/approve-route', authenticateToken, async (req, res) => {
+  const userEmail = req.user?.email;
+  if (!userEmail) return res.status(401).json({ message: 'Unauthorized' });
+  const tokenData = userTokenMap.get(userEmail);
+  if (!tokenData) return res.status(401).json({ message: 'Session expired' });
+  
+  const { nodeId, route } = req.body;
+  if (!nodeId || !route) return res.status(400).json({ message: 'Missing nodeId or route' });
+  
+  try {
+    const url = `${tokenData.headscaleUrl}/api/v1/nodes/${nodeId}/routes/${route}`;
+    console.log(`\n[APPROVE] Calling: ${url}`);
+    
+    const response = await axios.patch(
+      url,
+      { enabled: true },
+      { headers: { Authorization: `Bearer ${tokenData.apiKey}` }, timeout: 10000 }
+    );
+    
+    console.log(`[APPROVE] Success`);
+    res.json(response.data);
+  } catch (error) {
+    console.error(`[APPROVE] Error:`, error.message);
+    res.status(error.response?.status || 500).json({ message: error.message });
+  }
+});
+
+app.post('/api/headscale/disapprove-route', authenticateToken, async (req, res) => {
+  const userEmail = req.user?.email;
+  if (!userEmail) return res.status(401).json({ message: 'Unauthorized' });
+  const tokenData = userTokenMap.get(userEmail);
+  if (!tokenData) return res.status(401).json({ message: 'Session expired' });
+  
+  const { nodeId, route } = req.body;
+  if (!nodeId || !route) return res.status(400).json({ message: 'Missing nodeId or route' });
+  
+  try {
+    const url = `${tokenData.headscaleUrl}/api/v1/nodes/${nodeId}/routes/${route}`;
+    console.log(`\n[DISAPPROVE] Calling: ${url}`);
+    
+    const response = await axios.patch(
+      url,
+      { enabled: false },
+      { headers: { Authorization: `Bearer ${tokenData.apiKey}` }, timeout: 10000 }
+    );
+    
+    console.log(`[DISAPPROVE] Success`);
+    res.json(response.data);
+  } catch (error) {
+    console.error(`[DISAPPROVE] Error:`, error.message);
+    res.status(error.response?.status || 500).json({ message: error.message });
+  }
 });
 
 app.use('/api/headscale', authenticateToken, async (req, res) => {
