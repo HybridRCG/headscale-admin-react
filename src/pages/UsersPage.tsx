@@ -1,301 +1,715 @@
-import React, { useEffect, useState, useMemo } from 'react';
-import { useHeadscaleStore, Direction, OnlineStatus, User } from '../store/headscaleStore';
+import React, { useEffect, useState } from 'react';
+import axios from 'axios';
 import '../styles/Pages.css';
 
-interface UserCardProps {
-  user: User;
-  isOnline: boolean;
-  preAuthKeyCount: number;
-  nodeCount: number;
-  onRename: (userId: string, newName: string) => void;
-  onDelete: (userId: string) => void;
-  onCreatePreAuthKey: (userId: string) => void;
-  onExpirePreAuthKey: (keyId: string) => void;
+interface User {
+  id: string;
+  name: string;
+  displayName?: string;
+  email?: string;
+  createdAt: string;
+  provider: string;
 }
 
-const UserCard: React.FC<UserCardProps> = ({
-  user,
-  isOnline,
-  preAuthKeyCount,
-  nodeCount,
-  onRename,
-  onDelete,
-  onCreatePreAuthKey,
-}) => {
-  const [isRenaming, setIsRenaming] = useState(false);
-  const [newName, setNewName] = useState(user.name);
+interface Node {
+  id: string;
+  name: string;
+  givenName: string;
+  online: boolean;
+  userId: string;
+}
 
-  const handleRename = async () => {
-    if (newName && newName !== user.name) {
-      await onRename(user.id, newName);
-    }
-    setIsRenaming(false);
-  };
-
-  return (
-    <div className="user-card">
-      <div className="user-header">
-        <div className="user-status">
-          <span className={`status-badge ${isOnline ? 'online' : 'offline'}`}>
-            {isOnline ? '🟢' : '🔴'}
-          </span>
-        </div>
-
-        {isRenaming ? (
-          <input
-            type="text"
-            value={newName}
-            onChange={(e) => setNewName(e.target.value)}
-            onBlur={handleRename}
-            onKeyDown={(e) => {
-              if (e.key === 'Enter') handleRename();
-              if (e.key === 'Escape') setIsRenaming(false);
-            }}
-            autoFocus
-            className="user-name-input"
-          />
-        ) : (
-          <h3
-            className="user-name"
-            onClick={() => setIsRenaming(true)}
-            title="Click to rename"
-          >
-            {user.name}
-          </h3>
-        )}
-
-        <button
-          className="btn btn-delete"
-          onClick={() => onDelete(user.id)}
-          title="Delete user"
-        >
-          ✕
-        </button>
-      </div>
-
-      <div className="user-info">
-        <div className="info-row">
-          <span className="info-label">ID:</span>
-          <span className="info-value">{user.id}</span>
-        </div>
-        <div className="info-row">
-          <span className="info-label">Nodes:</span>
-          <span className="info-value">{nodeCount}</span>
-        </div>
-        <div className="info-row">
-          <span className="info-label">PreAuth Keys:</span>
-          <span className="info-value">{preAuthKeyCount}</span>
-        </div>
-        <div className="info-row">
-          <span className="info-label">Created:</span>
-          <span className="info-value">{new Date(user.createdAt).toLocaleDateString()}</span>
-        </div>
-      </div>
-
-      <div className="user-actions">
-        <button className="btn btn-primary" onClick={() => onCreatePreAuthKey(user.id)}>
-          Create PreAuth Key
-        </button>
-      </div>
-    </div>
-  );
-};
+interface ApiKey {
+  id: string;
+  prefix: string;
+  expiration: string;
+  createdAt: string;
+  lastSeen?: string;
+}
 
 export const UsersPage: React.FC = () => {
-  const {
-    users,
-    nodes,
-    preAuthKeys,
-    fetchUsers,
-    fetchNodes,
-    fetchPreAuthKeys,
-    createUser,
-    renameUser,
-    deleteUser,
-    createPreAuthKey,
-    isLoading,
-    error,
-  } = useHeadscaleStore();
-
-  const [showCreate, setShowCreate] = useState(false);
-  const [newUserName, setNewUserName] = useState('');
-  const [sortBy, setSortBy] = useState<'id' | 'name'>('name');
-  const [sortDir, setSortDir] = useState<Direction>('up');
-  const [filterOnline, setFilterOnline] = useState<OnlineStatus>('all');
-  const [filterString, setFilterString] = useState('');
+  const [users, setUsers] = useState<User[]>([]);
+  const [nodes, setNodes] = useState<Node[]>([]);
+  const [apiKeys, setApiKeys] = useState<Map<string, ApiKey[]>>(new Map());
+  const [loading, setLoading] = useState(true);
+  const [expandedUserId, setExpandedUserId] = useState<string | null>(null);
+  const [renamingUserId, setRenamingUserId] = useState<string | null>(null);
+  const [deletingUserId, setDeletingUserId] = useState<string | null>(null);
+  const [newName, setNewName] = useState('');
+  const [searchQuery, setSearchQuery] = useState('');
+  const [sortMethod, setSortMethod] = useState<'id' | 'name'>('id');
+  const [sortDirection, setSortDirection] = useState<'up' | 'down'>('up');
+  const [showCreateUser, setShowCreateUser] = useState(false);
+  const [newUsername, setNewUsername] = useState('');
+  const [newUserEmail, setNewUserEmail] = useState('');
+  const [loadingApiKeys, setLoadingApiKeys] = useState<Set<string>>(new Set());
+  const [showApiKeyModal, setShowApiKeyModal] = useState(false);
+  const [apiKeyModalContent, setApiKeyModalContent] = useState('');
+  const [showEmailNote, setShowEmailNote] = useState<string | null>(null);
 
   useEffect(() => {
-    const fetchData = async () => {
-      try {
-        await Promise.all([fetchUsers(), fetchNodes(), fetchPreAuthKeys()]);
-      } catch (error) {
-        console.error('Failed to fetch users data:', error);
-      }
-    };
-
-    fetchData();
+    fetchUsers();
+    fetchNodes();
   }, []);
 
-  const filteredUsers = useMemo(() => {
-    let filtered = users;
-
-    if (filterString) {
-      filtered = filtered.filter((u) =>
-        u.name.toLowerCase().includes(filterString.toLowerCase()) ||
-        u.id.toLowerCase().includes(filterString.toLowerCase())
-      );
+  const fetchUsers = async () => {
+    setLoading(true);
+    try {
+      const response = await axios.get('http://localhost:3000/api/headscale/api/v1/user');
+      setUsers(response.data.users || []);
+    } catch (error) {
+      console.error('Failed to fetch users:', error);
+    } finally {
+      setLoading(false);
     }
+  };
 
-    if (filterOnline !== 'all') {
-      const onlineUserIds = nodes
-        .filter((n) => (filterOnline === 'online' ? n.online : !n.online))
-        .map((n) => n.user.id);
-      filtered = filtered.filter((u) => onlineUserIds.includes(u.id));
+  const fetchNodes = async () => {
+    try {
+      const response = await axios.get('http://localhost:3000/api/headscale/api/v1/node');
+      setNodes(response.data.nodes || []);
+    } catch (error) {
+      console.error('Failed to fetch nodes:', error);
     }
+  };
 
-    filtered = [...filtered].sort((a, b) => {
-      const aVal = sortBy === 'id' ? a.id : a.name;
-      const bVal = sortBy === 'id' ? b.id : b.name;
-      const cmp = aVal.localeCompare(bVal);
-      return sortDir === 'up' ? cmp : -cmp;
-    });
-
-    return filtered;
-  }, [users, nodes, filterString, filterOnline, sortBy, sortDir]);
+  const fetchApiKeysForUser = async (userId: string) => {
+    setLoadingApiKeys(prev => new Set(prev).add(userId));
+    try {
+      const response = await axios.get('http://localhost:3000/api/headscale/api/v1/apikey');
+      setApiKeys(prev => new Map(prev).set(userId, response.data.apiKeys || []));
+    } catch (error) {
+      console.error('Failed to fetch API keys:', error);
+    } finally {
+      setLoadingApiKeys(prev => {
+        const next = new Set(prev);
+        next.delete(userId);
+        return next;
+      });
+    }
+  };
 
   const handleCreateUser = async () => {
-    if (newUserName.trim()) {
-      try {
-        await createUser(newUserName);
-        setNewUserName('');
-        setShowCreate(false);
-      } catch (error) {
-        console.error('Failed to create user:', error);
+    if (!newUsername.trim()) return;
+    try {
+      await axios.post('http://localhost:3000/api/headscale/api/v1/user', { name: newUsername });
+      
+      // Note: Email must be set manually via CLI or database, as Headscale API doesn't support it
+      if (newUserEmail.trim()) {
+        console.log(`Note: Created user "${newUsername}". Email can be added via: headscale users update --name ${newUsername} --email ${newUserEmail}`);
       }
+      
+      await fetchUsers();
+      setShowCreateUser(false);
+      setNewUsername('');
+      setNewUserEmail('');
+    } catch (error) {
+      console.error('Failed to create user:', error);
+      alert('Failed to create user');
     }
   };
 
-  const handleCreatePreAuthKey = async (userId: string) => {
+  const handleCreateApiKey = async (userId: string) => {
     try {
-      await createPreAuthKey(userId, true, false);
+      const date = new Date();
+      date.setDate(date.getDate() + 90);
+      const response = await axios.post('http://localhost:3000/api/headscale/api/v1/apikey', {
+        expiration: date.toISOString(),
+      });
+      
+      const fullKey = response.data.apiKey;
+      setApiKeyModalContent(fullKey);
+      setShowApiKeyModal(true);
+      
+      await new Promise(resolve => setTimeout(resolve, 1000));
+      await fetchApiKeysForUser(userId);
     } catch (error) {
-      console.error('Failed to create preauth key:', error);
+      console.error('Failed to create API key:', error);
+      alert('Failed to create API key');
     }
   };
+
+  const handleExpireApiKey = async (userId: string, prefix: string) => {
+    try {
+      await axios.post('http://localhost:3000/api/headscale/api/v1/apikey/expire', { prefix });
+      await fetchApiKeysForUser(userId);
+    } catch (error) {
+      console.error('Failed to expire API key:', error);
+      alert('Failed to expire API key');
+    }
+  };
+
+  const handleRenameUser = async (userId: string) => {
+    if (!newName.trim()) return;
+    try {
+      await axios.post(`http://localhost:3000/api/headscale/api/v1/user/${userId}/rename/${newName}`);
+      await fetchUsers();
+      setRenamingUserId(null);
+      setNewName('');
+    } catch (error) {
+      console.error('Failed to rename user:', error);
+      alert('Failed to rename user');
+    }
+  };
+
+  const handleDeleteUser = async (userId: string) => {
+    try {
+      await axios.delete(`http://localhost:3000/api/headscale/api/v1/user/${userId}`);
+      await fetchUsers();
+      setDeletingUserId(null);
+    } catch (error) {
+      console.error('Failed to delete user:', error);
+      alert('Failed to delete user');
+    }
+  };
+
+  const getUserNodes = (userId: string) => {
+    return nodes.filter((n: any) => n.user?.id === userId);
+  };
+
+  const getSortedAndFilteredUsers = () => {
+    let filtered = users.filter((u) =>
+      u.id.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      u.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      (u.displayName && u.displayName.toLowerCase().includes(searchQuery.toLowerCase())) ||
+      (u.email && u.email.toLowerCase().includes(searchQuery.toLowerCase()))
+    );
+
+    const sorted = [...filtered].sort((a, b) => {
+      let aVal = sortMethod === 'id' ? a.id : a.name;
+      let bVal = sortMethod === 'id' ? b.id : b.name;
+      const comparison = aVal.localeCompare(bVal);
+      return sortDirection === 'up' ? comparison : -comparison;
+    });
+    return sorted;
+  };
+
+  const toggleSort = (method: 'id' | 'name') => {
+    if (sortMethod === method) {
+      setSortDirection(sortDirection === 'up' ? 'down' : 'up');
+    } else {
+      setSortMethod(method);
+      setSortDirection('up');
+    }
+  };
+
+  const filteredUsers = getSortedAndFilteredUsers();
 
   return (
     <div className="page-container">
-      <div className="page-header">
-        <h1 className="page-title">Users</h1>
+      <h1 className="page-title">Users</h1>
 
-        <input
-          type="text"
-          placeholder="Filter users..."
-          value={filterString}
-          onChange={(e) => setFilterString(e.target.value)}
-          className="search-input"
-        />
-
-        <button
-          className="btn btn-primary"
-          onClick={() => setShowCreate(!showCreate)}
-          disabled={isLoading}
-        >
-          {showCreate ? 'Cancel' : '+ New User'}
-        </button>
-      </div>
-
-      {error && <div className="error-banner">{error}</div>}
-
-      {showCreate && (
-        <div className="create-user-form">
-          <input
-            type="text"
-            placeholder="New user name"
-            value={newUserName}
-            onChange={(e) => setNewUserName(e.target.value)}
-            onKeyDown={(e) => {
-              if (e.key === 'Enter') handleCreateUser();
-              if (e.key === 'Escape') setShowCreate(false);
-            }}
-            autoFocus
-            className="create-input"
-          />
-          <button className="btn btn-success" onClick={handleCreateUser}>
-            Create
-          </button>
+      {/* API Key Modal */}
+      {showApiKeyModal && (
+        <div style={{
+          position: 'fixed',
+          top: 0,
+          left: 0,
+          right: 0,
+          bottom: 0,
+          backgroundColor: 'rgba(0,0,0,0.7)',
+          display: 'flex',
+          justifyContent: 'center',
+          alignItems: 'center',
+          zIndex: 1000,
+        }}>
+          <div style={{
+            backgroundColor: '#1f2937',
+            border: '2px solid #10b981',
+            borderRadius: '0.5rem',
+            padding: '2rem',
+            maxWidth: '600px',
+            width: '90%',
+          }}>
+            <h2 style={{ color: '#f3f4f6', marginBottom: '1rem' }}>🔑 API Key Created</h2>
+            <p style={{ color: '#d1d5db', marginBottom: '1rem' }}>
+              Copy this API key and save it somewhere safe. You won't be able to see it again:
+            </p>
+            <div style={{
+              backgroundColor: '#111827',
+              border: '1px solid #374151',
+              borderRadius: '0.25rem',
+              padding: '1rem',
+              marginBottom: '1rem',
+              wordBreak: 'break-all',
+              fontFamily: 'monospace',
+              fontSize: '0.85rem',
+              color: '#10b981',
+              userSelect: 'all',
+            }}>
+              {apiKeyModalContent}
+            </div>
+            <button
+              className="btn btn-primary"
+              onClick={() => {
+                navigator.clipboard.writeText(apiKeyModalContent);
+                setShowApiKeyModal(false);
+                alert('API key copied to clipboard!');
+              }}
+              style={{ width: '100%' }}
+            >
+              ✓ Copy & Close
+            </button>
+          </div>
         </div>
       )}
 
-      <div className="controls">
-        <div className="sort-controls">
-          <button
-            className={`sort-btn ${sortBy === 'id' ? 'active' : ''}`}
-            onClick={() => {
-              if (sortBy === 'id') setSortDir(sortDir === 'up' ? 'down' : 'up');
-              else setSortBy('id');
-            }}
-          >
-            ID {sortBy === 'id' && (sortDir === 'up' ? '↑' : '↓')}
-          </button>
-          <button
-            className={`sort-btn ${sortBy === 'name' ? 'active' : ''}`}
-            onClick={() => {
-              if (sortBy === 'name') setSortDir(sortDir === 'up' ? 'down' : 'up');
-              else setSortBy('name');
-            }}
-          >
-            Name {sortBy === 'name' && (sortDir === 'up' ? '↑' : '↓')}
-          </button>
+      {/* Email Note Modal */}
+      {showEmailNote && (
+        <div style={{
+          position: 'fixed',
+          top: 0,
+          left: 0,
+          right: 0,
+          bottom: 0,
+          backgroundColor: 'rgba(0,0,0,0.7)',
+          display: 'flex',
+          justifyContent: 'center',
+          alignItems: 'center',
+          zIndex: 1000,
+        }}>
+          <div style={{
+            backgroundColor: '#1f2937',
+            border: '2px solid #f59e0b',
+            borderRadius: '0.5rem',
+            padding: '2rem',
+            maxWidth: '500px',
+            width: '90%',
+          }}>
+            <h2 style={{ color: '#f3f4f6', marginBottom: '1rem' }}>ℹ️ About User Email</h2>
+            <p style={{ color: '#d1d5db', marginBottom: '1rem' }}>
+              Email addresses are user identifiers in Headscale and can be used in ACL groups.
+            </p>
+            <p style={{ color: '#d1d5db', marginBottom: '1rem' }}>
+              To set or update a user's email, use the CLI:
+            </p>
+            <div style={{
+              backgroundColor: '#111827',
+              border: '1px solid #374151',
+              borderRadius: '0.25rem',
+              padding: '1rem',
+              marginBottom: '1rem',
+              fontFamily: 'monospace',
+              fontSize: '0.85rem',
+              color: '#9ca3af',
+              userSelect: 'all',
+            }}>
+              docker exec headscale headscale users update --name {'<username>'} --email {'<email>'}
+            </div>
+            <button
+              className="btn btn-primary"
+              onClick={() => setShowEmailNote(null)}
+              style={{ width: '100%' }}
+            >
+              OK
+            </button>
+          </div>
         </div>
+      )}
 
-        <div className="filter-controls">
+      {/* Create User Section */}
+      <div style={{ marginBottom: '1.5rem', padding: '1rem', backgroundColor: '#1f2937', borderRadius: '0.5rem', border: '1px solid #374151' }}>
+        {showCreateUser ? (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+            <div>
+              <label style={{ fontSize: '0.75rem', color: '#9ca3af', display: 'block', marginBottom: '0.25rem' }}>
+                Username (required):
+              </label>
+              <input
+                type="text"
+                value={newUsername}
+                onChange={(e) => setNewUsername(e.target.value)}
+                placeholder="Username..."
+                autoFocus
+                style={{
+                  width: '100%',
+                  padding: '0.75rem',
+                  backgroundColor: '#374151',
+                  border: '1px solid #4b5563',
+                  borderRadius: '0.25rem',
+                  color: '#f3f4f6',
+                  fontSize: '1rem',
+                }}
+              />
+            </div>
+            <div>
+              <label style={{ fontSize: '0.75rem', color: '#9ca3af', display: 'block', marginBottom: '0.25rem' }}>
+                Email (optional):
+              </label>
+              <input
+                type="email"
+                value={newUserEmail}
+                onChange={(e) => setNewUserEmail(e.target.value)}
+                placeholder="user@example.com"
+                style={{
+                  width: '100%',
+                  padding: '0.75rem',
+                  backgroundColor: '#374151',
+                  border: '1px solid #4b5563',
+                  borderRadius: '0.25rem',
+                  color: '#f3f4f6',
+                  fontSize: '1rem',
+                }}
+              />
+              <div style={{ fontSize: '0.7rem', color: '#6b7280', marginTop: '0.25rem' }}>
+                Note: Email must be set via CLI after user creation
+              </div>
+            </div>
+            <div style={{ display: 'flex', gap: '0.5rem' }}>
+              <button
+                className="btn btn-sm btn-success"
+                onClick={handleCreateUser}
+              >
+                Create User
+              </button>
+              <button
+                className="btn btn-sm btn-secondary"
+                onClick={() => {
+                  setShowCreateUser(false);
+                  setNewUsername('');
+                  setNewUserEmail('');
+                }}
+              >
+                Cancel
+              </button>
+            </div>
+          </div>
+        ) : (
           <button
-            className={`filter-btn ${filterOnline === 'all' ? 'active' : ''}`}
-            onClick={() => setFilterOnline('all')}
+            className="btn btn-primary"
+            onClick={() => setShowCreateUser(true)}
           >
-            All
+            ➕ Create New User
           </button>
-          <button
-            className={`filter-btn ${filterOnline === 'online' ? 'active' : ''}`}
-            onClick={() => setFilterOnline('online')}
-          >
-            Online
-          </button>
-          <button
-            className={`filter-btn ${filterOnline === 'offline' ? 'active' : ''}`}
-            onClick={() => setFilterOnline('offline')}
-          >
-            Offline
-          </button>
-        </div>
+        )}
       </div>
 
-      {isLoading && filteredUsers.length === 0 ? (
+      {/* Search Bar */}
+      <div style={{ marginBottom: '1.5rem' }}>
+        <input
+          type="text"
+          placeholder="🔍 Search users..."
+          value={searchQuery}
+          onChange={(e) => setSearchQuery(e.target.value)}
+          style={{
+            width: '100%',
+            padding: '0.75rem',
+            backgroundColor: '#1f2937',
+            border: '1px solid #374151',
+            borderRadius: '0.5rem',
+            color: '#f3f4f6',
+            fontSize: '1rem',
+          }}
+        />
+      </div>
+
+      {/* Sort Controls */}
+      <div style={{ marginBottom: '1rem', display: 'flex', gap: '0.5rem' }}>
+        <button
+          className="btn btn-primary"
+          onClick={() => toggleSort('id')}
+          style={{ fontWeight: sortMethod === 'id' ? 'bold' : 'normal' }}
+        >
+          {sortMethod === 'id' ? '📊 ' : ''} ID {sortDirection === 'up' ? '↑' : '↓'}
+        </button>
+        <button
+          className="btn btn-primary"
+          onClick={() => toggleSort('name')}
+          style={{ fontWeight: sortMethod === 'name' ? 'bold' : 'normal' }}
+        >
+          {sortMethod === 'name' ? '📊 ' : ''} Name {sortDirection === 'up' ? '↑' : '↓'}
+        </button>
+        <button className="btn btn-primary" onClick={fetchUsers} disabled={loading}>
+          🔄 Refresh
+        </button>
+      </div>
+
+      {loading ? (
         <div className="loading">Loading users...</div>
       ) : filteredUsers.length === 0 ? (
-        <div className="no-results">No users found</div>
+        <div className="no-results">
+          {searchQuery ? `No users match "${searchQuery}"` : 'No users found'}
+        </div>
       ) : (
-        <div className="users-grid">
-          {filteredUsers.map((user) => {
-            const isOnline = nodes.some((n) => n.user.id === user.id && n.online);
-            const userNodeCount = nodes.filter((n) => n.user.id === user.id).length;
-            const userKeyCount = preAuthKeys.filter((k) => k.user.id === user.id).length;
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+          {filteredUsers.map((user) => (
+            <div
+              key={user.id}
+              style={{
+                backgroundColor: '#1f2937',
+                border: '1px solid #374151',
+                borderRadius: '0.5rem',
+                overflow: 'hidden',
+              }}
+            >
+              {/* Header */}
+              <div
+                style={{
+                  padding: '1rem',
+                  display: 'flex',
+                  justifyContent: 'space-between',
+                  alignItems: 'center',
+                  backgroundColor: '#111827',
+                  borderBottom: expandedUserId === user.id ? '1px solid #374151' : 'none',
+                }}
+              >
+                <div
+                  onClick={() =>
+                    setExpandedUserId(expandedUserId === user.id ? null : user.id)
+                  }
+                  style={{
+                    cursor: 'pointer',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '1rem',
+                    flex: 1,
+                    userSelect: 'none',
+                  }}
+                >
+                  <div
+                    style={{
+                      fontSize: '1.5rem',
+                      transition: 'transform 0.2s',
+                      transform: expandedUserId === user.id ? 'rotate(180deg)' : 'rotate(0deg)',
+                      minWidth: '24px',
+                    }}
+                  >
+                    ▼
+                  </div>
+                  <div>
+                    <div style={{ fontSize: '1.125rem', fontWeight: '700', color: '#f3f4f6' }}>
+                      {user.name}
+                    </div>
+                    <div style={{ fontSize: '0.75rem', color: '#9ca3af', marginTop: '0.25rem' }}>
+                      {user.email || 'No email'} • ID: {user.id}
+                    </div>
+                  </div>
+                </div>
 
-            return (
-              <UserCard
-                key={user.id}
-                user={user}
-                isOnline={isOnline}
-                nodeCount={userNodeCount}
-                preAuthKeyCount={userKeyCount}
-                onRename={renameUser}
-                onDelete={deleteUser}
-                onCreatePreAuthKey={handleCreatePreAuthKey}
-                onExpirePreAuthKey={() => {}}
-              />
-            );
-          })}
+                <div style={{ display: 'flex', gap: '0.5rem', marginLeft: '1rem' }}>
+                  {renamingUserId === user.id ? (
+                    <>
+                      <input
+                        type="text"
+                        value={newName}
+                        onChange={(e) => setNewName(e.target.value)}
+                        placeholder="New name..."
+                        autoFocus
+                        style={{
+                          padding: '0.4rem 0.6rem',
+                          backgroundColor: '#374151',
+                          border: '1px solid #4b5563',
+                          borderRadius: '0.25rem',
+                          color: '#f3f4f6',
+                          fontSize: '0.75rem',
+                          minWidth: '120px',
+                        }}
+                      />
+                      <button
+                        className="btn btn-sm btn-success"
+                        onClick={() => handleRenameUser(user.id)}
+                        style={{ padding: '0.3rem 0.6rem', fontSize: '0.75rem' }}
+                      >
+                        ✓
+                      </button>
+                      <button
+                        className="btn btn-sm btn-secondary"
+                        onClick={() => {
+                          setRenamingUserId(null);
+                          setNewName('');
+                        }}
+                        style={{ padding: '0.3rem 0.6rem', fontSize: '0.75rem' }}
+                      >
+                        ✕
+                      </button>
+                    </>
+                  ) : (
+                    <button
+                      className="btn btn-sm btn-primary"
+                      onClick={() => {
+                        setRenamingUserId(user.id);
+                        setNewName(user.name);
+                      }}
+                      style={{ padding: '0.3rem 0.6rem', fontSize: '0.75rem' }}
+                    >
+                      ✏️
+                    </button>
+                  )}
+
+                  {deletingUserId === user.id ? (
+                    <>
+                      <button
+                        className="btn btn-sm btn-error"
+                        onClick={() => handleDeleteUser(user.id)}
+                        style={{ padding: '0.3rem 0.6rem', fontSize: '0.75rem' }}
+                      >
+                        Confirm
+                      </button>
+                      <button
+                        className="btn btn-sm btn-secondary"
+                        onClick={() => setDeletingUserId(null)}
+                        style={{ padding: '0.3rem 0.6rem', fontSize: '0.75rem' }}
+                      >
+                        Cancel
+                      </button>
+                    </>
+                  ) : (
+                    <button
+                      className="btn btn-sm btn-error"
+                      onClick={() => setDeletingUserId(user.id)}
+                      style={{ padding: '0.3rem 0.6rem', fontSize: '0.75rem' }}
+                    >
+                      🗑️
+                    </button>
+                  )}
+                </div>
+              </div>
+
+              {/* Expandable Content */}
+              {expandedUserId === user.id && (
+                <div style={{ padding: '1.5rem', borderTop: '1px solid #374151' }}>
+                  {/* Display Name */}
+                  <div style={{ marginBottom: '1rem' }}>
+                    <label style={{ display: 'block', fontSize: '0.875rem', fontWeight: '600', marginBottom: '0.5rem', color: '#d1d5db' }}>
+                      Display Name:
+                    </label>
+                    <div style={{ color: '#f3f4f6' }}>
+                      {user.displayName || 'Not set'}
+                    </div>
+                  </div>
+
+                  {/* Email */}
+                  <div style={{ marginBottom: '1rem' }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.5rem' }}>
+                      <label style={{ fontSize: '0.875rem', fontWeight: '600', color: '#d1d5db' }}>
+                        Email:
+                      </label>
+                      <button
+                        className="btn btn-sm btn-secondary"
+                        onClick={() => setShowEmailNote(user.id)}
+                        style={{ padding: '0.2rem 0.4rem', fontSize: '0.7rem' }}
+                      >
+                        ℹ️
+                      </button>
+                    </div>
+                    <div style={{ color: '#f3f4f6' }}>
+                      {user.email || 'Not set'}
+                    </div>
+                  </div>
+
+                  {/* Provider */}
+                  <div style={{ marginBottom: '1rem' }}>
+                    <label style={{ display: 'block', fontSize: '0.875rem', fontWeight: '600', marginBottom: '0.5rem', color: '#d1d5db' }}>
+                      Provider:
+                    </label>
+                    <div style={{ color: '#f3f4f6' }}>{user.provider || 'Local'}</div>
+                  </div>
+
+                  {/* Created At */}
+                  <div style={{ marginBottom: '1.5rem' }}>
+                    <label style={{ display: 'block', fontSize: '0.875rem', fontWeight: '600', marginBottom: '0.5rem', color: '#d1d5db' }}>
+                      Created:
+                    </label>
+                    <div style={{ color: '#f3f4f6', fontSize: '0.875rem' }}>
+                      {new Date(user.createdAt).toLocaleString()}
+                    </div>
+                  </div>
+
+                  {/* API Keys Section */}
+                  <div style={{ marginBottom: '1.5rem', paddingBottom: '1.5rem', borderBottom: '1px solid #374151' }}>
+                    <label style={{ display: 'block', fontSize: '0.875rem', fontWeight: '600', marginBottom: '0.75rem', color: '#d1d5db' }}>
+                      API Keys:
+                    </label>
+                    {loadingApiKeys.has(user.id) ? (
+                      <div style={{ color: '#9ca3af', fontSize: '0.875rem' }}>Loading...</div>
+                    ) : apiKeys.get(user.id) && apiKeys.get(user.id)!.length > 0 ? (
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem', marginBottom: '0.75rem' }}>
+                        {apiKeys.get(user.id)!.map((key) => (
+                          <div
+                            key={key.id}
+                            style={{
+                              padding: '0.75rem',
+                              backgroundColor: '#374151',
+                              borderRadius: '0.25rem',
+                              display: 'flex',
+                              justifyContent: 'space-between',
+                              alignItems: 'center',
+                              fontSize: '0.875rem',
+                            }}
+                          >
+                            <div>
+                              <div style={{ color: '#f3f4f6', fontFamily: 'monospace' }}>{key.prefix}</div>
+                              <div style={{ color: '#9ca3af', fontSize: '0.75rem', marginTop: '0.25rem' }}>
+                                Expires: {new Date(key.expiration).toLocaleDateString()}
+                              </div>
+                            </div>
+                            <button
+                              className="btn btn-sm btn-error"
+                              onClick={() => handleExpireApiKey(user.id, key.prefix)}
+                              style={{ padding: '0.3rem 0.6rem', fontSize: '0.75rem' }}
+                            >
+                              Expire
+                            </button>
+                          </div>
+                        ))}
+                      </div>
+                    ) : (
+                      <div style={{ color: '#9ca3af', fontSize: '0.875rem', marginBottom: '0.75rem' }}>No API keys</div>
+                    )}
+                    <button
+                      className="btn btn-sm btn-success"
+                      onClick={() => {
+                        setExpandedUserId(user.id);
+                        fetchApiKeysForUser(user.id);
+                        handleCreateApiKey(user.id);
+                      }}
+                    >
+                      ➕ Create API Key
+                    </button>
+                  </div>
+
+                  {/* Associated Nodes */}
+                  <div>
+                    <label style={{ display: 'block', fontSize: '0.875rem', fontWeight: '600', marginBottom: '0.5rem', color: '#d1d5db' }}>
+                      Nodes ({getUserNodes(user.id).length}):
+                    </label>
+                    {getUserNodes(user.id).length > 0 ? (
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+                        {getUserNodes(user.id).map((node: any) => (
+                          <div
+                            key={node.id}
+                            style={{
+                              padding: '0.5rem',
+                              backgroundColor: '#374151',
+                              borderRadius: '0.25rem',
+                              display: 'flex',
+                              justifyContent: 'space-between',
+                              alignItems: 'center',
+                              fontSize: '0.875rem',
+                            }}
+                          >
+                            <span>{node.givenName} ({node.name})</span>
+                            <span
+                              style={{
+                                display: 'inline-block',
+                                width: '8px',
+                                height: '8px',
+                                borderRadius: '50%',
+                                backgroundColor: node.online ? '#10b981' : '#6b7280',
+                              }}
+                              title={node.online ? 'Online' : 'Offline'}
+                            />
+                          </div>
+                        ))}
+                      </div>
+                    ) : (
+                      <div style={{ color: '#9ca3af', fontSize: '0.875rem' }}>No nodes</div>
+                    )}
+                  </div>
+                </div>
+              )}
+            </div>
+          ))}
         </div>
       )}
     </div>
