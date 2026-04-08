@@ -2,23 +2,18 @@ const express = require('express');
 const path = require('path');
 const app = express();
 
-console.log('Starting server, serving from:', path.join(__dirname, 'build'));
+const buildPath = path.join(__dirname, 'build');
+console.log('Starting React server, serving from:', buildPath);
 
-// Serve static files
-app.use(express.static(path.join(__dirname, 'build')));
+// Serve static files with proper MIME types
+app.use(express.static(buildPath));
 
-// Log all requests
-app.use((req, res, next) => {
-  console.log('Request:', req.method, req.path);
-  next();
-});
-
-// SPA fallback - serve index.html only for route requests
-app.get('*', (req, res) => {
-  console.log('Serving index.html for:', req.path);
-  res.sendFile(path.join(__dirname, 'build', 'index.html'));
+// Fallback for SPA routing - MUST come after static middleware
+app.use((req, res) => {
+  console.log('Serving index.html for route:', req.path);
+  res.sendFile(path.join(buildPath, 'index.html'));
 });
 
 app.listen(3000, () => {
-  console.log('React app listening on port 3000');
+  console.log('✅ React app listening on port 3000');
 });
