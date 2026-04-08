@@ -1,38 +1,99 @@
 import { create } from 'zustand';
-import { AuthState, AuthUser } from '../types';
+import axios from 'axios';
 
-interface AuthStoreState extends AuthState {
-  login: (user: AuthUser, apiKey: string, apiUrl: string) => void;
-  logout: () => void;
-  setAuthFromStorage: () => void;
+export interface AuthUser {
+  email: string;
+  username: string;
+  role: 'admin' | 'manager' | 'viewer';
+  id: string;
 }
 
-export const useAuthStore = create<AuthStoreState>((set) => ({
+export interface AuthState {
+  user: AuthUser | null;
+  isAuthenticated: boolean;
+  isLoading: boolean;
+  error: string | null;
+  sessionToken: string | null;
+}
+
+export interface AuthActions {
+  login: (email: string, apiKey: string, headscaleUrl: string) => Promise<void>;
+  logout: () => Promise<void>;
+  restoreSession: () => Promise<void>;
+  clearError: () => void;
+}
+
+export type AuthStore = AuthState & AuthActions;
+
+const API_BASE = process.env.REACT_APP_API_URL || 'http://localhost:3000/api';
+
+export const useAuthStore = create<AuthStore>((set) => ({
   user: null,
-  apiKey: null,
-  apiUrl: null,
   isAuthenticated: false,
+  isLoading: false,
+  error: null,
+  sessionToken: null,
 
-  login: (user: AuthUser, apiKey: string, apiUrl: string) => {
-    localStorage.setItem('authUser', JSON.stringify(user));
-    localStorage.setItem('apiKey', apiKey);
-    localStorage.setItem('apiUrl', apiUrl);
-    set({ user, apiKey, apiUrl, isAuthenticated: true });
-  },
+  login: async (email: string, apiKey: string, headscaleUrl: string) => {
+    set({ isLoading: true, error: null });
+    try {
+      const response = await axios.post(`${API_BASE}/auth/login`, {
+        email,
+        apiKey,
+        headscaleUrl,
+      });
 
-  logout: () => {
-    localStorage.removeItem('authUser');
-    localStorage.removeItem('apiKey');
-    localStorage.removeItem('apiUrl');
-    set({ user: null, apiKey: null, apiUrl: null, isAuthenticated: false });
-  },
+      const { sessionToken, user } = response.data;
+      axios.defaults.headers.common['Authorization'] = `Bearer ${sessionToken}`;
 
-  setAuthFromStorage: () => {
-    const user = localStorage.getItem('authUser');
-    const apiKey = localStorage.getItem('apiKey');
-    const apiUrl = localStorage.getItem('apiUrl');
-    if (user && apiKey && apiUrl) {
-      set({ user: JSON.parse(user), apiKey, apiUrl, isAuthenticated: true });
+      set({
+        user,
+        sessionToken,
+        isAuthenticated: true,
+        isLoading: false,
+      });
+    } catch (error) {
+      const message = axios.isAxiosError(error)
+        ? error.response?.data?.message || error.message
+        : 'Login failed';
+      set({
+        error: message,
+        isLoading: false,
+      });
+      throw error;
     }
   },
+
+  logout: async () => {
+    try {
+      await axios.post(`${API_BASE}/auth/logout`);
+    } catch (err) {
+      console.warn('Logout request failed, clearing local session anyway');
+    }
+
+    delete axios.defaults.headers.common['Authorization'];
+    set({
+      user: null,
+      sessionToken: null,
+      isAuthenticated: false,
+      error: null,
+    });
+  },
+
+  restoreSession: async () => {
+    set({ isLoading: true });
+    try {
+      const response = await axios.get(`${API_BASE}/auth/me`);
+      const { user } = response.data;
+      set({
+        user,
+        isAuthenticated: true,
+        isLoading: false,
+      });
+    } catch (error) {
+      set({ isLoading: false });
+    }
+  },
+
+  clearError: () => set({ error: null }),
 }));

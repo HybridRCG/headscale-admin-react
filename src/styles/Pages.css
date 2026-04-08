@@ -1,0 +1,350 @@
+:root {
+  --color-primary: #3b82f6;
+  --color-primary-dark: #1e40af;
+  --color-primary-light: #dbeafe;
+  --color-success: #10b981;
+  --color-warning: #f59e0b;
+  --color-danger: #ef4444;
+  --color-border: #e5e7eb;
+  --color-bg: #f9fafb;
+  --color-text: #1f2937;
+  --color-text-light: #6b7280;
+  --color-online: #22c55e;
+  --color-offline: #ef4444;
+}
+
+.page-container {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 2rem;
+}
+
+.page-title {
+  font-size: 2.5rem;
+  font-weight: bold;
+  margin-bottom: 2rem;
+  color: var(--color-text);
+}
+
+.page-header {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  margin-bottom: 2rem;
+  flex-wrap: wrap;
+}
+
+.search-input {
+  flex: 1;
+  min-width: 200px;
+  padding: 0.5rem 1rem;
+  border: 1px solid var(--color-border);
+  border-radius: 0.375rem;
+  font-size: 0.875rem;
+}
+
+.search-input:focus {
+  outline: none;
+  border-color: var(--color-primary);
+  box-shadow: 0 0 0 3px var(--color-primary-light);
+}
+
+.btn {
+  padding: 0.5rem 1rem;
+  border: none;
+  border-radius: 0.375rem;
+  font-size: 0.875rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.btn-primary {
+  background-color: var(--color-primary);
+  color: white;
+}
+
+.btn-primary:hover:not(:disabled) {
+  background-color: var(--color-primary-dark);
+}
+
+.btn-success {
+  background-color: var(--color-success);
+  color: white;
+}
+
+.btn-success:hover:not(:disabled) {
+  background-color: #059669;
+}
+
+.btn-delete {
+  background-color: var(--color-danger);
+  color: white;
+  padding: 0.25rem 0.5rem;
+  font-size: 1rem;
+}
+
+.btn-delete:hover:not(:disabled) {
+  background-color: #dc2626;
+}
+
+.error-banner {
+  background-color: #fee2e2;
+  border: 1px solid #fecaca;
+  color: #991b1b;
+  padding: 1rem;
+  border-radius: 0.375rem;
+  margin-bottom: 1rem;
+}
+
+.error-message {
+  color: var(--color-danger);
+  font-size: 0.875rem;
+  margin-top: 0.5rem;
+}
+
+.loading, .no-results {
+  text-align: center;
+  padding: 2rem;
+  color: var(--color-text-light);
+  font-size: 1.125rem;
+}
+
+.summary-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+  gap: 1.5rem;
+  margin-bottom: 2rem;
+}
+
+.summary-card {
+  background: white;
+  border-radius: 0.5rem;
+  border: 1px solid var(--color-border);
+  padding: 1.5rem;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+}
+
+.summary-card:hover {
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+  transform: translateY(-2px);
+}
+
+.summary-icon {
+  font-size: 2.5rem;
+  margin-bottom: 0.5rem;
+}
+
+.summary-value {
+  font-size: 3rem;
+  font-weight: bold;
+  color: var(--color-primary);
+  margin-bottom: 0.5rem;
+}
+
+.summary-title {
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: var(--color-text-light);
+}
+
+.controls {
+  display: flex;
+  gap: 1rem;
+  margin-bottom: 2rem;
+  flex-wrap: wrap;
+}
+
+.sort-controls, .filter-controls {
+  display: flex;
+  gap: 0.5rem;
+}
+
+.sort-btn, .filter-btn {
+  padding: 0.5rem 0.75rem;
+  border: 1px solid var(--color-border);
+  background: white;
+  border-radius: 0.375rem;
+  cursor: pointer;
+  font-size: 0.875rem;
+  transition: all 0.2s ease;
+}
+
+.sort-btn:hover, .filter-btn:hover {
+  border-color: var(--color-primary);
+  color: var(--color-primary);
+}
+
+.sort-btn.active, .filter-btn.active {
+  background-color: var(--color-primary);
+  color: white;
+  border-color: var(--color-primary);
+}
+
+.create-user-form {
+  display: flex;
+  gap: 0.5rem;
+  margin-bottom: 1.5rem;
+  padding: 1rem;
+  background: #f0f9ff;
+  border-radius: 0.375rem;
+  border-left: 4px solid var(--color-primary);
+}
+
+.create-input {
+  flex: 1;
+  padding: 0.5rem 0.75rem;
+  border: 1px solid var(--color-border);
+  border-radius: 0.375rem;
+  font-size: 0.875rem;
+}
+
+.create-input:focus {
+  outline: none;
+  border-color: var(--color-primary);
+}
+
+.users-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+  gap: 1.5rem;
+}
+
+.user-card {
+  background: white;
+  border: 1px solid var(--color-border);
+  border-radius: 0.5rem;
+  padding: 1.5rem;
+  transition: all 0.2s ease;
+}
+
+.user-card:hover {
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+}
+
+.user-header {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  margin-bottom: 1rem;
+}
+
+.user-status {
+  flex-shrink: 0;
+}
+
+.status-badge {
+  display: inline-block;
+  font-size: 1.25rem;
+}
+
+.user-name {
+  flex: 1;
+  margin: 0;
+  font-size: 1.125rem;
+  font-weight: 600;
+  cursor: pointer;
+  padding: 0.25rem;
+  border-radius: 0.25rem;
+  transition: all 0.2s ease;
+}
+
+.user-name:hover {
+  background-color: var(--color-primary-light);
+  color: var(--color-primary-dark);
+}
+
+.user-name-input {
+  flex: 1;
+  padding: 0.5rem;
+  border: 2px solid var(--color-primary);
+  border-radius: 0.375rem;
+  font-size: 1.125rem;
+  font-weight: 600;
+}
+
+.user-name-input:focus {
+  outline: none;
+}
+
+.user-info {
+  margin-bottom: 1rem;
+  font-size: 0.875rem;
+}
+
+.info-row {
+  display: flex;
+  justify-content: space-between;
+  padding: 0.5rem 0;
+  border-bottom: 1px solid var(--color-border);
+}
+
+.info-row:last-child {
+  border-bottom: none;
+}
+
+.info-label {
+  font-weight: 600;
+  color: var(--color-text-light);
+}
+
+.info-value {
+  color: var(--color-text);
+  font-family: 'Monaco', 'Courier New', monospace;
+}
+
+.user-actions {
+  display: flex;
+  gap: 0.5rem;
+}
+
+.user-actions .btn {
+  flex: 1;
+  padding: 0.5rem;
+  font-size: 0.75rem;
+}
+
+@media (max-width: 768px) {
+  .page-container {
+    padding: 1rem;
+  }
+
+  .page-title {
+    font-size: 1.875rem;
+  }
+
+  .summary-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .users-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .page-header {
+    flex-direction: column;
+  }
+
+  .search-input {
+    width: 100%;
+  }
+
+  .controls {
+    flex-direction: column;
+  }
+
+  .sort-controls, .filter-controls {
+    width: 100%;
+    justify-content: space-between;
+  }
+}

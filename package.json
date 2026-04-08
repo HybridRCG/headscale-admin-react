@@ -1,5 +1,6 @@
 {
   "name": "headscale-admin-react",
+  "homepage": "/admin/",
   "version": "0.1.0",
   "private": true,
   "dependencies": {
@@ -12,7 +13,9 @@
     "@types/react": "^19.2.14",
     "@types/react-dom": "^19.2.3",
     "axios": "^1.14.0",
+    "cors": "^2.8.6",
     "express": "^5.2.1",
+    "jsonwebtoken": "^9.0.3",
     "react": "^19.2.4",
     "react-dom": "^19.2.4",
     "react-router-dom": "^7.14.0",
