@@ -34,8 +34,10 @@ export const UsersPage: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [expandedUserId, setExpandedUserId] = useState<string | null>(null);
   const [renamingUserId, setRenamingUserId] = useState<string | null>(null);
+  const [editingEmailUserId, setEditingEmailUserId] = useState<string | null>(null);
   const [deletingUserId, setDeletingUserId] = useState<string | null>(null);
   const [newName, setNewName] = useState('');
+  const [newEmail, setNewEmail] = useState('');
   const [searchQuery, setSearchQuery] = useState('');
   const [sortMethod, setSortMethod] = useState<'id' | 'name'>('id');
   const [sortDirection, setSortDirection] = useState<'up' | 'down'>('up');
@@ -92,13 +94,7 @@ export const UsersPage: React.FC = () => {
   const handleCreateUser = async () => {
     if (!newUsername.trim()) return;
     try {
-      await axios.post('http://localhost:3000/api/headscale/api/v1/user', { name: newUsername });
-      
-      // Note: Email must be set manually via CLI or database, as Headscale API doesn't support it
-      if (newUserEmail.trim()) {
-        console.log(`Note: Created user "${newUsername}". Email can be added via: headscale users update --name ${newUsername} --email ${newUserEmail}`);
-      }
-      
+      await axios.post('http://localhost:3000/api/headscale/user/create', { username: newUsername, email: newUserEmail });
       await fetchUsers();
       setShowCreateUser(false);
       setNewUsername('');
@@ -106,6 +102,23 @@ export const UsersPage: React.FC = () => {
     } catch (error) {
       console.error('Failed to create user:', error);
       alert('Failed to create user');
+    }
+  };
+
+  const handleUpdateEmail = async (userId: string, username: string) => {
+    if (!newEmail.trim()) {
+      alert('Email cannot be empty');
+      return;
+    }
+    try {
+      console.log(`Updating email for ${username} to ${newEmail}`);
+      await axios.post('http://localhost:3000/api/headscale/user/update-email', { username, email: newEmail });
+      await fetchUsers();
+      setEditingEmailUserId(null);
+      setNewEmail('');
+    } catch (error) {
+      console.error('Failed to update email:', error);
+      alert('Failed to update email');
     }
   };
 
@@ -254,59 +267,6 @@ export const UsersPage: React.FC = () => {
         </div>
       )}
 
-      {/* Email Note Modal */}
-      {showEmailNote && (
-        <div style={{
-          position: 'fixed',
-          top: 0,
-          left: 0,
-          right: 0,
-          bottom: 0,
-          backgroundColor: 'rgba(0,0,0,0.7)',
-          display: 'flex',
-          justifyContent: 'center',
-          alignItems: 'center',
-          zIndex: 1000,
-        }}>
-          <div style={{
-            backgroundColor: '#1f2937',
-            border: '2px solid #f59e0b',
-            borderRadius: '0.5rem',
-            padding: '2rem',
-            maxWidth: '500px',
-            width: '90%',
-          }}>
-            <h2 style={{ color: '#f3f4f6', marginBottom: '1rem' }}>ℹ️ About User Email</h2>
-            <p style={{ color: '#d1d5db', marginBottom: '1rem' }}>
-              Email addresses are user identifiers in Headscale and can be used in ACL groups.
-            </p>
-            <p style={{ color: '#d1d5db', marginBottom: '1rem' }}>
-              To set or update a user's email, use the CLI:
-            </p>
-            <div style={{
-              backgroundColor: '#111827',
-              border: '1px solid #374151',
-              borderRadius: '0.25rem',
-              padding: '1rem',
-              marginBottom: '1rem',
-              fontFamily: 'monospace',
-              fontSize: '0.85rem',
-              color: '#9ca3af',
-              userSelect: 'all',
-            }}>
-              docker exec headscale headscale users update --name {'<username>'} --email {'<email>'}
-            </div>
-            <button
-              className="btn btn-primary"
-              onClick={() => setShowEmailNote(null)}
-              style={{ width: '100%' }}
-            >
-              OK
-            </button>
-          </div>
-        </div>
-      )}
-
       {/* Create User Section */}
       <div style={{ marginBottom: '1.5rem', padding: '1rem', backgroundColor: '#1f2937', borderRadius: '0.5rem', border: '1px solid #374151' }}>
         {showCreateUser ? (
@@ -351,9 +311,6 @@ export const UsersPage: React.FC = () => {
                   fontSize: '1rem',
                 }}
               />
-              <div style={{ fontSize: '0.7rem', color: '#6b7280', marginTop: '0.25rem' }}>
-                Note: Email must be set via CLI after user creation
-              </div>
             </div>
             <div style={{ display: 'flex', gap: '0.5rem' }}>
               <button
@@ -481,7 +438,7 @@ export const UsersPage: React.FC = () => {
                       {user.name}
                     </div>
                     <div style={{ fontSize: '0.75rem', color: '#9ca3af', marginTop: '0.25rem' }}>
-                      {user.email || 'No email'} • ID: {user.id}
+                      {user.email || '⚠️ No email (viewer only)'} • ID: {user.id}
                     </div>
                   </div>
                 </div>
@@ -578,23 +535,61 @@ export const UsersPage: React.FC = () => {
                     </div>
                   </div>
 
-                  {/* Email */}
-                  <div style={{ marginBottom: '1rem' }}>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.5rem' }}>
-                      <label style={{ fontSize: '0.875rem', fontWeight: '600', color: '#d1d5db' }}>
-                        Email:
-                      </label>
-                      <button
-                        className="btn btn-sm btn-secondary"
-                        onClick={() => setShowEmailNote(user.id)}
-                        style={{ padding: '0.2rem 0.4rem', fontSize: '0.7rem' }}
-                      >
-                        ℹ️
-                      </button>
-                    </div>
-                    <div style={{ color: '#f3f4f6' }}>
-                      {user.email || 'Not set'}
-                    </div>
+                  {/* Email - EDITABLE */}
+                  <div style={{ marginBottom: '1rem', paddingBottom: '1rem', borderBottom: '1px solid #374151' }}>
+                    <label style={{ display: 'block', fontSize: '0.875rem', fontWeight: '600', marginBottom: '0.5rem', color: '#d1d5db' }}>
+                      Email (determines user role in ACL):
+                    </label>
+                    {editingEmailUserId === user.id ? (
+                      <div style={{ display: 'flex', gap: '0.5rem' }}>
+                        <input
+                          type="email"
+                          value={newEmail}
+                          onChange={(e) => setNewEmail(e.target.value)}
+                          placeholder="user@example.com"
+                          autoFocus
+                          style={{
+                            flex: 1,
+                            padding: '0.5rem',
+                            backgroundColor: '#374151',
+                            border: '1px solid #4b5563',
+                            borderRadius: '0.25rem',
+                            color: '#f3f4f6',
+                            fontSize: '0.875rem',
+                          }}
+                        />
+                        <button
+                          className="btn btn-sm btn-success"
+                          onClick={() => handleUpdateEmail(user.id, user.name)}
+                        >
+                          Save
+                        </button>
+                        <button
+                          className="btn btn-sm btn-secondary"
+                          onClick={() => {
+                            setEditingEmailUserId(null);
+                            setNewEmail('');
+                          }}
+                        >
+                          Cancel
+                        </button>
+                      </div>
+                    ) : (
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                        <div style={{ color: user.email ? '#f3f4f6' : '#ef5350', fontSize: '0.875rem' }}>
+                          {user.email || '⚠️ Not set (user will be viewer)'}
+                        </div>
+                        <button
+                          className="btn btn-sm btn-primary"
+                          onClick={() => {
+                            setEditingEmailUserId(user.id);
+                            setNewEmail(user.email || '');
+                          }}
+                        >
+                          ✏️ Edit
+                        </button>
+                      </div>
+                    )}
                   </div>
 
                   {/* Provider */}

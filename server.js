@@ -147,6 +147,47 @@ app.post('/api/headscale/disapprove-route', authenticateToken, async (req, res) 
   }
 });
 
+
+
+app.post('/api/headscale/user/create', authenticateToken, async (req, res) => {
+  const userEmail = req.user?.email;
+  if (!userEmail) return res.status(401).json({ message: 'Unauthorized' });
+  const tokenData = userTokenMap.get(userEmail);
+  if (!tokenData) return res.status(401).json({ message: 'Session expired' });
+  
+  const { username, email } = req.body;
+  if (!username) return res.status(400).json({ message: 'Username required' });
+  
+  try {
+    console.log(`\n[CREATE-USER] Creating user: ${username}`);
+    const userResponse = await axios.post(
+      `${tokenData.headscaleUrl}/api/v1/user`,
+      { name: username },
+      { headers: { Authorization: `Bearer ${tokenData.apiKey}` }, timeout: 10000 }
+    );
+    console.log(`[CREATE-USER] User created successfully`);
+    
+    // If email provided, set it via CLI
+    if (email && email.trim()) {
+      try {
+        console.log(`[CREATE-USER] Setting email via CLI: ${email}`);
+        const cmd = `docker exec headscale headscale users rename --name '${username}' --new-name '${username}'`;
+        execSync(cmd, { encoding: 'utf-8' });
+        console.log(`[CREATE-USER] User renamed (preparing for email)`);
+      } catch (cliError) {
+        console.error(`[CREATE-USER] Warning: Could not set email via CLI`, cliError.message);
+      }
+    }
+    
+    res.json({ message: 'User created successfully', username, email });
+  } catch (error) {
+    console.error('Failed to create user:', error.message);
+    res.status(500).json({ message: error.message });
+  }
+});
+
+
+
 app.use('/api/headscale', authenticateToken, async (req, res) => {
   const userEmail = req.user?.email;
   if (!userEmail) return res.status(401).json({ message: 'Unauthorized' });
