@@ -27,22 +27,14 @@ const authenticateToken = (req, res, next) => {
 };
 
 const getUserRoleFromACL = (email, aclPolicy) => {
-  if (!aclPolicy || !aclPolicy.groups) {
-    console.log(`No groups in ACL, defaulting to viewer`);
-    return 'viewer';
-  }
-  
+  if (!aclPolicy || !aclPolicy.groups) return 'viewer';
   const adminGroups = aclPolicy.tagOwners?.['tag:admin'] || [];
-  
   for (const groupName in aclPolicy.groups) {
     const members = aclPolicy.groups[groupName];
-    if (members.includes(email)) {
-      if (adminGroups.includes(groupName)) {
-        return 'admin';
-      }
+    if (members.includes(email) && adminGroups.includes(groupName)) {
+      return 'admin';
     }
   }
-  
   return 'viewer';
 };
 
@@ -51,16 +43,13 @@ app.post('/api/auth/login', async (req, res) => {
   if (!email || !apiKey || !headscaleUrl) return res.status(400).json({ message: 'Missing fields' });
   try {
     console.log(`\n[LOGIN] ${email}`);
-    
     await axios.get(`${headscaleUrl}/api/v1/user`, { headers: { Authorization: `Bearer ${apiKey}` }, timeout: 5000 });
     console.log('✓ API key validated');
     
     const policyResponse = await axios.get(`${headscaleUrl}/api/v1/policy`, { headers: { Authorization: `Bearer ${apiKey}` }, timeout: 5000 });
-    
     let aclPolicy = policyResponse.data;
     if (typeof aclPolicy.policy === 'string') {
       aclPolicy = JSON.parse(aclPolicy.policy);
-      console.log('✓ Parsed stringified policy');
     }
     
     const role = getUserRoleFromACL(email, aclPolicy);
@@ -95,19 +84,31 @@ app.post('/api/headscale/approve-route', authenticateToken, async (req, res) => 
   if (!nodeId || !route) return res.status(400).json({ message: 'Missing nodeId or route' });
   
   try {
-    const url = `${tokenData.headscaleUrl}/api/v1/nodes/${nodeId}/routes/${route}`;
-    console.log(`\n[APPROVE] Calling: ${url}`);
+    console.log(`\n[APPROVE] Route: ${route}, NodeId: ${nodeId}`);
     
-    const response = await axios.patch(
-      url,
-      { enabled: true },
+    // First get the node to get current approved routes
+    const nodeResponse = await axios.get(
+      `${tokenData.headscaleUrl}/api/v1/node/${nodeId}`,
       { headers: { Authorization: `Bearer ${tokenData.apiKey}` }, timeout: 10000 }
     );
     
-    console.log(`[APPROVE] Success`);
-    res.json(response.data);
+    const node = nodeResponse.data.node;
+    const currentApproved = new Set(node.approvedRoutes || []);
+    currentApproved.add(route);
+    const newRoutes = Array.from(currentApproved);
+    
+    console.log(`[APPROVE] New approved routes:`, newRoutes);
+    
+    const response = await axios.post(
+      `${tokenData.headscaleUrl}/api/v1/node/${nodeId}/approve_routes`,
+      { routes: newRoutes },
+      { headers: { Authorization: `Bearer ${tokenData.apiKey}` }, timeout: 10000 }
+    );
+    
+    console.log(`[APPROVE] Success (${response.status})`);
+    res.json({ message: 'Route approved', data: response.data });
   } catch (error) {
-    console.error(`[APPROVE] Error:`, error.message);
+    console.error(`[APPROVE] Error (${error.response?.status}):`, error.message);
     res.status(error.response?.status || 500).json({ message: error.message });
   }
 });
@@ -122,19 +123,31 @@ app.post('/api/headscale/disapprove-route', authenticateToken, async (req, res) 
   if (!nodeId || !route) return res.status(400).json({ message: 'Missing nodeId or route' });
   
   try {
-    const url = `${tokenData.headscaleUrl}/api/v1/nodes/${nodeId}/routes/${route}`;
-    console.log(`\n[DISAPPROVE] Calling: ${url}`);
+    console.log(`\n[DISAPPROVE] Route: ${route}, NodeId: ${nodeId}`);
     
-    const response = await axios.patch(
-      url,
-      { enabled: false },
+    // First get the node to get current approved routes
+    const nodeResponse = await axios.get(
+      `${tokenData.headscaleUrl}/api/v1/node/${nodeId}`,
       { headers: { Authorization: `Bearer ${tokenData.apiKey}` }, timeout: 10000 }
     );
     
-    console.log(`[DISAPPROVE] Success`);
-    res.json(response.data);
+    const node = nodeResponse.data.node;
+    const currentApproved = new Set(node.approvedRoutes || []);
+    currentApproved.delete(route);
+    const newRoutes = Array.from(currentApproved);
+    
+    console.log(`[DISAPPROVE] New approved routes:`, newRoutes);
+    
+    const response = await axios.post(
+      `${tokenData.headscaleUrl}/api/v1/node/${nodeId}/approve_routes`,
+      { routes: newRoutes },
+      { headers: { Authorization: `Bearer ${tokenData.apiKey}` }, timeout: 10000 }
+    );
+    
+    console.log(`[DISAPPROVE] Success (${response.status})`);
+    res.json({ message: 'Route disapproved', data: response.data });
   } catch (error) {
-    console.error(`[DISAPPROVE] Error:`, error.message);
+    console.error(`[DISAPPROVE] Error (${error.response?.status}):`, error.message);
     res.status(error.response?.status || 500).json({ message: error.message });
   }
 });
