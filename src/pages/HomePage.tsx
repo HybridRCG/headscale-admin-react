@@ -5,21 +5,20 @@ import '../styles/Pages.css';
 
 interface SummaryCard {
   title: string;
-  value: number;
   border: string;
   icon: string;
-  path: string;
+  path?: string;
+  isNav?: boolean;
 }
 
 export const HomePage: React.FC = () => {
   const navigate = useNavigate();
-  const { users, nodes, preAuthKeys, fetchUsers, fetchNodes, fetchPreAuthKeys, isLoading } =
-    useHeadscaleStore();
+  const { users, nodes, fetchUsers, fetchNodes } = useHeadscaleStore();
 
   useEffect(() => {
     const fetchData = async () => {
       try {
-        await Promise.all([fetchUsers(), fetchNodes(), fetchPreAuthKeys()]);
+        await Promise.all([fetchUsers(), fetchNodes()]);
       } catch (error) {
         console.error('Failed to fetch dashboard data:', error);
       }
@@ -28,76 +27,41 @@ export const HomePage: React.FC = () => {
     fetchData();
   }, []);
 
-  const onlineUsers = users.filter((user) =>
-    nodes.some((node) => node.online && node.user.id === user.id)
-  ).length;
-
-  const validPreAuthKeys = preAuthKeys.filter((key) => {
-    const isExpired = new Date(key.expiration) < new Date();
-    const isUsed = key.used && !key.reusable;
-    return !isExpired && !isUsed;
-  }).length;
-
-  const onlineNodes = nodes.filter((n) => n.online).length;
-
-  const totalRoutes = nodes.reduce(
-    (acc, node) => acc + (node.availableRoutes?.length || 0),
-    0
-  );
-
   const summaries: SummaryCard[] = [
     {
-      title: 'Total Users',
-      value: users.length,
+      title: 'Users',
       border: 'border-blue-700',
       icon: '👤',
       path: '/users',
     },
     {
-      title: 'Online Users',
-      value: onlineUsers,
-      border: 'border-blue-500',
-      icon: '👤',
-      path: '/users',
-    },
-    {
-      title: 'Valid PreAuth Keys',
-      value: validPreAuthKeys,
-      border: 'border-slate-700',
-      icon: '🔑',
-      path: '/users',
-    },
-    {
-      title: 'Total Nodes',
-      value: nodes.length,
+      title: 'Nodes',
       border: 'border-purple-700',
       icon: '🖥️',
       path: '/nodes',
     },
     {
-      title: 'Online Nodes',
-      value: onlineNodes,
-      border: 'border-purple-400',
-      icon: '🖥️',
-      path: '/nodes',
+      title: 'ACL Editor',
+      border: 'border-green-700',
+      icon: '📋',
+      path: '/acl',
+      isNav: true,
     },
     {
-      title: 'Total Routes',
-      value: totalRoutes,
-      border: 'border-yellow-600',
-      icon: '🛣️',
-      path: '/routes',
+      title: 'DNS',
+      border: 'border-orange-700',
+      icon: '🌐',
+      path: '/dns',
+      isNav: true,
+    },
+    {
+      title: 'Settings',
+      border: 'border-gray-700',
+      icon: '⚙️',
+      path: '/settings',
+      isNav: true,
     },
   ];
-
-  if (isLoading && users.length === 0) {
-    return (
-      <div className="page-container">
-        <h1 className="page-title">Home</h1>
-        <div className="loading">Loading dashboard...</div>
-      </div>
-    );
-  }
 
   return (
     <div className="page-container">
@@ -108,16 +72,16 @@ export const HomePage: React.FC = () => {
           <div
             key={summary.title}
             className={`summary-card border-l-4 ${summary.border}`}
-            onClick={() => navigate(summary.path)}
+            onClick={() => summary.path && navigate(summary.path)}
             role="button"
             tabIndex={0}
             onKeyDown={(e) => {
-              if (e.key === 'Enter') navigate(summary.path);
+              if (e.key === 'Enter' && summary.path) navigate(summary.path);
             }}
+            style={{ cursor: summary.path ? 'pointer' : 'default' }}
           >
-            <div className="summary-icon">{summary.icon}</div>
-            <div className="summary-value">{summary.value}</div>
-            <div className="summary-title">{summary.title}</div>
+            <div className="summary-icon-large">{summary.icon}</div>
+            <div className="summary-title-bold">{summary.title}</div>
           </div>
         ))}
       </div>

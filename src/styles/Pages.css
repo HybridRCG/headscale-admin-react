@@ -348,3 +348,15 @@
     justify-content: space-between;
   }
 }
+
+.summary-icon-large {
+  font-size: 4rem;
+  margin-bottom: 1rem;
+}
+
+.summary-title-bold {
+  font-size: 1.5rem;
+  font-weight: 700;
+  color: var(--color-text);
+  text-align: center;
+}

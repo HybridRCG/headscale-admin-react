@@ -26,21 +26,55 @@ const authenticateToken = (req, res, next) => {
   }
 };
 
+const getUserRoleFromACL = (email, aclPolicy) => {
+  if (!aclPolicy || !aclPolicy.groups) {
+    console.log(`No groups in ACL, defaulting to viewer`);
+    return 'viewer';
+  }
+  
+  const adminGroups = aclPolicy.tagOwners?.['tag:admin'] || [];
+  console.log(`${email} checking against admin groups:`, adminGroups);
+  
+  for (const groupName in aclPolicy.groups) {
+    const members = aclPolicy.groups[groupName];
+    if (members.includes(email)) {
+      console.log(`✓ ${email} in ${groupName}`);
+      if (adminGroups.includes(groupName)) {
+        console.log(`✓ ${groupName} is admin -> ADMIN ROLE`);
+        return 'admin';
+      }
+    }
+  }
+  
+  return 'viewer';
+};
+
 app.post('/api/auth/login', async (req, res) => {
   const { email, apiKey, headscaleUrl } = req.body;
   if (!email || !apiKey || !headscaleUrl) return res.status(400).json({ message: 'Missing fields' });
   try {
+    console.log(`\n[LOGIN] ${email}`);
+    
     await axios.get(`${headscaleUrl}/api/v1/user`, { headers: { Authorization: `Bearer ${apiKey}` }, timeout: 5000 });
+    console.log('✓ API key validated');
+    
+    const policyResponse = await axios.get(`${headscaleUrl}/api/v1/policy`, { headers: { Authorization: `Bearer ${apiKey}` }, timeout: 5000 });
+    
+    let aclPolicy = policyResponse.data;
+    if (typeof aclPolicy.policy === 'string') {
+      aclPolicy = JSON.parse(aclPolicy.policy);
+      console.log('✓ Parsed stringified policy');
+    }
+    
+    const role = getUserRoleFromACL(email, aclPolicy);
+    console.log(`Final role: ${role}\n`);
+    
     const username = email.split('@')[0];
-    const adminEmails = (process.env.ADMIN_EMAILS || '').split(',').map(e => e.trim());
-    const managerEmails = (process.env.MANAGER_EMAILS || '').split(',').map(e => e.trim());
-    let role = 'viewer';
-    if (adminEmails.includes(email)) role = 'admin';
-    else if (managerEmails.includes(email)) role = 'manager';
     userTokenMap.set(email, { apiKey, headscaleUrl, validatedAt: Date.now() });
     const sessionToken = jwt.sign({ email, username, role, id: email }, JWT_SECRET, { expiresIn: '24h' });
     res.json({ sessionToken, user: { email, username, role, id: email } });
   } catch (error) {
+    console.error('Login error:', error.message);
     res.status(401).json({ message: 'Invalid API key' });
   }
 });
@@ -59,27 +93,29 @@ app.use('/api/headscale', authenticateToken, async (req, res) => {
   if (!userEmail) return res.status(401).json({ message: 'Unauthorized' });
   const tokenData = userTokenMap.get(userEmail);
   if (!tokenData) return res.status(401).json({ message: 'Session expired' });
-  const targetPath = req.path;
+  
+  const targetPath = req.path.replace('/api/headscale', '');
   const targetUrl = `${tokenData.headscaleUrl}${targetPath}`;
+  
+  console.log(`Proxying ${req.method} ${req.path} -> ${targetUrl}`);
+  
   try {
-    const response = await axios({ method: req.method.toLowerCase(), url: targetUrl, headers: { ...req.headers, Authorization: `Bearer ${tokenData.apiKey}` }, data: req.body || undefined, timeout: 10000 });
+    const response = await axios({ method: req.method.toLowerCase(), url: targetUrl, headers: { Authorization: `Bearer ${tokenData.apiKey}` }, data: req.body || undefined, timeout: 10000 });
     res.status(response.status).json(response.data);
   } catch (error) {
+    console.error(`Proxy error for ${targetUrl}:`, error.message);
     if (error.response) res.status(error.response.status || 500).json({ message: error.response.data?.message || error.message });
-    else res.status(500).json({ message: 'Proxy error' });
+    else res.status(500).json({ message: `Proxy error: ${error.message}` });
   }
 });
 
 const buildPath = path.join(__dirname, 'build');
-
 app.use('/admin/static', express.static(path.join(buildPath, 'static')));
 app.use('/admin', express.static(buildPath, { index: false }));
 app.use('/admin', (req, res) => {
   res.sendFile(path.join(buildPath, 'index.html'));
 });
 
-app.get('/', (req, res) => {
-  res.redirect('/admin');
-});
+app.get('/', (req, res) => res.redirect('/admin'));
 
 app.listen(PORT, () => console.log(`✅ Server running on port ${PORT}`));
