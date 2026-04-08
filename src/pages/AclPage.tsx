@@ -17,7 +17,7 @@ export const AclPage: React.FC = () => {
     setLoading(true);
     setError('');
     try {
-      const response = await axios.get('http://localhost:3000/api/headscale/api/v1/policy');
+      const response = await axios.get('/admin/api/headscale/api/v1/policy');
       
       let policyData = response.data;
       if (typeof policyData.policy === 'string') {
@@ -37,7 +37,7 @@ export const AclPage: React.FC = () => {
     try {
       const policyObj = JSON.parse(aclContent);
       
-      await axios.post('http://localhost:3000/api/headscale/api/v1/policy', { policy: policyObj });
+      await axios.post('/admin/api/headscale/api/v1/policy', { policy: policyObj });
       alert('ACL policy saved successfully!');
       setEditing(false);
     } catch (err) {

@@ -21,7 +21,7 @@ export const RoutesPage: React.FC = () => {
   const fetchRoutes = async () => {
     setLoading(true);
     try {
-      const response = await axios.get('http://localhost:3000/api/headscale/api/v1/node');
+      const response = await axios.get('/admin/api/headscale/api/v1/node');
       const allNodes = response.data.nodes || [];
       
       const nodesWithRoutes = allNodes.filter((node: any) => 
@@ -41,9 +41,9 @@ export const RoutesPage: React.FC = () => {
     setApproving(`${nodeId}-${route}`);
     try {
       if (isApproved) {
-        await axios.post('http://localhost:3000/api/headscale/disapprove-route', { nodeId, route });
+        await axios.post('/admin/api/headscale/disapprove-route', { nodeId, route });
       } else {
-        await axios.post('http://localhost:3000/api/headscale/approve-route', { nodeId, route });
+        await axios.post('/admin/api/headscale/approve-route', { nodeId, route });
       }
       
       // Wait a moment for the backend to update, then refetch

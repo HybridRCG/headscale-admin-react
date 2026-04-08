@@ -57,7 +57,7 @@ export const UsersPage: React.FC = () => {
   const fetchUsers = async () => {
     setLoading(true);
     try {
-      const response = await axios.get('http://localhost:3000/api/headscale/api/v1/user');
+      const response = await axios.get('/admin/api/headscale/api/v1/user');
       setUsers(response.data.users || []);
     } catch (error) {
       console.error('Failed to fetch users:', error);
@@ -68,7 +68,7 @@ export const UsersPage: React.FC = () => {
 
   const fetchNodes = async () => {
     try {
-      const response = await axios.get('http://localhost:3000/api/headscale/api/v1/node');
+      const response = await axios.get('/admin/api/headscale/api/v1/node');
       setNodes(response.data.nodes || []);
     } catch (error) {
       console.error('Failed to fetch nodes:', error);
@@ -78,7 +78,7 @@ export const UsersPage: React.FC = () => {
   const fetchApiKeysForUser = async (userId: string) => {
     setLoadingApiKeys(prev => new Set(prev).add(userId));
     try {
-      const response = await axios.get('http://localhost:3000/api/headscale/api/v1/apikey');
+      const response = await axios.get('/admin/api/headscale/api/v1/apikey');
       setApiKeys(prev => new Map(prev).set(userId, response.data.apiKeys || []));
     } catch (error) {
       console.error('Failed to fetch API keys:', error);
@@ -94,7 +94,7 @@ export const UsersPage: React.FC = () => {
   const handleCreateUser = async () => {
     if (!newUsername.trim()) return;
     try {
-      await axios.post('http://localhost:3000/api/headscale/user/create', { username: newUsername, email: newUserEmail });
+      await axios.post('/admin/api/headscale/user/create', { username: newUsername, email: newUserEmail });
       await fetchUsers();
       setShowCreateUser(false);
       setNewUsername('');
@@ -112,7 +112,7 @@ export const UsersPage: React.FC = () => {
     }
     try {
       console.log(`Updating email for ${username} to ${newEmail}`);
-      await axios.post('http://localhost:3000/api/headscale/user/update-email', { username, email: newEmail });
+      await axios.post('/admin/api/headscale/user/update-email', { username, email: newEmail });
       await fetchUsers();
       setEditingEmailUserId(null);
       setNewEmail('');
@@ -126,7 +126,7 @@ export const UsersPage: React.FC = () => {
     try {
       const date = new Date();
       date.setDate(date.getDate() + 90);
-      const response = await axios.post('http://localhost:3000/api/headscale/api/v1/apikey', {
+      const response = await axios.post('/admin/api/headscale/api/v1/apikey', {
         expiration: date.toISOString(),
       });
       
@@ -144,7 +144,7 @@ export const UsersPage: React.FC = () => {
 
   const handleExpireApiKey = async (userId: string, prefix: string) => {
     try {
-      await axios.post('http://localhost:3000/api/headscale/api/v1/apikey/expire', { prefix });
+      await axios.post('/admin/api/headscale/api/v1/apikey/expire', { prefix });
       await fetchApiKeysForUser(userId);
     } catch (error) {
       console.error('Failed to expire API key:', error);
@@ -155,7 +155,7 @@ export const UsersPage: React.FC = () => {
   const handleRenameUser = async (userId: string) => {
     if (!newName.trim()) return;
     try {
-      await axios.post(`http://localhost:3000/api/headscale/api/v1/user/${userId}/rename/${newName}`);
+      await axios.post(`/api/headscale/api/v1/user/${userId}/rename/${newName}`);
       await fetchUsers();
       setRenamingUserId(null);
       setNewName('');
@@ -167,7 +167,7 @@ export const UsersPage: React.FC = () => {
 
   const handleDeleteUser = async (userId: string) => {
     try {
-      await axios.delete(`http://localhost:3000/api/headscale/api/v1/user/${userId}`);
+      await axios.delete(`/api/headscale/api/v1/user/${userId}`);
       await fetchUsers();
       setDeletingUserId(null);
     } catch (error) {

@@ -25,7 +25,7 @@ export interface AuthActions {
 
 export type AuthStore = AuthState & AuthActions;
 
-const API_BASE = process.env.REACT_APP_API_URL || 'http://localhost:3000/api';
+const API_BASE = process.env.REACT_APP_API_URL || '/admin/api';
 
 export const useAuthStore = create<AuthStore>((set) => ({
   user: null,
@@ -70,7 +70,6 @@ export const useAuthStore = create<AuthStore>((set) => ({
     } catch (err) {
       console.warn('Logout request failed, clearing local session anyway');
     }
-
     delete axios.defaults.headers.common['Authorization'];
     set({
       user: null,

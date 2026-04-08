@@ -12,6 +12,11 @@ const JWT_SECRET = process.env.JWT_SECRET || 'dev-secret-change-in-prod';
 app.use(express.json());
 app.use(cors());
 
+app.use((req, res, next) => {
+  console.log(`[${new Date().toISOString()}] ${req.method} ${req.path}`);
+  next();
+});
+
 const userTokenMap = new Map();
 
 const authenticateToken = (req, res, next) => {

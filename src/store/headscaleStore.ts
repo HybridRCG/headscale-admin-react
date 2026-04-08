@@ -71,7 +71,7 @@ export interface HeadscaleActions {
 
 export type HeadscaleStore = HeadscaleState & HeadscaleActions;
 
-const API_BASE = process.env.REACT_APP_API_URL || 'http://localhost:3000/api';
+const API_BASE = process.env.REACT_APP_API_URL || '/admin/api';
 const HEADSCALE_PROXY = `${API_BASE}/headscale`;
 
 export const useHeadscaleStore = create<HeadscaleStore>((set, get) => ({

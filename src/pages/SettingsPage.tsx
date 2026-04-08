@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import '../styles/Pages.css';
 
-const APP_VERSION = '0.3.0';
+const APP_VERSION = '0.4.3';
 
 export const SettingsPage: React.FC = () => {
   const [settings, setSettings] = useState({

@@ -29,10 +29,20 @@ function App() {
     const saved = localStorage.getItem('theme');
     return saved ? saved === 'dark' : false;
   });
+  const [appReady, setAppReady] = useState(false);
 
   useEffect(() => {
-    const restoreSession = useAuthStore.getState().restoreSession;
-    restoreSession().catch(() => {});
+    const init = async () => {
+      try {
+        const restoreSession = useAuthStore.getState().restoreSession;
+        await restoreSession();
+      } catch (err) {
+        // restoreSession failed, user is not authenticated
+        console.log('Session restore failed, redirecting to login');
+      }
+      setAppReady(true);
+    };
+    init();
   }, []);
 
   useEffect(() => {
@@ -43,6 +53,10 @@ function App() {
     }
     localStorage.setItem('theme', isDarkMode ? 'dark' : 'light');
   }, [isDarkMode]);
+
+  if (!appReady) {
+    return <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100vh' }}>Loading...</div>;
+  }
 
   return (
     <BrowserRouter basename="/admin">
@@ -56,7 +70,7 @@ function App() {
         <Route path="/acl" element={<PrivateRoute><AclPage /></PrivateRoute>} />
         <Route path="/dns" element={<PrivateRoute><DnsPage /></PrivateRoute>} />
         <Route path="/settings" element={<PrivateRoute><SettingsPage /></PrivateRoute>} />
-        <Route path="/" element={<Navigate to="/dashboard" />} />
+        <Route path="/" element={<Navigate to={isAuthenticated ? "/dashboard" : "/login"} />} />
       </Routes>
       {isAuthenticated && <Footer />}
     </BrowserRouter>

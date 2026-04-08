@@ -1,7 +1,7 @@
 {
   "name": "headscale-admin-react",
   "homepage": "/admin/",
-  "version": "0.1.0",
+  "version": "0.4.3",
   "private": true,
   "dependencies": {
     "@monaco-editor/react": "^4.7.0",
