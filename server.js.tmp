@@ -1,0 +1,57 @@
+app.post('/api/headscale/approve-route', authenticateToken, async (req, res) => {
+  const userEmail = req.user?.email;
+  if (!userEmail) return res.status(401).json({ message: 'Unauthorized' });
+  const tokenData = userTokenMap.get(userEmail);
+  if (!tokenData) return res.status(401).json({ message: 'Session expired' });
+  const { nodeId, route } = req.body;
+  if (!nodeId || !route) return res.status(400).json({ message: 'Missing nodeId or route' });
+  try {
+    console.log(`\n[APPROVE] Route: ${route}, NodeId: ${nodeId}`);
+    const nodeResponse = await axios.get(
+      `${tokenData.headscaleUrl}/api/v1/node/${nodeId}`,
+      { headers: { Authorization: `Bearer ${tokenData.apiKey}` }, timeout: 10000 }
+    );
+    const node = nodeResponse.data.node;
+    const newApproved = [...new Set([...(node.approvedRoutes || []), route])];
+    console.log(`[APPROVE] Updating routes to: ${newApproved.join(', ')}`);
+    const updateResponse = await axios.post(
+      `${tokenData.headscaleUrl}/api/v1/node/${nodeId}/approve_routes`,
+      { routes: newApproved },
+      { headers: { Authorization: `Bearer ${tokenData.apiKey}` }, timeout: 10000 }
+    );
+    console.log(`[APPROVE] Success`);
+    res.json({ message: 'Route approved', node: updateResponse.data.node });
+  } catch (error) {
+    console.error(`[APPROVE] Error:`, error.message);
+    res.status(500).json({ message: error.message });
+  }
+});
+
+app.post('/api/headscale/disapprove-route', authenticateToken, async (req, res) => {
+  const userEmail = req.user?.email;
+  if (!userEmail) return res.status(401).json({ message: 'Unauthorized' });
+  const tokenData = userTokenMap.get(userEmail);
+  if (!tokenData) return res.status(401).json({ message: 'Session expired' });
+  const { nodeId, route } = req.body;
+  if (!nodeId || !route) return res.status(400).json({ message: 'Missing nodeId or route' });
+  try {
+    console.log(`\n[DISAPPROVE] Route: ${route}, NodeId: ${nodeId}`);
+    const nodeResponse = await axios.get(
+      `${tokenData.headscaleUrl}/api/v1/node/${nodeId}`,
+      { headers: { Authorization: `Bearer ${tokenData.apiKey}` }, timeout: 10000 }
+    );
+    const node = nodeResponse.data.node;
+    const newApproved = (node.approvedRoutes || []).filter(r => r !== route);
+    console.log(`[DISAPPROVE] Updating routes to: ${newApproved.join(', ')}`);
+    const updateResponse = await axios.post(
+      `${tokenData.headscaleUrl}/api/v1/node/${nodeId}/approve_routes`,
+      { routes: newApproved },
+      { headers: { Authorization: `Bearer ${tokenData.apiKey}` }, timeout: 10000 }
+    );
+    console.log(`[DISAPPROVE] Success`);
+    res.json({ message: 'Route disapproved', node: updateResponse.data.node });
+  } catch (error) {
+    console.error(`[DISAPPROVE] Error:`, error.message);
+    res.status(500).json({ message: error.message });
+  }
+});

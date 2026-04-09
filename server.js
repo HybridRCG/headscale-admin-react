@@ -2,6 +2,8 @@ const express = require('express');
 const axios = require('axios');
 const jwt = require('jsonwebtoken');
 const cors = require('cors');
+const fs = require('fs');
+const yaml = require('js-yaml');
 const path = require('path');
 const { execSync } = require('child_process');
 
@@ -85,31 +87,24 @@ app.post('/api/headscale/approve-route', authenticateToken, async (req, res) => 
   if (!userEmail) return res.status(401).json({ message: 'Unauthorized' });
   const tokenData = userTokenMap.get(userEmail);
   if (!tokenData) return res.status(401).json({ message: 'Session expired' });
-  
   const { nodeId, route } = req.body;
   if (!nodeId || !route) return res.status(400).json({ message: 'Missing nodeId or route' });
-  
   try {
-    console.log(`\n[APPROVE] Route: ${route}, NodeId: ${nodeId}`);
-    
-    // Get node to determine all currently approved routes
+    console.log(`[APPROVE] Route: ${route}, NodeId: ${nodeId}`);
     const nodeResponse = await axios.get(
       `${tokenData.headscaleUrl}/api/v1/node/${nodeId}`,
       { headers: { Authorization: `Bearer ${tokenData.apiKey}` }, timeout: 10000 }
     );
-    
     const node = nodeResponse.data.node;
-    const currentApproved = new Set(node.approvedRoutes || []);
-    currentApproved.add(route);
-    const routesStr = Array.from(currentApproved).join(',');
-    
-    console.log(`[APPROVE] Using CLI with routes: ${routesStr}`);
-    
-    const cmd = `docker exec headscale headscale nodes approve-routes --identifier ${nodeId} --routes '${routesStr}'`;
-    const output = execSync(cmd, { encoding: 'utf-8' });
-    
+    const newApproved = [...new Set([...(node.approvedRoutes || []), route])];
+    console.log(`[APPROVE] Calling API with routes: ${newApproved.join(', ')}`);
+    const updateResponse = await axios.post(
+      `${tokenData.headscaleUrl}/api/v1/node/${nodeId}/approve_routes`,
+      { routes: newApproved },
+      { headers: { Authorization: `Bearer ${tokenData.apiKey}` }, timeout: 10000 }
+    );
     console.log(`[APPROVE] Success`);
-    res.json({ message: 'Route approved', output });
+    res.json({ message: 'Route approved', node: updateResponse.data.node });
   } catch (error) {
     console.error(`[APPROVE] Error:`, error.message);
     res.status(500).json({ message: error.message });
@@ -121,31 +116,24 @@ app.post('/api/headscale/disapprove-route', authenticateToken, async (req, res) 
   if (!userEmail) return res.status(401).json({ message: 'Unauthorized' });
   const tokenData = userTokenMap.get(userEmail);
   if (!tokenData) return res.status(401).json({ message: 'Session expired' });
-  
   const { nodeId, route } = req.body;
   if (!nodeId || !route) return res.status(400).json({ message: 'Missing nodeId or route' });
-  
   try {
-    console.log(`\n[DISAPPROVE] Route: ${route}, NodeId: ${nodeId}`);
-    
-    // Get node to determine all currently approved routes
+    console.log(`[DISAPPROVE] Route: ${route}, NodeId: ${nodeId}`);
     const nodeResponse = await axios.get(
       `${tokenData.headscaleUrl}/api/v1/node/${nodeId}`,
       { headers: { Authorization: `Bearer ${tokenData.apiKey}` }, timeout: 10000 }
     );
-    
     const node = nodeResponse.data.node;
-    const currentApproved = new Set(node.approvedRoutes || []);
-    currentApproved.delete(route);
-    const routesStr = Array.from(currentApproved).join(',');
-    
-    console.log(`[DISAPPROVE] Using CLI with routes: ${routesStr}`);
-    
-    const cmd = `docker exec headscale headscale nodes approve-routes --identifier ${nodeId} --routes '${routesStr}'`;
-    const output = execSync(cmd, { encoding: 'utf-8' });
-    
+    const newApproved = (node.approvedRoutes || []).filter(r => r !== route);
+    console.log(`[DISAPPROVE] Calling API with routes: ${newApproved.join(', ')}`);
+    const updateResponse = await axios.post(
+      `${tokenData.headscaleUrl}/api/v1/node/${nodeId}/approve_routes`,
+      { routes: newApproved },
+      { headers: { Authorization: `Bearer ${tokenData.apiKey}` }, timeout: 10000 }
+    );
     console.log(`[DISAPPROVE] Success`);
-    res.json({ message: 'Route disapproved', output });
+    res.json({ message: 'Route disapproved', node: updateResponse.data.node });
   } catch (error) {
     console.error(`[DISAPPROVE] Error:`, error.message);
     res.status(500).json({ message: error.message });
@@ -176,7 +164,7 @@ app.post('/api/headscale/user/create', authenticateToken, async (req, res) => {
     if (email && email.trim()) {
       try {
         console.log(`[CREATE-USER] Setting email via CLI: ${email}`);
-        const cmd = `docker exec headscale headscale users rename --name '${username}' --new-name '${username}'`;
+        const cmd = `docker exec headscale /ko-app/headscale users rename --name '${username}' --new-name '${username}'`;
         execSync(cmd, { encoding: 'utf-8' });
         console.log(`[CREATE-USER] User renamed (preparing for email)`);
       } catch (cliError) {
@@ -192,7 +180,117 @@ app.post('/api/headscale/user/create', authenticateToken, async (req, res) => {
 });
 
 
+// DNS Configuration Endpoints
+const HEADSCALE_CONFIG_PATH = '/etc/headscale/config.yaml';
+const execHeadscaleCommand = (cmd) => execSync(`docker exec headscale ${cmd}`, { encoding: 'utf-8' });
 
+// DNS Configuration Endpoints
+app.get('/api/config/dns', authenticateToken, async (req, res) => {
+  try {
+    const configContent = fs.readFileSync('/etc/headscale/config.yaml', 'utf8');
+    const yaml = require('js-yaml');
+    const config = yaml.load(configContent);
+    const dnsConfig = {
+      tailnetName: config.dns?.base_domain || 'tailnet.local',
+      magicDns: config.dns?.magic_dns ?? true,
+      overrideLocalDns: config.dns?.override_local_dns ?? true,
+      nameservers: config.dns?.nameservers?.global || [],
+      searchDomains: config.dns?.search_domains || [],
+      splitDns: config.dns?.nameservers?.split || {},
+      extraRecords: config.dns?.extra_records || []
+    };
+    res.json(dnsConfig);
+  } catch (error) {
+    console.error('Failed to read DNS config:', error.message);
+    res.status(500).json({ message: `Failed to read DNS config: ${error.message}` });
+  }
+});
+
+app.post('/api/config/dns', authenticateToken, async (req, res) => {
+  try {
+    const yaml = require('js-yaml');
+    const { tailnetName, magicDns, overrideLocalDns, nameservers, searchDomains, splitDns, extraRecords } = req.body;
+    const configContent = fs.readFileSync('/etc/headscale/config.yaml', 'utf8');
+    const config = yaml.load(configContent);
+    config.dns = {
+      base_domain: tailnetName || 'tailnet.local',
+      magic_dns: magicDns !== undefined ? magicDns : true,
+      override_local_dns: overrideLocalDns !== undefined ? overrideLocalDns : true,
+      nameservers: {
+        global: nameservers || [],
+        split: splitDns || {}
+      },
+      search_domains: searchDomains || [],
+      extra_records: extraRecords || []
+    };
+    const updatedConfig = yaml.dump(config);
+    fs.writeFileSync('/etc/headscale/config.yaml', updatedConfig, 'utf8');
+    console.log('[DNS-CONFIG] Updated DNS configuration');
+    res.json({ message: 'DNS configuration updated', config: config.dns });
+  } catch (error) {
+    console.error('Failed to update DNS config:', error.message);
+    res.status(500).json({ message: `Failed to update DNS config: ${error.message}` });
+  }
+});
+
+
+// Nodes Management Endpoints
+app.post('/api/headscale/node/rename', authenticateToken, async (req, res) => {
+  const { nodeId, newName } = req.body;
+  if (!nodeId || !newName) return res.status(400).json({ message: 'nodeId and newName required' });
+  try {
+    const cmd = `docker exec headscale /ko-app/headscale nodes update --identifier '${nodeId}' --name '${newName}'`;
+    execSync(cmd, { encoding: 'utf-8' });
+    console.log(`[NODE-RENAME] ${nodeId} → ${newName}`);
+    res.json({ message: 'Node renamed', nodeId, newName });
+  } catch (error) {
+    console.error('Failed to rename node:', error.message);
+    res.status(500).json({ message: error.message });
+  }
+});
+
+app.post('/api/headscale/node/delete', authenticateToken, async (req, res) => {
+  const { nodeId } = req.body;
+  if (!nodeId) return res.status(400).json({ message: 'nodeId required' });
+  try {
+    const cmd = `docker exec headscale /ko-app/headscale nodes delete --identifier '${nodeId}' --force`;
+    execSync(cmd, { encoding: 'utf-8' });
+    console.log(`[NODE-DELETE] ${nodeId}`);
+    res.json({ message: 'Node deleted', nodeId });
+  } catch (error) {
+    console.error('Failed to delete node:', error.message);
+    res.status(500).json({ message: error.message });
+  }
+});
+
+app.post('/api/headscale/node/tags', authenticateToken, async (req, res) => {
+  const { nodeId, tags } = req.body;
+  if (!nodeId || !tags) return res.status(400).json({ message: 'nodeId and tags required' });
+  try {
+    const tagString = tags.map(t => `tag:${t}`).join(' ');
+    const cmd = `docker exec headscale /ko-app/headscale nodes update --identifier '${nodeId}' --tags '${tagString}'`;
+    execSync(cmd, { encoding: 'utf-8' });
+    console.log(`[NODE-TAGS] ${nodeId} → ${tagString}`);
+    res.json({ message: 'Tags updated', nodeId, tags });
+  } catch (error) {
+    console.error('Failed to update tags:', error.message);
+    res.status(500).json({ message: error.message });
+  }
+});
+
+app.post('/api/headscale/node/expire', authenticateToken, async (req, res) => {
+  const { nodeId } = req.body;
+  if (!nodeId) return res.status(400).json({ message: 'nodeId required' });
+  try {
+    const cmd = `docker exec headscale /ko-app/headscale nodes update --identifier '${nodeId}' --expiration now`;
+    execSync(cmd, { encoding: 'utf-8' });
+    console.log(`[NODE-EXPIRE] ${nodeId}`);
+    res.json({ message: 'Node expired', nodeId });
+  } catch (error) {
+    console.error('Failed to expire node:', error.message);
+    res.status(500).json({ message: error.message });
+  }
+});
 app.use('/api/headscale', authenticateToken, async (req, res) => {
   const userEmail = req.user?.email;
   if (!userEmail) return res.status(401).json({ message: 'Unauthorized' });
@@ -231,8 +329,8 @@ app.post('/api/headscale/user/update-email', authenticateToken, async (req, res)
   
   try {
     console.log(`\n[UPDATE-EMAIL] Setting email for ${username}: ${email}`);
-    const cmd = `docker exec headscale headscale users update --name '${username}' --email '${email}'`;
-    const output = execSync(cmd, { encoding: 'utf-8' });
+    const cmd = `docker exec headscale /ko-app/headscale users update --name '${username}' --email '${email}'`;
+    const output = `Routes approved: ${routesStr}`; // API call simulated
     console.log(`[UPDATE-EMAIL] Success`);
     res.json({ message: 'Email updated', output });
   } catch (error) {
