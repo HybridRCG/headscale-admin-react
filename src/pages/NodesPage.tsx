@@ -19,6 +19,7 @@ export const NodesPage: React.FC = () => {
   const [users, setUsers] = useState<string[]>([]);
   const [groups, setGroups] = useState<string[]>([]);
   const [groupUsers, setGroupUsers] = useState<Record<string, string[]>>({});
+  const [userEmailMap, setUserEmailMap] = useState<Record<string, string>>({});
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
   const [filterStatus, setFilterStatus] = useState('all');
@@ -43,7 +44,7 @@ export const NodesPage: React.FC = () => {
 
   useEffect(() => {
     applyFilters();
-  }, [allNodes, searchTerm, filterStatus, selectedUser, selectedGroup, groupUsers]);
+  }, [allNodes, searchTerm, filterStatus, selectedUser, selectedGroup, groupUsers, userEmailMap]);
 
   const fetchNodes = async () => {
     setLoading(true);
@@ -62,6 +63,11 @@ export const NodesPage: React.FC = () => {
       const response = await axios.get(`${API_BASE}/headscale/api/v1/user`);
       const userList = response.data.users?.map((u: any) => u.name) || [];
       setUsers(userList);
+      
+      // Fetch user-email mapping from new endpoint
+      const mappingResponse = await axios.get(`${API_BASE}/headscale/user-mapping`);
+      console.log('User email map from API:', mappingResponse.data);
+      setUserEmailMap(mappingResponse.data);
     } catch (err) {
       console.error('Failed to fetch users:', err);
     }
@@ -109,7 +115,9 @@ export const NodesPage: React.FC = () => {
         console.log(`Checking ${node.name}: user=${nodeUser || 'N/A'}, group=${selectedGroup}, groupUsers=${JSON.stringify(groupUsersForGroup)}, match=${nodeUser ? (groupUsersForGroup?.includes(nodeUser) || false) : false}`);
       }
       if (selectedGroup !== 'all' && node.user?.name) {
-        groupMatch = groupUsers[selectedGroup]?.includes(node.user.name) || false;
+        const nodeUserEmail = userEmailMap[node.user.name];
+        const groupUsersForGroup = groupUsers[selectedGroup] || [];
+        groupMatch = nodeUserEmail ? groupUsersForGroup.includes(nodeUserEmail) : false;
       }
       
       const statusMatch = filterStatus === 'all' ||

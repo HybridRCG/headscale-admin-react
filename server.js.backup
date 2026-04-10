@@ -47,34 +47,23 @@ const getUserRoleFromACL = (email, aclPolicy) => {
 };
 
 app.post('/api/auth/login', async (req, res) => {
-  const { username, apiKey, headscaleUrl } = req.body;
-  if (!username || !apiKey || !headscaleUrl) return res.status(400).json({ message: 'Missing fields: username, apiKey, headscaleUrl' });
+  const { email, apiKey, headscaleUrl } = req.body;
+  if (!email || !apiKey || !headscaleUrl) return res.status(400).json({ message: 'Missing fields' });
   try {
-    console.log(`\n[LOGIN] ${username}`);
+    console.log(`\n[LOGIN] ${email}`);
     await axios.get(`${headscaleUrl}/api/v1/user`, { headers: { Authorization: `Bearer ${apiKey}` }, timeout: 5000 });
     console.log('✓ API key validated');
     
-    console.log('[LOGIN] Fetching policy...');
     const policyResponse = await axios.get(`${headscaleUrl}/api/v1/policy`, { headers: { Authorization: `Bearer ${apiKey}` }, timeout: 5000 });
     let aclPolicy = policyResponse.data;
     if (typeof aclPolicy.policy === 'string') {
       aclPolicy = JSON.parse(aclPolicy.policy);
     }
     
-    console.log('[LOGIN] ACL Policy users:', Object.keys(aclPolicy.users || {}));
-    let usersMapping;
-    try {
-      usersMapping = JSON.parse(fs.readFileSync('/etc/headscale/users-mapping.json', 'utf8'));
-      console.log('[LOGIN] Users mapping loaded:', Object.keys(usersMapping));
-    } catch (err) {
-      console.error('[LOGIN] Failed to load users mapping:', err.message);
-      return res.status(500).json({ message: 'Failed to load users mapping' });
-    }
-    const email = usersMapping[username];
-    console.log(`[LOGIN] Looking up email for username: ${username}`);
-    if (!email) return res.status(400).json({ message: `Username "${username}" not found in ACL users mapping` });
     const role = getUserRoleFromACL(email, aclPolicy);
+    console.log(`Final role: ${role}\n`);
     
+    const username = email.split('@')[0];
     userTokenMap.set(email, { apiKey, headscaleUrl, validatedAt: Date.now() });
     const sessionToken = jwt.sign({ email, username, role, id: email }, JWT_SECRET, { expiresIn: '24h' });
     res.json({ sessionToken, user: { email, username, role, id: email } });
@@ -331,37 +320,6 @@ app.get('/api/headscale/user-mapping', authenticateToken, async (req, res) => {
     res.status(500).json({ message: e.message });
   }
 });
-
-// Move node to different user - proper Headscale workflow
-// This deletes the node and returns instructions for re-registration under new user
-
-
-// Move node to different user - proper Headscale workflow
-// This deletes the node and returns instructions for re-registration under new user
-app.post('/api/headscale/node/move-user', authenticateToken, async (req, res) => {
-  const { nodeId, newUser } = req.body;
-  if (!nodeId || !newUser) return res.status(400).json({ message: 'nodeId and newUser required' });
-  try {
-    const userEmail = req.user.email;
-    const tokenData = userTokenMap.get(userEmail);
-    if (!tokenData) return res.status(401).json({ message: 'Session expired' });
-    const usersResp = await axios.get(tokenData.headscaleUrl + '/api/v1/user', { headers: { Authorization: 'Bearer ' + tokenData.apiKey }, timeout: 10000 });
-    const targetUser = usersResp.data.users.find(u => u.name === newUser);
-    if (!targetUser) return res.status(400).json({ message: 'User not found' });
-    const nodesResp = await axios.get(tokenData.headscaleUrl + '/api/v1/node', { headers: { Authorization: 'Bearer ' + tokenData.apiKey }, timeout: 10000 });
-    const node = nodesResp.data.nodes.find(n => n.id.toString() === nodeId.toString());
-    if (!node) return res.status(400).json({ message: 'Node not found' });
-    await axios.delete(tokenData.headscaleUrl + '/api/v1/node/' + nodeId, { headers: { Authorization: 'Bearer ' + tokenData.apiKey }, timeout: 10000 });
-    const preauthResp = await axios.post(tokenData.headscaleUrl + '/api/v1/preauthkey', { user: newUser, ephemeral: false }, { headers: { Authorization: 'Bearer ' + tokenData.apiKey }, timeout: 10000 });
-    const newKey = preauthResp.data.pre_auth_key.key;
-    console.log('[NODE-MOVE-USER] Node ' + nodeId + ' (' + node.hostname + ') deleted. New pre-auth key created for user ' + newUser);
-    res.json({ message: 'Node deleted and new pre-auth key created', nodeId, hostname: node.hostname, newUser, newKey, instructions: 'Device must reconnect with: tailscale login --auth-key=' + newKey });
-  } catch (error) {
-    console.error('Failed to move node to user:', error.message);
-    res.status(500).json({ message: error.message });
-  }
-});
-
 
 app.use('/api/headscale', authenticateToken, async (req, res) => {
   const userEmail = req.user?.email;

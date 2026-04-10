@@ -4,7 +4,7 @@ import { useAuthStore } from '../store/authStore';
 import '../styles/LoginPage.css';
 
 export const LoginPage: React.FC = () => {
-  const [email, setEmail] = useState('');
+  const [username, setUsername] = useState('');
   const [apiKey, setApiKey] = useState('');
   const [headscaleUrl, setHeadscaleUrl] = useState(
     process.env.REACT_APP_HEADSCALE_URL || 'https://hs.groblers.co.uk'
@@ -28,7 +28,7 @@ export const LoginPage: React.FC = () => {
     setError('');
 
     try {
-      await login(email, apiKey, headscaleUrl);
+      await login(username, apiKey, headscaleUrl);
       navigate('/dashboard');
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Authentication failed');
@@ -47,18 +47,20 @@ export const LoginPage: React.FC = () => {
 
         <form onSubmit={handleSubmit} className="login-form">
           <div className="form-group">
-            <label htmlFor="email">Email Address</label>
+            <label htmlFor="username">Username (e.g., Hybrid)</label>
             <input
-              id="email"
-              type="email"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              placeholder="your@email.com"
+              id="username"
+              type="text"
+              autoComplete="off"
+              inputMode="text"
+              value={username}
+              onChange={(e) => setUsername(e.target.value)}
+              placeholder="e.g., Admin (admin), Hybrid, it"
               required
               disabled={loading}
               className="form-input"
             />
-            <small>Your headscale user email</small>
+            <small>Your headscale username</small>
           </div>
 
           <div className="form-group">
@@ -105,7 +107,7 @@ export const LoginPage: React.FC = () => {
 
           <button
             type="submit"
-            disabled={loading || !email || !apiKey}
+            disabled={loading || !username || !apiKey}
             className="btn btn-primary btn-submit"
           >
             {loading ? 'Authenticating...' : 'Login'}
@@ -113,7 +115,7 @@ export const LoginPage: React.FC = () => {
         </form>
 
         <div className="login-footer">
-          <p className="footer-version">v0.4.5</p>
+          <p className="footer-version">v0.4.8</p>
           <p className="footer-text">
             Your API key is sent securely to the backend and never stored in your browser.
           </p>

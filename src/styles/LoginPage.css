@@ -29,7 +29,7 @@
 
 .login-header p {
   margin: 0.5rem 0 0 0;
-  color: #6b7280;
+  color: #4b5563;
   font-size: 0.95rem;
 }
 
@@ -68,7 +68,7 @@
 
 .form-input:disabled {
   background-color: #f3f4f6;
-  color: #9ca3af;
+  color: #374151;
   cursor: not-allowed;
 }
 
@@ -106,7 +106,7 @@
 }
 
 .form-group small {
-  color: #9ca3af;
+  color: #374151;
   font-size: 0.8rem;
 }
 
@@ -150,7 +150,7 @@
 }
 
 .footer-text {
-  color: #9ca3af;
+  color: #374151;
   font-size: 0.8rem;
   margin: 0;
 }

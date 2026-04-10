@@ -34,11 +34,11 @@ export const useAuthStore = create<AuthStore>((set) => ({
   error: null,
   sessionToken: null,
 
-  login: async (email: string, apiKey: string, headscaleUrl: string) => {
+  login: async (username: string, apiKey: string, headscaleUrl: string) => {
     set({ isLoading: true, error: null });
     try {
       const response = await axios.post(`${API_BASE}/auth/login`, {
-        email,
+        username,
         apiKey,
         headscaleUrl,
       });

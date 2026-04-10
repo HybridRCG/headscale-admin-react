@@ -1,6 +1,8 @@
 FROM node:20-alpine
-
 WORKDIR /app
+
+# Install docker CLI
+RUN apk add --no-cache docker-cli
 
 # Copy package files
 COPY package.json package-lock.json ./
@@ -13,5 +15,4 @@ COPY server.js ./
 COPY build/ ./build/
 
 EXPOSE 3000
-
 CMD ["node", "server.js"]
