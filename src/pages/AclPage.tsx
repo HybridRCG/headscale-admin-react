@@ -1,110 +1,152 @@
-import React, { useEffect, useState } from 'react';
-import Editor from '@monaco-editor/react';
+import React, { useState, useEffect } from 'react';
 import axios from 'axios';
-import '../styles/Pages.css';
+import '../styles/AclEditorPage.css';
+
+const API_BASE = process.env.REACT_APP_API_URL || '/admin/api';
+
+interface ACL {
+  groups: { [key: string]: string[] };
+  tagOwners: { [key: string]: string[] };
+  hosts: { [key: string]: string };
+  acls: Array<{
+    '#ha-meta'?: { name: string; open: boolean };
+    action: string;
+    src: string[];
+    dst: string[];
+    proto?: string;
+  }>;
+  ssh: Array<{
+    '#ha-meta'?: { name: string; open: boolean };
+    action: string;
+    src: string[];
+    dst: string[];
+  }>;
+}
 
 export const AclPage: React.FC = () => {
-  const [aclContent, setAclContent] = useState('');
-  const [loading, setLoading] = useState(true);
-  const [editing, setEditing] = useState(false);
+  const [acl, setAcl] = useState<ACL | null>(null);
+  const [loading, setLoading] = useState(false);
+  const [activeTab, setActiveTab] = useState(0);
   const [error, setError] = useState('');
 
+  const tabs = [
+    { name: 'Groups', icon: '👥' },
+    { name: 'Tag Owners', icon: '🏷️' },
+    { name: 'Hosts', icon: '🖥️' },
+    { name: 'Policies', icon: '🔒' },
+    { name: 'SSH', icon: '🔐' },
+    { name: 'Config', icon: '⚙️' }
+  ];
+
   useEffect(() => {
-    fetchACL();
+    fetchAcl();
   }, []);
 
-  const fetchACL = async () => {
+  const fetchAcl = async () => {
     setLoading(true);
-    setError('');
     try {
-      const response = await axios.get('/admin/api/headscale/api/v1/policy');
-      
-      let policyData = response.data;
-      if (typeof policyData.policy === 'string') {
-        policyData = JSON.parse(policyData.policy);
-      }
-      
-      setAclContent(JSON.stringify(policyData, null, 2));
+      const response = await axios.get(`${API_BASE}/headscale/acl`);
+      setAcl(response.data);
+      setError('');
     } catch (err) {
-      setError('Failed to load ACL policy');
-      console.error('ACL fetch error:', err);
+      setError(err instanceof Error ? err.message : 'Failed to load ACL');
     } finally {
       setLoading(false);
     }
   };
 
-  const handleSave = async () => {
+  const saveAcl = async () => {
+    if (!acl) return;
+    setLoading(true);
     try {
-      const policyObj = JSON.parse(aclContent);
-      
-      await axios.post('/admin/api/headscale/api/v1/policy', { policy: policyObj });
-      alert('ACL policy saved successfully!');
-      setEditing(false);
+      await axios.post(`${API_BASE}/headscale/acl`, acl);
+      setError('');
+      alert('ACL saved successfully!');
     } catch (err) {
-      setError('Failed to save ACL policy. Invalid JSON or API error.');
-      console.error('Save error:', err);
+      setError(err instanceof Error ? err.message : 'Failed to save ACL');
+    } finally {
+      setLoading(false);
     }
   };
 
-  const handleCancel = () => {
-    fetchACL();
-    setEditing(false);
-  };
+  if (!acl) return <div className="acl-container">Loading...</div>;
 
   return (
-    <div className="page-container">
-      <h1 className="page-title">ACL Editor</h1>
-
-      <div style={{ marginBottom: '1rem', display: 'flex', gap: '0.5rem' }}>
-        <button className="btn btn-primary" onClick={fetchACL} disabled={loading || editing}>
-          🔄 Refresh
+    <div className="acl-container">
+      <div className="acl-header">
+        <h1>ACL Editor</h1>
+        <button onClick={saveAcl} disabled={loading} className="btn-save">
+          💾 Save ACL
         </button>
-        <button
-          className="btn btn-primary"
-          onClick={() => {
-            if (editing) {
-              handleSave();
-            } else {
-              setEditing(true);
-            }
-          }}
-          disabled={loading}
-        >
-          {editing ? '💾 Save' : '✏️ Edit'}
-        </button>
-        {editing && (
-          <button className="btn btn-primary" onClick={handleCancel} style={{ backgroundColor: '#ef4444' }}>
-            ❌ Cancel
-          </button>
-        )}
       </div>
 
-      {error && (
-        <div style={{ backgroundColor: '#7f1d1d', color: '#fecaca', padding: '1rem', borderRadius: '0.375rem', marginBottom: '1rem' }}>
-          {error}
-        </div>
-      )}
+      <div className="acl-tabs">
+        {tabs.map((tab, idx) => (
+          <button
+            key={idx}
+            onClick={() => setActiveTab(idx)}
+            className={`tab ${activeTab === idx ? 'active' : ''}`}
+          >
+            {tab.icon} {tab.name}
+          </button>
+        ))}
+      </div>
 
-      {loading ? (
-        <div className="loading">Loading ACL policy...</div>
-      ) : (
-        <div style={{ height: '600px', border: '1px solid #374151', borderRadius: '0.375rem', overflow: 'hidden' }}>
-          <Editor
-            height="100%"
-            language="json"
-            value={aclContent}
-            onChange={(value) => setAclContent(value || '')}
-            theme="vs-dark"
-            options={{
-              minimap: { enabled: false },
-              readOnly: !editing,
-              wordWrap: 'on',
-              formatOnPaste: true,
-              formatOnType: true,
-            }}
-          />
-        </div>
-      )}
+      {error && <div className="error-message">{error}</div>}
+
+      <div className="acl-content">
+        {activeTab === 0 && <GroupsTab acl={acl} setAcl={setAcl} />}
+        {activeTab === 1 && <TagOwnersTab acl={acl} setAcl={setAcl} />}
+        {activeTab === 2 && <HostsTab acl={acl} setAcl={setAcl} />}
+        {activeTab === 3 && <PoliciesTab acl={acl} setAcl={setAcl} />}
+        {activeTab === 4 && <SshTab acl={acl} setAcl={setAcl} />}
+        {activeTab === 5 && <ConfigTab acl={acl} setAcl={setAcl} />}
+      </div>
     </div>
   );
 };
+
+// Placeholder components
+const GroupsTab: React.FC<{ acl: ACL; setAcl: (acl: ACL) => void }> = ({ acl, setAcl }) => (
+  <div className="tab-content">
+    <h2>Groups</h2>
+    <pre>{JSON.stringify(acl.groups, null, 2)}</pre>
+  </div>
+);
+
+const TagOwnersTab: React.FC<{ acl: ACL; setAcl: (acl: ACL) => void }> = ({ acl, setAcl }) => (
+  <div className="tab-content">
+    <h2>Tag Owners</h2>
+    <pre>{JSON.stringify(acl.tagOwners, null, 2)}</pre>
+  </div>
+);
+
+const HostsTab: React.FC<{ acl: ACL; setAcl: (acl: ACL) => void }> = ({ acl, setAcl }) => (
+  <div className="tab-content">
+    <h2>Hosts</h2>
+    <pre>{JSON.stringify(acl.hosts, null, 2)}</pre>
+  </div>
+);
+
+const PoliciesTab: React.FC<{ acl: ACL; setAcl: (acl: ACL) => void }> = ({ acl, setAcl }) => (
+  <div className="tab-content">
+    <h2>Policies</h2>
+    <pre>{JSON.stringify(acl.acls, null, 2)}</pre>
+  </div>
+);
+
+const SshTab: React.FC<{ acl: ACL; setAcl: (acl: ACL) => void }> = ({ acl, setAcl }) => (
+  <div className="tab-content">
+    <h2>SSH Rules</h2>
+    <pre>{JSON.stringify(acl.ssh, null, 2)}</pre>
+  </div>
+);
+
+const ConfigTab: React.FC<{ acl: ACL; setAcl: (acl: ACL) => void }> = ({ acl, setAcl }) => (
+  <div className="tab-content">
+    <h2>Config</h2>
+    <p>Raw JSON Editor</p>
+    <textarea rows={20} defaultValue={JSON.stringify(acl, null, 2)} />
+  </div>
+);
+

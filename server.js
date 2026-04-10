@@ -363,6 +363,38 @@ app.post('/api/headscale/node/move-user', authenticateToken, async (req, res) =>
 });
 
 
+// ACL Management Endpoints
+app.get('/api/headscale/acl', authenticateToken, async (req, res) => {
+  try {
+    const userEmail = req.user.email;
+    const tokenData = userTokenMap.get(userEmail);
+    if (!tokenData) return res.status(401).json({ message: 'Session expired' });
+    const policyResp = await axios.get(`${tokenData.headscaleUrl}/api/v1/policy`, { headers: { Authorization: `Bearer ${tokenData.apiKey}` }, timeout: 10000 });
+    let policy = policyResp.data.policy;
+    if (typeof policy === 'string') policy = JSON.parse(policy);
+    res.json(policy);
+  } catch (error) {
+    console.error('Failed to get ACL:', error.message);
+    res.status(500).json({ message: error.message });
+  }
+});
+
+app.post('/api/headscale/acl', authenticateToken, async (req, res) => {
+  const { groups, tagOwners, hosts, acls, ssh } = req.body;
+  try {
+    const userEmail = req.user.email;
+    const tokenData = userTokenMap.get(userEmail);
+    if (!tokenData) return res.status(401).json({ message: 'Session expired' });
+    const policy = { groups, tagOwners, hosts, acls, ssh };
+    const updateResp = await axios.post(`${tokenData.headscaleUrl}/api/v1/policy`, { policy: JSON.stringify(policy) }, { headers: { Authorization: `Bearer ${tokenData.apiKey}` }, timeout: 10000 });
+    console.log('[ACL] Policy updated');
+    res.json({ message: 'ACL updated', policy });
+  } catch (error) {
+    console.error('Failed to update ACL:', error.message);
+    res.status(500).json({ message: error.message });
+  }
+});
+
 app.use('/api/headscale', authenticateToken, async (req, res) => {
   const userEmail = req.user?.email;
   if (!userEmail) return res.status(401).json({ message: 'Unauthorized' });
