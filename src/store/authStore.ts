@@ -17,7 +17,7 @@ export interface AuthState {
 }
 
 export interface AuthActions {
-  login: (email: string, apiKey: string, headscaleUrl: string) => Promise<void>;
+  login: (email: string, apiKey: string) => Promise<void>;
   logout: () => Promise<void>;
   restoreSession: () => Promise<void>;
   clearError: () => void;
@@ -34,13 +34,12 @@ export const useAuthStore = create<AuthStore>((set) => ({
   error: null,
   sessionToken: null,
 
-  login: async (username: string, apiKey: string, headscaleUrl: string) => {
+  login: async (username: string, apiKey: string) => {
     set({ isLoading: true, error: null });
     try {
       const response = await axios.post(`${API_BASE}/auth/login`, {
         username,
         apiKey,
-        headscaleUrl,
       });
 
       const { sessionToken, user } = response.data;

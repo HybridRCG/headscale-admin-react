@@ -6,9 +6,6 @@ import '../styles/LoginPage.css';
 export const LoginPage: React.FC = () => {
   const [username, setUsername] = useState('');
   const [apiKey, setApiKey] = useState('');
-  const [headscaleUrl, setHeadscaleUrl] = useState(
-    process.env.REACT_APP_HEADSCALE_URL || 'https://hs.groblers.co.uk'
-  );
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [showPassword, setShowPassword] = useState(false);
@@ -24,16 +21,11 @@ export const LoginPage: React.FC = () => {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    setLoading(true);
-    setError('');
-
     try {
-      await login(username, apiKey, headscaleUrl);
+      await login(username, apiKey);
       navigate('/dashboard');
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Authentication failed');
-    } finally {
-      setLoading(false);
     }
   };
 
@@ -86,21 +78,6 @@ export const LoginPage: React.FC = () => {
               </button>
             </div>
             <small>Your personal Headscale API key or admin token</small>
-          </div>
-
-          <div className="form-group">
-            <label htmlFor="headscaleUrl">Headscale URL</label>
-            <input
-              id="headscaleUrl"
-              type="url"
-              value={headscaleUrl}
-              onChange={(e) => setHeadscaleUrl(e.target.value)}
-              placeholder="https://hs.example.com"
-              required
-              disabled={loading}
-              className="form-input"
-            />
-            <small>Base URL of your headscale instance</small>
           </div>
 
           {error && <div className="error-message">{error}</div>}

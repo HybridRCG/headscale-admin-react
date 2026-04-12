@@ -10,6 +10,7 @@ const { execSync } = require('child_process');
 const app = express();
 const PORT = process.env.PORT || 3000;
 const JWT_SECRET = process.env.JWT_SECRET || 'dev-secret-change-in-prod';
+const HEADSCALE_URL = process.env.HEADSCALE_URL || 'http://headscale:8080';
 
 app.use(express.json());
 app.use(cors());
@@ -47,8 +48,9 @@ const getUserRoleFromACL = (email, aclPolicy) => {
 };
 
 app.post('/api/auth/login', async (req, res) => {
-  const { username, apiKey, headscaleUrl } = req.body;
-  if (!username || !apiKey || !headscaleUrl) return res.status(400).json({ message: 'Missing fields: username, apiKey, headscaleUrl' });
+  const { username, apiKey } = req.body;
+  const headscaleUrl = HEADSCALE_URL;
+  if (!username || !apiKey) return res.status(400).json({ message: 'Missing fields: username, apiKey' });
   try {
     console.log(`\n[LOGIN] ${username}`);
     await axios.get(`${headscaleUrl}/api/v1/user`, { headers: { Authorization: `Bearer ${apiKey}` }, timeout: 5000 });
@@ -65,12 +67,13 @@ app.post('/api/auth/login', async (req, res) => {
     let usersMapping;
     try {
       usersMapping = JSON.parse(fs.readFileSync('/etc/headscale/users-mapping.json', 'utf8'));
-      console.log('[LOGIN] Users mapping loaded:', Object.keys(usersMapping));
+      console.log('[LOGIN] Users mapping loaded:', Object.keys(usersMapping.users || {}));
     } catch (err) {
       console.error('[LOGIN] Failed to load users mapping:', err.message);
       return res.status(500).json({ message: 'Failed to load users mapping' });
     }
-    const email = usersMapping[username];
+    const userRecord = usersMapping.users?.[username];
+    const email = userRecord?.email;
     console.log(`[LOGIN] Looking up email for username: ${username}`);
     if (!email) return res.status(400).json({ message: `Username "${username}" not found in ACL users mapping` });
     const role = getUserRoleFromACL(email, aclPolicy);
@@ -442,3 +445,35 @@ app.post('/api/headscale/user/update-email', authenticateToken, async (req, res)
     res.status(500).json({ message: error.message });
   }
 });
+
+// GET user emails and permissions
+app.get('/api/headscale/user-emails', authenticateToken, async (req, res) => {
+  try {
+    const data = fs.readFileSync('/etc/headscale/users-mapping.json', 'utf8');
+    res.json(JSON.parse(data));
+  } catch (err) {
+    res.status(500).json({ message: 'Failed to read users' });
+  }
+});
+
+// POST user emails and permissions
+app.post('/api/headscale/user-emails', authenticateToken, async (req, res) => {
+  const userEmail = req.user?.email;
+  if (!userEmail) return res.status(401).json({ message: 'Unauthorized' });
+
+  try {
+    const currentData = JSON.parse(fs.readFileSync('/etc/headscale/users-mapping.json', 'utf8'));
+    const currentUser = Object.values(currentData.users).find(u => u.email === userEmail);
+    
+    if (!currentUser || currentUser.role !== 'super_admin') {
+      return res.status(403).json({ message: 'Only super admins can modify users' });
+    }
+
+    const newData = req.body;
+    fs.writeFileSync('/etc/headscale/users-mapping.json', JSON.stringify(newData, null, 2));
+    res.json({ message: 'Users updated successfully' });
+  } catch (err) {
+    res.status(500).json({ message: 'Failed to update users: ' + err.message });
+  }
+});
+

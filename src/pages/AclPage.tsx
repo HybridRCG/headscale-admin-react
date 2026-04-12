@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
+import { useAuthStore } from '../store/authStore';
 import '../styles/AclEditorPage.css';
 
 const API_BASE = process.env.REACT_APP_API_URL || '/admin/api';
@@ -13,6 +14,7 @@ interface ACL {
 }
 
 export const AclPage: React.FC = () => {
+  const userEmail = useAuthStore((state) => state.user?.email || '');
   const [acl, setAcl] = useState<ACL | null>(null);
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState(0);
@@ -53,6 +55,7 @@ export const AclPage: React.FC = () => {
   if (loading && !acl) return <div className="acl-container"><p>Loading ACL...</p></div>;
 
   const tabs = [
+    { icon: '👤', label: 'Users' },
     { icon: '👥', label: 'Groups' },
     { icon: '🏷️', label: 'Tag Owners' },
     { icon: '🖥️', label: 'Hosts' },
@@ -83,12 +86,13 @@ export const AclPage: React.FC = () => {
       </div>
       {acl && (
         <div className="acl-content">
-          {activeTab === 0 && <GroupsTab acl={acl} setAcl={setAcl} />}
-          {activeTab === 1 && <TagOwnersTab acl={acl} setAcl={setAcl} />}
-          {activeTab === 2 && <HostsTab acl={acl} setAcl={setAcl} />}
-          {activeTab === 3 && <PoliciesTab acl={acl} setAcl={setAcl} />}
-          {activeTab === 4 && <SshTab acl={acl} setAcl={setAcl} />}
-          {activeTab === 5 && <ConfigTab acl={acl} setAcl={setAcl} />}
+          {activeTab === 0 && <UsersTab userEmail={userEmail} />}
+          {activeTab === 1 && <GroupsTab acl={acl} setAcl={setAcl} />}
+          {activeTab === 2 && <TagOwnersTab acl={acl} setAcl={setAcl} />}
+          {activeTab === 3 && <HostsTab acl={acl} setAcl={setAcl} />}
+          {activeTab === 4 && <PoliciesTab acl={acl} setAcl={setAcl} />}
+          {activeTab === 5 && <SshTab acl={acl} setAcl={setAcl} />}
+          {activeTab === 6 && <ConfigTab acl={acl} setAcl={setAcl} />}
         </div>
       )}
     </div>
@@ -526,6 +530,224 @@ const ConfigTab: React.FC<{ acl: ACL; setAcl: (a: ACL) => void }> = ({ acl, setA
       <h2>Raw Config (JSON)</h2>
       <textarea value={jsonText} onChange={(e) => setJsonText(e.target.value)} rows={30} />
       <button onClick={handleUpdateJson} className="btn-save" style={{ marginTop: '15px' }}>💾 Update Config</button>
+    </div>
+  );
+};
+
+// USERS TAB
+const UsersTab: React.FC<{ userEmail: string }> = ({ userEmail }) => {
+  const [usersData, setUsersData] = useState<any>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState('');
+  const [newUsername, setNewUsername] = useState('');
+  const [newEmail, setNewEmail] = useState('');
+
+  useEffect(() => {
+    fetchUsers();
+  }, []);
+
+  const fetchUsers = async () => {
+    setLoading(true);
+    try {
+      const response = await axios.get(`${API_BASE}/headscale/user-emails`);
+      setUsersData(response.data);
+      setError('');
+    } catch (err) {
+      setError('Failed to load users: ' + (err instanceof Error ? err.message : 'Unknown error'));
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const getCurrentUserPerms = () => {
+    if (!usersData?.users) return { role: 'user', domains: [] };
+    const current = Object.values(usersData.users).find((u: any) => u.email === userEmail) as any;
+    return { role: (current as any)?.role || 'user', domains: (current as any)?.manageable_domains || [] };
+  };
+
+  const canManageUser = (targetEmail: string): boolean => {
+    const perms = getCurrentUserPerms();
+    if (perms.role === 'super_admin') return true;
+    if (perms.role !== 'group_admin') return false;
+    return perms.domains.some((d: string) => targetEmail.endsWith(d));
+  };
+
+  const canAddUser = (): boolean => {
+    const perms = getCurrentUserPerms();
+    return perms.role === 'super_admin' || perms.role === 'group_admin';
+  };
+
+  const canManagePermissions = (): boolean => {
+    const perms = getCurrentUserPerms();
+    return perms.role === 'super_admin';
+  };
+
+  const getEditableUsers = () => {
+    if (!usersData?.users) return [];
+    const perms = getCurrentUserPerms();
+    if (perms.role === 'super_admin') return Object.entries(usersData.users);
+    if (perms.role === 'group_admin') {
+      return Object.entries(usersData.users).filter(([_, u]: [string, any]) =>
+        perms.domains.some((d: string) => u.email.endsWith(d))
+      );
+    }
+    return [];
+  };
+
+  const handleAddUser = async () => {
+    if (!newUsername.trim() || !newEmail.trim()) return;
+    if (!canAddUser()) {
+      setError('You do not have permission to add users');
+      return;
+    }
+
+    const perms = getCurrentUserPerms();
+    if (perms.role === 'group_admin' && perms.domains.length > 0) {
+      const domain = perms.domains[0];
+      if (!newEmail.endsWith(domain)) {
+        setError(`As group admin, you can only add users with ${domain} email`);
+        return;
+      }
+    }
+
+    const updated = { ...usersData };
+    updated.users[newUsername] = { email: newEmail, role: 'user', manageable_domains: [] };
+
+    try {
+      await axios.post(`${API_BASE}/headscale/user-emails`, updated);
+      setUsersData(updated);
+      setNewUsername('');
+      setNewEmail('');
+      setError('');
+      alert('✅ User added successfully!');
+    } catch (err) {
+      setError('Failed to add user: ' + (err instanceof Error ? err.message : 'Unknown error'));
+    }
+  };
+
+  const handleDeleteUser = async (username: string) => {
+    if (!window.confirm(`Delete user "${username}"?`)) return;
+    if (!canManageUser(usersData.users[username].email)) {
+      setError('You do not have permission to delete this user');
+      return;
+    }
+
+    const updated = { ...usersData };
+    delete updated.users[username];
+
+    try {
+      await axios.post(`${API_BASE}/headscale/user-emails`, updated);
+      setUsersData(updated);
+      setError('');
+      alert('✅ User deleted successfully!');
+    } catch (err) {
+      setError('Failed to delete user: ' + (err instanceof Error ? err.message : 'Unknown error'));
+    }
+  };
+
+  const handleUpdateUser = async (username: string, field: string, value: any) => {
+    if (!canManageUser(usersData.users[username].email)) {
+      setError('You do not have permission to edit this user');
+      return;
+    }
+
+    const updated = { ...usersData };
+    updated.users[username][field] = value;
+
+    try {
+      await axios.post(`${API_BASE}/headscale/user-emails`, updated);
+      setUsersData(updated);
+      setError('');
+    } catch (err) {
+      setError('Failed to update user: ' + (err instanceof Error ? err.message : 'Unknown error'));
+    }
+  };
+
+  if (loading) return <div><p>Loading users...</p></div>;
+
+  return (
+    <div>
+      <h2>Users & Permissions</h2>
+      {error && <div className="error-box">{error}</div>}
+
+      {canAddUser() && (
+        <div className="form-section">
+          <h3>Add New User</h3>
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr auto', gap: '10px' }}>
+            <input type="text" placeholder="Username" value={newUsername} onChange={(e) => setNewUsername(e.target.value)} />
+            <input type="email" placeholder="Email" value={newEmail} onChange={(e) => setNewEmail(e.target.value)} />
+            <button onClick={handleAddUser} className="btn-create">➕ Add</button>
+          </div>
+          {getCurrentUserPerms().role === 'group_admin' && getCurrentUserPerms().domains.length > 0 && (
+            <p style={{ fontSize: '12px', color: '#6b7280', marginTop: '8px' }}>
+              You can only add users with {getCurrentUserPerms().domains[0]} email
+            </p>
+          )}
+        </div>
+      )}
+
+      {getEditableUsers().length > 0 ? (
+        <div className="table-container">
+          <table>
+            <thead>
+              <tr>
+                <th>Username</th>
+                <th>Email</th>
+                <th>Role</th>
+                {canManagePermissions() && <th>Manageable Domains</th>}
+                <th>Action</th>
+              </tr>
+            </thead>
+            <tbody>
+              {getEditableUsers().map(([username, user]: any) => (
+                <tr key={username}>
+                  <td>{username}</td>
+                  <td>{user.email}</td>
+                  <td>
+                    {canManagePermissions() ? (
+                      <select value={user.role} onChange={(e) => handleUpdateUser(username, 'role', e.target.value)} style={{ padding: '4px 8px', borderRadius: '4px', border: '1px solid #d1d5db' }}>
+                        <option value="user">User</option>
+                        <option value="group_admin">Group Admin</option>
+                        <option value="super_admin">Super Admin</option>
+                      </select>
+                    ) : (
+                      <span>{user.role}</span>
+                    )}
+                  </td>
+                  {canManagePermissions() && <td>{user.manageable_domains.join(', ') || 'N/A'}</td>}
+                  <td><button onClick={() => handleDeleteUser(username)} className="btn-delete">🗑️</button></td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      ) : (
+        <p style={{ color: '#9ca3af', textAlign: 'center', padding: '40px' }}>No users to manage</p>
+      )}
+
+      {canManagePermissions() && (
+        <div className="form-section" style={{ marginTop: '30px' }}>
+          <h3>🔐 Manage Permissions</h3>
+          {Object.entries(usersData?.users || {}).map(([username, user]: any) => (
+            <div key={username} style={{ marginBottom: '15px', padding: '12px', backgroundColor: '#f9fafb', borderRadius: '8px', border: '1px solid #e5e7eb' }}>
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
+                <div>
+                  <label style={{ fontSize: '12px', fontWeight: '600', display: 'block', marginBottom: '5px' }}>{username} - Role:</label>
+                  <select value={user.role} onChange={(e) => handleUpdateUser(username, 'role', e.target.value)} style={{ width: '100%', padding: '6px', borderRadius: '4px', border: '1px solid #d1d5db', fontSize: '13px' }}>
+                    <option value="user">User</option>
+                    <option value="group_admin">Group Admin</option>
+                    <option value="super_admin">Super Admin</option>
+                  </select>
+                </div>
+                <div>
+                  <label style={{ fontSize: '12px', fontWeight: '600', display: 'block', marginBottom: '5px' }}>Domains (comma-separated):</label>
+                  <input type="text" value={user.manageable_domains.join(', ')} onChange={(e) => handleUpdateUser(username, 'manageable_domains', e.target.value.split(',').map((s: string) => s.trim()))} placeholder="@domain.com" style={{ width: '100%', padding: '6px', borderRadius: '4px', border: '1px solid #d1d5db', fontSize: '13px' }} />
+                </div>
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
     </div>
   );
 };
