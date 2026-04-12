@@ -1,0 +1,3 @@
+// Replace the h3 line in GroupsTab to strip "group:" prefix
+OLD: <h3 style={{ margin: '0 0 5px 0', color: '#1f2937' }}>{groupName}</h3>
+NEW: <h3 style={{ margin: '0 0 5px 0', color: '#1f2937' }}>{groupName.replace(/^group:/, '')}</h3>

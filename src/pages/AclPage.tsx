@@ -146,25 +146,18 @@ const GroupsTab: React.FC<{ acl: ACL; setAcl: (a: ACL) => void }> = ({ acl, setA
       <div className="form-section">
         <h3>Create New Group</h3>
         <div style={{ display: 'flex', gap: '10px' }}>
-          <input
-            type="text"
-            placeholder="e.g., group:admins"
-            value={newGroup}
-            onChange={(e) => setNewGroup(e.target.value)}
-            onKeyDown={(e) => e.key === 'Enter' && handleCreateGroup()}
-            style={{ flex: 1 }}
-          />
+          <input type="text" placeholder="e.g., group:admins" value={newGroup} onChange={(e) => setNewGroup(e.target.value)} onKeyDown={(e) => e.key === 'Enter' && handleCreateGroup()} style={{ flex: 1 }} />
           <button onClick={handleCreateGroup} className="btn-create">➕ Create</button>
         </div>
       </div>
 
-      <div className="grid-cards">
+      <div style={{ display: 'flex', flexDirection: 'column', gap: '15px' }}>
         {Object.entries(acl.groups).map(([groupName, members]) => (
           <div key={groupName} className="group-card">
-            <div className="accordion-header" onClick={() => setExpandedGroup(expandedGroup === groupName ? null : groupName)}>
-              <div>
-                <h3>{groupName}</h3>
-                <p>{members.length} member{members.length !== 1 ? 's' : ''}</p>
+            <div className="accordion-header" onClick={() => setExpandedGroup(expandedGroup === groupName ? null : groupName)} style={{ cursor: 'pointer' }}>
+              <div style={{ flex: 1 }}>
+                <h3 style={{ margin: '0 0 5px 0' }}>{groupName.replace(/^group:/,'')}</h3>
+                <p style={{ margin: '0', fontSize: '12px', color: '#6b7280' }}>{members.length} member{members.length !== 1 ? 's' : ''}</p>
               </div>
               <span className={`accordion-icon ${expandedGroup === groupName ? 'open' : ''}`}>▼</span>
             </div>
@@ -173,28 +166,8 @@ const GroupsTab: React.FC<{ acl: ACL; setAcl: (a: ACL) => void }> = ({ acl, setA
               <div style={{ marginTop: '15px', paddingTop: '15px', borderTop: '1px solid #e5e7eb' }}>
                 {editingGroup === groupName ? (
                   <div style={{ marginBottom: '15px' }}>
-                    <label style={{ display: 'block', marginBottom: '8px', fontSize: '12px', fontWeight: '600', color: '#6b7280' }}>Rename Group:</label>
-                    <div style={{ display: 'flex', gap: '10px' }}>
-                      <input
-                        autoFocus
-                        type="text"
-                        defaultValue={groupName}
-                        onBlur={(e) => {
-                          if (e.target.value !== groupName) {
-                            handleRenameGroup(groupName, e.target.value);
-                          } else {
-                            setEditingGroup(null);
-                          }
-                        }}
-                        onKeyDown={(e) => {
-                          if (e.key === 'Enter') {
-                            handleRenameGroup(groupName, e.currentTarget.value);
-                          } else if (e.key === 'Escape') {
-                            setEditingGroup(null);
-                          }
-                        }}
-                      />
-                    </div>
+                    <label style={{ display: 'block', marginBottom: '8px', fontSize: '12px', fontWeight: '600' }}>Rename:</label>
+                    <input autoFocus type="text" defaultValue={groupName} onBlur={(e) => { if (e.target.value !== groupName) handleRenameGroup(groupName, e.target.value); else setEditingGroup(null); }} onKeyDown={(e) => { if (e.key === 'Enter') handleRenameGroup(groupName, e.currentTarget.value); else if (e.key === 'Escape') setEditingGroup(null); }} />
                   </div>
                 ) : (
                   <div style={{ marginBottom: '15px', display: 'flex', gap: '10px' }}>
@@ -204,9 +177,7 @@ const GroupsTab: React.FC<{ acl: ACL; setAcl: (a: ACL) => void }> = ({ acl, setA
                 )}
 
                 <h4 style={{ fontSize: '12px', fontWeight: '600', color: '#6b7280', marginBottom: '10px' }}>Members:</h4>
-                {members.length === 0 ? (
-                  <p style={{ fontSize: '13px', color: '#9ca3af', marginBottom: '15px' }}>No members yet</p>
-                ) : (
+                {members.length === 0 ? <p style={{ fontSize: '13px', color: '#9ca3af' }}>No members</p> : (
                   <ul className="member-list" style={{ marginBottom: '15px' }}>
                     {members.map(m => (
                       <li key={m} className="member-item">
@@ -218,14 +189,7 @@ const GroupsTab: React.FC<{ acl: ACL; setAcl: (a: ACL) => void }> = ({ acl, setA
                 )}
 
                 <div style={{ display: 'flex', gap: '10px' }}>
-                  <input
-                    type="email"
-                    placeholder="Add member..."
-                    value={newMember}
-                    onChange={(e) => setNewMember(e.target.value)}
-                    onKeyDown={(e) => e.key === 'Enter' && handleAddMember(groupName)}
-                    style={{ flex: 1 }}
-                  />
+                  <input type="email" placeholder="Add member..." value={newMember} onChange={(e) => setNewMember(e.target.value)} onKeyDown={(e) => e.key === 'Enter' && handleAddMember(groupName)} style={{ flex: 1 }} />
                   <button onClick={() => handleAddMember(groupName)} className="btn-create">➕ Add</button>
                 </div>
               </div>
@@ -235,9 +199,7 @@ const GroupsTab: React.FC<{ acl: ACL; setAcl: (a: ACL) => void }> = ({ acl, setA
       </div>
     </div>
   );
-};
-
-// TAG OWNERS TAB - WITH ACCORDION
+}
 const TagOwnersTab: React.FC<{ acl: ACL; setAcl: (a: ACL) => void }> = ({ acl, setAcl }) => {
   const [newTag, setNewTag] = useState('');
   const [newOwner, setNewOwner] = useState('');
