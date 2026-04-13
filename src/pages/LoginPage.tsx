@@ -1,3 +1,4 @@
+import { APP_VERSION, APP_NAME } from '../constants/version';
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuthStore } from '../store/authStore';
@@ -92,7 +93,7 @@ export const LoginPage: React.FC = () => {
         </form>
 
         <div className="login-footer">
-          <p className="footer-version">v0.4.9</p>
+          <p className="footer-version">v{APP_VERSION}</p>
           <p className="footer-text">
             Your API key is sent securely to the backend and never stored in your browser.
           </p>

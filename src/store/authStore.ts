@@ -4,7 +4,7 @@ import axios from 'axios';
 export interface AuthUser {
   email: string;
   username: string;
-  role: 'admin' | 'manager' | 'viewer';
+  role: 'super_admin' | 'group_admin' | 'user';
   id: string;
 }
 

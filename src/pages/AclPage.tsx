@@ -15,6 +15,19 @@ interface ACL {
 
 export const AclPage: React.FC = () => {
   const userEmail = useAuthStore((state) => state.user?.email || '');
+  const tabs = [
+    { icon: '👤', label: 'Users' },
+    { icon: '👥', label: 'Groups' },
+    { icon: '🏷️', label: 'Tag Owners' },
+    { icon: '🖥️', label: 'Hosts' },
+    { icon: '🔒', label: 'Policies' },
+    { icon: '🔐', label: 'SSH' },
+    { icon: '⚙️', label: 'Config' }
+  ];
+
+  const userRole = useAuthStore((state) => state.user?.role || 'user');
+  console.log('[DEBUG AclPage] userRole:', userRole, 'user:', useAuthStore((state) => state.user));
+  const visibleTabs = userRole === 'super_admin' ? tabs : [tabs[0]];
   const [acl, setAcl] = useState<ACL | null>(null);
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState(0);
@@ -54,15 +67,9 @@ export const AclPage: React.FC = () => {
 
   if (loading && !acl) return <div className="acl-container"><p>Loading ACL...</p></div>;
 
-  const tabs = [
-    { icon: '👤', label: 'Users' },
-    { icon: '👥', label: 'Groups' },
-    { icon: '🏷️', label: 'Tag Owners' },
-    { icon: '🖥️', label: 'Hosts' },
-    { icon: '🔒', label: 'Policies' },
-    { icon: '🔐', label: 'SSH' },
-    { icon: '⚙️', label: 'Config' }
-  ];
+
+  // Filter tabs based on user role
+
 
   return (
     <div className="acl-container">
@@ -72,7 +79,7 @@ export const AclPage: React.FC = () => {
       </div>
       {error && <div className="error-box">{error}</div>}
       <div className="acl-tabs">
-        {tabs.map((tab, idx) => (
+        {visibleTabs.map((tab, idx) => (
           <button
             key={idx}
             onClick={() => setActiveTab(idx)}
@@ -539,6 +546,12 @@ const UsersTab: React.FC<{ userEmail: string }> = ({ userEmail }) => {
   const [usersData, setUsersData] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
+
+  const [apiKeys, setApiKeys] = useState<any[]>([]);
+  const [selectedUser, setSelectedUser] = useState<string>('');
+  const [apiKeyExpiration, setApiKeyExpiration] = useState<string>('90d');
+  const [showNewKey, setShowNewKey] = useState<string>('');
+  const [loadingApiKeys, setLoadingApiKeys] = useState(false);
   const [newUsername, setNewUsername] = useState('');
   const [newEmail, setNewEmail] = useState('');
 
@@ -663,6 +676,59 @@ const UsersTab: React.FC<{ userEmail: string }> = ({ userEmail }) => {
     }
   };
 
+
+  const loadApiKeys = async () => {
+    setLoadingApiKeys(true);
+    try {
+      const response = await axios.get(`${API_BASE}/headscale/apikey/list`);
+      setApiKeys(response.data || []);
+    } catch (err) {
+      setError('Failed to load API keys: ' + (err instanceof Error ? err.message : 'Unknown error'));
+    } finally {
+      setLoadingApiKeys(false);
+    }
+  };
+
+  const handleCreateApiKey = async () => {
+    if (!selectedUser.trim()) {
+      setError('Please select a user');
+      return;
+    }
+
+    setLoadingApiKeys(true);
+    try {
+      const response = await axios.post(`${API_BASE}/headscale/apikey/create`, {
+        username: selectedUser,
+        expiration: apiKeyExpiration
+      });
+      setShowNewKey(response.data.apiKey);
+      setSelectedUser('');
+      setApiKeyExpiration('90d');
+      loadApiKeys();
+    } catch (err) {
+      setError('Failed to create API key: ' + (err instanceof Error ? err.message : 'Unknown error'));
+    } finally {
+      setLoadingApiKeys(false);
+    }
+  };
+
+  const handleRevokeApiKey = async (keyId: string) => {
+    if (!window.confirm('Revoke this API key?')) return;
+
+    try {
+      await axios.post(`${API_BASE}/headscale/apikey/revoke`, { keyId });
+      loadApiKeys();
+      setError('');
+    } catch (err) {
+      setError('Failed to revoke API key: ' + (err instanceof Error ? err.message : 'Unknown error'));
+    }
+  };
+
+  const copyToClipboard = (text: string) => {
+    navigator.clipboard.writeText(text);
+    alert('✅ API key copied to clipboard!');
+  };
+
   if (loading) return <div><p>Loading users...</p></div>;
 
   return (
@@ -748,6 +814,42 @@ const UsersTab: React.FC<{ userEmail: string }> = ({ userEmail }) => {
           ))}
         </div>
       )}
+
+      {canManagePermissions() && (
+        <div className="form-section" style={{ marginTop: '30px' }}>
+          <h3>🔑 API Key Management</h3>
+          {showNewKey && (
+            <div style={{ padding: '12px', marginBottom: '15px', backgroundColor: '#dcfce7', border: '1px solid #86efac', borderRadius: '8px' }}>
+              <p style={{ marginBottom: '8px', fontWeight: '600' }}>✅ New API Key Created (save it securely!):</p>
+              <div style={{ display: 'flex', gap: '10px', alignItems: 'center' }}>
+                <code style={{ padding: '8px', backgroundColor: '#f0fdf4', borderRadius: '4px', flex: 1, fontSize: '12px', wordBreak: 'break-all' }}>{showNewKey}</code>
+                <button onClick={() => copyToClipboard(showNewKey)} style={{ padding: '6px 12px', backgroundColor: '#22c55e', color: 'white', border: 'none', borderRadius: '4px', cursor: 'pointer', fontWeight: '600' }}>📋 Copy</button>
+              </div>
+              <button onClick={() => setShowNewKey('')} style={{ marginTop: '8px', padding: '6px 12px', backgroundColor: '#f3f4f6', border: '1px solid #d1d5db', borderRadius: '4px', cursor: 'pointer' }}>Hide</button>
+            </div>
+          )}
+          
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr auto', gap: '10px', marginBottom: '15px' }}>
+            <select value={selectedUser} onChange={(e) => setSelectedUser(e.target.value)} style={{ padding: '6px', borderRadius: '4px', border: '1px solid #d1d5db' }}>
+              <option value="">Select user...</option>
+              {Object.entries(usersData?.users || {}).map(([username]) => (
+                <option key={username} value={username}>{username}</option>
+              ))}
+            </select>
+            <select value={apiKeyExpiration} onChange={(e) => setApiKeyExpiration(e.target.value)} style={{ padding: '6px', borderRadius: '4px', border: '1px solid #d1d5db' }}>
+              <option value="30m">30 minutes</option>
+              <option value="24h">24 hours</option>
+              <option value="7d">7 days</option>
+              <option value="30d">30 days</option>
+              <option value="90d">90 days (default)</option>
+            </select>
+            <button onClick={handleCreateApiKey} disabled={loadingApiKeys} style={{ padding: '6px 12px', backgroundColor: '#3b82f6', color: 'white', border: 'none', borderRadius: '4px', cursor: 'pointer', fontWeight: '600' }}>
+              🔐 Generate Key
+            </button>
+          </div>
+        </div>
+      )}
+
     </div>
   );
 };
