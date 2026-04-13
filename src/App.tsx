@@ -23,6 +23,16 @@ function PrivateRoute({ children }: PrivateRouteProps) {
   return isAuthenticated ? <>{children}</> : <Navigate to="/login" />;
 }
 
+interface AdminRouteProps {
+  children: ReactNode;
+}
+
+function AdminRoute({ children }: AdminRouteProps) {
+  const isAuthenticated = useAuthStore((state) => state.isAuthenticated);
+  const userRole = useAuthStore((state) => state.user?.role || 'user');
+  return isAuthenticated && userRole === 'super_admin' ? <>{children}</> : <Navigate to="/dashboard" />;
+}
+
 function App() {
   const isAuthenticated = useAuthStore((state) => state.isAuthenticated);
   const [isDarkMode, setIsDarkMode] = useState(() => {
@@ -68,8 +78,8 @@ function App() {
         <Route path="/nodes" element={<PrivateRoute><NodesPage /></PrivateRoute>} />
         <Route path="/routes" element={<PrivateRoute><RoutesPage /></PrivateRoute>} />
         <Route path="/acl" element={<PrivateRoute><AclPage /></PrivateRoute>} />
-        <Route path="/dns" element={<PrivateRoute><DnsPage /></PrivateRoute>} />
-        <Route path="/settings" element={<PrivateRoute><SettingsPage /></PrivateRoute>} />
+        <Route path="/dns" element={<AdminRoute><DnsPage /></AdminRoute>} />
+        <Route path="/settings" element={<AdminRoute><SettingsPage /></AdminRoute>} />
         <Route path="/" element={<Navigate to={isAuthenticated ? "/dashboard" : "/login"} />} />
       </Routes>
       {isAuthenticated && <Footer />}

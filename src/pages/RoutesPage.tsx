@@ -1,3 +1,4 @@
+import { useAuthStore } from '../store/authStore';
 import React, { useEffect, useState } from 'react';
 import axios from 'axios';
 import '../styles/Pages.css';
