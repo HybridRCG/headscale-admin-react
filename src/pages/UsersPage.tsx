@@ -439,9 +439,11 @@ export const UsersPage: React.FC = () => {
                 }}
               >
                 <div
-                  onClick={() =>
-                    setExpandedUserId(expandedUserId === user.id ? null : user.id)
-                  }
+                  onClick={() => {
+                    const newId = expandedUserId === user.id ? null : user.id;
+                    setExpandedUserId(newId);
+                    if (newId) fetchApiKeysForUser(newId);
+                  }}
                   style={{
                     cursor: 'pointer',
                     display: 'flex',
@@ -575,9 +577,9 @@ export const UsersPage: React.FC = () => {
                     </label>
                     {loadingApiKeys.has(user.id) ? (
                       <div style={{ color: '#9ca3af', fontSize: '0.875rem' }}>Loading...</div>
-                    ) : apiKeys.get(user.id) && apiKeys.get(user.id)!.length > 0 ? (
+                    ) : (apiKeys.get(user.id) || apiKeys.get('all') || []).length > 0 ? (
                       <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem', marginBottom: '0.75rem' }}>
-                        {apiKeys.get(user.id)!.map((key) => (
+                        {(apiKeys.get(user.id) || apiKeys.get('all') || []).map((key) => (
                           <div
                             key={key.id}
                             style={{
