@@ -339,6 +339,13 @@ app.get('/api/headscale/user-mapping', authenticateToken, async (req, res) => {
     usersResp.data.users.forEach(user => {
       if (user.email && !map[user.name]) map[user.name] = user.email;
     });
+    // Fallback: fill in emails from users-mapping.json for users with no headscale email
+    try {
+      const usersMapping = JSON.parse(fs.readFileSync('/etc/headscale/users-mapping.json', 'utf8'));
+      Object.entries(usersMapping.users || {}).forEach(([username, record]) => {
+        if (record.email && !map[username]) map[username] = record.email;
+      });
+    } catch (e) { /* mapping file optional */ }
     console.log('[USER-MAPPING] Generated:', Object.keys(map).length, 'users');
     res.json(map);
   } catch (e) {
