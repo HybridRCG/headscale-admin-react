@@ -30,6 +30,7 @@ interface ApiKey {
 
 export const UsersPage: React.FC = () => {
   const [users, setUsers] = useState<User[]>([]);
+  const [userEmailMap, setUserEmailMap] = useState<Record<string, string>>({});
   const { user: authUser } = useAuthStore();
   const manageableDomains: string[] = (authUser as any)?.manageable_domains || [];
   const shouldFilter = authUser?.role !== 'super_admin' && !manageableDomains.includes('*');
@@ -61,8 +62,12 @@ export const UsersPage: React.FC = () => {
   const fetchUsers = async () => {
     setLoading(true);
     try {
-      const response = await axios.get('/admin/api/headscale/api/v1/user');
-      setUsers(response.data.users || []);
+      const [usersResp, mappingResp] = await Promise.all([
+        axios.get('/admin/api/headscale/api/v1/user'),
+        axios.get('/admin/api/headscale/user-mapping').catch(() => ({ data: {} }))
+      ]);
+      setUsers(usersResp.data.users || []);
+      setUserEmailMap(mappingResp.data || {});
     } catch (error) {
       console.error('Failed to fetch users:', error);
     } finally {
@@ -186,7 +191,10 @@ export const UsersPage: React.FC = () => {
 
   const getSortedAndFilteredUsers = () => {
     let filtered = users.filter((u) =>
-      (!shouldFilter || manageableDomains.some((d: string) => u.email?.endsWith(d.replace('@','')))) &&
+      (!shouldFilter || (() => {
+        const email = u.email || userEmailMap[u.name] || '';
+        return manageableDomains.some((d: string) => email.endsWith(d.replace('@','')));
+      })()) &&
       (
         u.id.toLowerCase().includes(searchQuery.toLowerCase()) ||
         u.name.toLowerCase().includes(searchQuery.toLowerCase()) ||

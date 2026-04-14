@@ -1,6 +1,7 @@
 import React, { useEffect } from 'react';
 import { useHeadscaleStore } from '../store/headscaleStore';
 import { useNavigate } from 'react-router-dom';
+import { useAuthStore } from '../store/authStore';
 import '../styles/Pages.css';
 
 interface SummaryCard {
@@ -13,6 +14,8 @@ interface SummaryCard {
 export const HomePage: React.FC = () => {
   const navigate = useNavigate();
   const { fetchUsers, fetchNodes } = useHeadscaleStore();
+  const { user } = useAuthStore();
+  const isSuperAdmin = user?.role === 'super_admin';
 
   useEffect(() => {
     const fetchData = async () => {
@@ -65,12 +68,16 @@ export const HomePage: React.FC = () => {
     },
   ];
 
+  const visibleSummaries = summaries.filter(s =>
+    isSuperAdmin || !['Routes', 'DNS', 'Settings'].includes(s.title)
+  );
+
   return (
     <div className="page-container">
       <h1 className="page-title">Home</h1>
 
       <div className="summary-grid">
-        {summaries.map((summary) => (
+        {visibleSummaries.map((summary) => (
           <div
             key={summary.title}
             className={`summary-card border-l-4 ${summary.border}`}
