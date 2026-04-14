@@ -588,98 +588,81 @@ export const UsersPage: React.FC = () => {
                     </div>
                   </div>
 
-                  {/* API Keys Section - super_admin only */}
-                  {authUser?.role === 'super_admin' && <div style={{ marginBottom: '1.5rem', paddingBottom: '1.5rem', borderBottom: '1px solid #374151' }}>
-                    <label style={{ display: 'block', fontSize: '0.875rem', fontWeight: '600', marginBottom: '0.75rem', color: '#d1d5db' }}>
-                      API Keys:
-                    </label>
-                    {loadingApiKeys.has(user.id) ? (
-                      <div style={{ color: '#9ca3af', fontSize: '0.875rem' }}>Loading...</div>
-                    ) : (apiKeys.get(user.id) || apiKeys.get('all') || []).filter((key) =>
-                      !apiKeyOwners[key.prefix] || apiKeyOwners[key.prefix] === user.name
-                    ).length > 0 ? (
-                      <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem', marginBottom: '0.75rem' }}>
-                        {(apiKeys.get(user.id) || apiKeys.get('all') || []).filter((key) =>
-                          !apiKeyOwners[key.prefix] || apiKeyOwners[key.prefix] === user.name
-                        ).map((key) => (
-                          <div
-                            key={key.id}
-                            style={{
-                              padding: '0.75rem',
-                              backgroundColor: '#374151',
-                              borderRadius: '0.25rem',
-                              display: 'flex',
-                              justifyContent: 'space-between',
-                              alignItems: 'center',
-                              fontSize: '0.875rem',
-                            }}
-                          >
-                            <div style={{ flex: 1 }}>
-                              <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                                <span style={{ color: '#f3f4f6', fontFamily: 'monospace', fontSize: '0.8rem' }}>{key.prefix}...</span>
-                                {editingLabelPrefix === key.prefix ? (
-                                  <>
-                                    <input
-                                      type='text'
-                                      value={labelDraft}
-                                      onChange={(e) => setLabelDraft(e.target.value)}
-                                      onKeyDown={(e) => { if (e.key === 'Enter') handleSaveLabel(key.prefix, labelDraft); if (e.key === 'Escape') setEditingLabelPrefix(null); }}
-                                      autoFocus
-                                      placeholder='e.g. Login key'
-                                      style={{ padding: '0.2rem 0.4rem', backgroundColor: '#1f2937', border: '1px solid #4b5563', borderRadius: '0.25rem', color: '#f3f4f6', fontSize: '0.75rem', width: '140px' }}
-                                    />
-                                    <button className='btn btn-sm btn-success' style={{ padding: '0.2rem 0.4rem', fontSize: '0.7rem' }} onClick={() => handleSaveLabel(key.prefix, labelDraft)}>✓</button>
-                                    <button className='btn btn-sm btn-secondary' style={{ padding: '0.2rem 0.4rem', fontSize: '0.7rem' }} onClick={() => setEditingLabelPrefix(null)}>✕</button>
-                                  </>
-                                ) : (
-                                  <span
-                                    onClick={() => { setEditingLabelPrefix(key.prefix); setLabelDraft(apiKeyLabels[key.prefix] || ''); }}
-                                    style={{ color: apiKeyLabels[key.prefix] ? '#10b981' : '#ef4444', fontSize: '0.8rem', cursor: 'pointer', fontWeight: 'bold', fontStyle: apiKeyLabels[key.prefix] ? 'normal' : 'italic' }}
-                                    title='Click to add/edit label'
-                                  >
-                                    {apiKeyLabels[key.prefix] || '⚠ add label'}
-                                  </span>
-                                )}
+                  {/* API Keys Section */}
+                  {authUser?.role === 'super_admin' ? (
+                    // Super admin: full controls
+                    <div style={{ marginBottom: '1.5rem', paddingBottom: '1.5rem', borderBottom: '1px solid #374151' }}>
+                      <label style={{ display: 'block', fontSize: '0.875rem', fontWeight: '600', marginBottom: '0.75rem', color: '#d1d5db' }}>
+                        API Keys:
+                      </label>
+                      {loadingApiKeys.has(user.id) ? (
+                        <div style={{ color: '#9ca3af', fontSize: '0.875rem' }}>Loading...</div>
+                      ) : (apiKeys.get(user.id) || apiKeys.get('all') || []).length > 0 ? (
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem', marginBottom: '0.75rem' }}>
+                          {(apiKeys.get(user.id) || apiKeys.get('all') || []).map((key) => (
+                            <div key={key.id} style={{ padding: '0.75rem', backgroundColor: '#374151', borderRadius: '0.25rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '0.875rem' }}>
+                              <div style={{ flex: 1 }}>
+                                <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                                  <span style={{ color: '#f3f4f6', fontFamily: 'monospace', fontSize: '0.8rem' }}>{key.prefix}...</span>
+                                  {editingLabelPrefix === key.prefix ? (
+                                    <>
+                                      <input type='text' value={labelDraft} onChange={(e) => setLabelDraft(e.target.value)}
+                                        onKeyDown={(e) => { if (e.key === 'Enter') handleSaveLabel(key.prefix, labelDraft); if (e.key === 'Escape') setEditingLabelPrefix(null); }}
+                                        autoFocus placeholder='e.g. Marius Login Key'
+                                        style={{ padding: '0.2rem 0.4rem', backgroundColor: '#1f2937', border: '1px solid #4b5563', borderRadius: '0.25rem', color: '#f3f4f6', fontSize: '0.75rem', width: '160px' }} />
+                                      <button className='btn btn-sm btn-success' style={{ padding: '0.2rem 0.4rem', fontSize: '0.7rem' }} onClick={() => handleSaveLabel(key.prefix, labelDraft)}>✓</button>
+                                      <button className='btn btn-sm btn-secondary' style={{ padding: '0.2rem 0.4rem', fontSize: '0.7rem' }} onClick={() => setEditingLabelPrefix(null)}>✕</button>
+                                    </>
+                                  ) : (
+                                    <span onClick={() => { setEditingLabelPrefix(key.prefix); setLabelDraft(apiKeyLabels[key.prefix] || ''); }}
+                                      style={{ color: apiKeyLabels[key.prefix] ? '#10b981' : '#ef4444', fontSize: '0.8rem', cursor: 'pointer', fontWeight: 'bold', fontStyle: apiKeyLabels[key.prefix] ? 'normal' : 'italic' }}
+                                      title='Click to add/edit label'>
+                                      {apiKeyLabels[key.prefix] || '⚠ add label'}
+                                    </span>
+                                  )}
+                                </div>
+                                <div style={{ color: '#9ca3af', fontSize: '0.75rem', marginTop: '0.25rem' }}>Expires: {new Date(key.expiration).toLocaleDateString()}</div>
                               </div>
-                              <div style={{ color: '#9ca3af', fontSize: '0.75rem', marginTop: '0.25rem' }}>
-                                Expires: {new Date(key.expiration).toLocaleDateString()}
+                              <div style={{ display: 'flex', gap: '0.25rem' }}>
+                                <button className="btn btn-sm btn-warning" onClick={() => handleExpireApiKey(user.id, key.prefix)} style={{ padding: '0.3rem 0.6rem', fontSize: '0.75rem' }}>⏱ Expire</button>
+                                <button className="btn btn-sm btn-error" onClick={() => handleDeleteApiKey(user.id, key.prefix)} style={{ padding: '0.3rem 0.6rem', fontSize: '0.75rem' }}>🗑 Delete</button>
                               </div>
                             </div>
-                            <div style={{ display: 'flex', gap: '0.25rem' }}>
-                              <button
-                                className="btn btn-sm btn-warning"
-                                onClick={() => handleExpireApiKey(user.id, key.prefix)}
-                                style={{ padding: '0.3rem 0.6rem', fontSize: '0.75rem' }}
-                                title="Expire this key"
-                              >
-                                ⏱ Expire
-                              </button>
-                              <button
-                                className="btn btn-sm btn-error"
-                                onClick={() => handleDeleteApiKey(user.id, key.prefix)}
-                                style={{ padding: '0.3rem 0.6rem', fontSize: '0.75rem' }}
-                                title="Delete this key"
-                              >
-                                🗑 Delete
-                              </button>
-                            </div>
+                          ))}
+                        </div>
+                      ) : (
+                        <div style={{ color: '#9ca3af', fontSize: '0.875rem', marginBottom: '0.75rem' }}>No API keys</div>
+                      )}
+                      <button className="btn btn-sm btn-success" onClick={() => { setExpandedUserId(user.id); fetchApiKeysForUser(user.id); handleCreateApiKey(user.id); }}>
+                        ➕ Create API Key
+                      </button>
+                    </div>
+                  ) : (
+                    // Group admin / user: read-only, only keys labelled with their username
+                    (() => {
+                      const myKeys = (apiKeys.get(user.id) || apiKeys.get('all') || []).filter(
+                        key => apiKeyLabels[key.prefix] && apiKeyLabels[key.prefix].toLowerCase().includes(user.name.toLowerCase())
+                      );
+                      return myKeys.length > 0 ? (
+                        <div style={{ marginBottom: '1.5rem', paddingBottom: '1.5rem', borderBottom: '1px solid #374151' }}>
+                          <label style={{ display: 'block', fontSize: '0.875rem', fontWeight: '600', marginBottom: '0.75rem', color: '#d1d5db' }}>
+                            API Keys:
+                          </label>
+                          <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+                            {myKeys.map(key => (
+                              <div key={key.id} style={{ padding: '0.75rem', backgroundColor: '#374151', borderRadius: '0.25rem', fontSize: '0.875rem' }}>
+                                <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                                  <span style={{ color: '#f3f4f6', fontFamily: 'monospace', fontSize: '0.8rem' }}>{key.prefix}...</span>
+                                  <span style={{ color: '#10b981', fontSize: '0.8rem', fontWeight: 'bold' }}>{apiKeyLabels[key.prefix]}</span>
+                                </div>
+                                <div style={{ color: '#9ca3af', fontSize: '0.75rem', marginTop: '0.25rem' }}>Expires: {new Date(key.expiration).toLocaleDateString()}</div>
+                              </div>
+                            ))}
                           </div>
-                        ))}
-                      </div>
-                    ) : (
-                      <div style={{ color: '#9ca3af', fontSize: '0.875rem', marginBottom: '0.75rem' }}>No API keys</div>
-                    )}
-                    <button
-                      className="btn btn-sm btn-success"
-                      onClick={() => {
-                        setExpandedUserId(user.id);
-                        fetchApiKeysForUser(user.id);
-                        handleCreateApiKey(user.id);
-                      }}
-                    >
-                      ➕ Create API Key
-                    </button>
-                  </div>}
+                        </div>
+                      ) : null;
+                    })()
+                  )}
 
                   {/* Associated Nodes */}
                   <div>
