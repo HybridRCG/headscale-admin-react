@@ -12,6 +12,9 @@ interface Node {
 
 export const RoutesPage: React.FC = () => {
   const [nodes, setNodes] = useState<Node[]>([]);
+  const { user: authUser } = useAuthStore();
+  const manageableDomains: string[] = (authUser as any)?.manageable_domains || [];
+  const shouldFilter = authUser?.role !== 'super_admin' && !manageableDomains.includes('*');
   const [loading, setLoading] = useState(true);
   const [approving, setApproving] = useState<string>('');
 

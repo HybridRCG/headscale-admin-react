@@ -81,9 +81,10 @@ app.post('/api/auth/login', async (req, res) => {
     const role = currentUser?.role || 'user';
     
     userTokenMap.set(email, { apiKey, headscaleUrl, validatedAt: Date.now() });
-    const sessionToken = jwt.sign({ email, username, role, id: email }, JWT_SECRET, { expiresIn: '24h' });
+    const manageable_domains = currentUser?.manageable_domains || [];
+    const sessionToken = jwt.sign({ email, username, role, id: email, manageable_domains }, JWT_SECRET, { expiresIn: '24h' });
     console.log(`[LOGIN SUCCESS] ${username} (${email}) role: ${role}`);
-    res.json({ sessionToken, user: { email, username, role, id: email } });
+    res.json({ sessionToken, user: { email, username, role, id: email, manageable_domains } });
   } catch (error) {
     console.error('Login error:', error.message);
     res.status(401).json({ message: 'Invalid API key' });
@@ -96,7 +97,7 @@ app.post('/api/auth/logout', authenticateToken, (req, res) => {
 });
 
 app.get('/api/auth/me', authenticateToken, (req, res) => {
-  res.json({ user: { email: req.user?.email, role: req.user?.role, id: req.user?.email } });
+  res.json({ user: { email: req.user?.email, role: req.user?.role, id: req.user?.email, manageable_domains: req.user?.manageable_domains || [] } });
 });
 
 app.post('/api/headscale/approve-route', authenticateToken, async (req, res) => {

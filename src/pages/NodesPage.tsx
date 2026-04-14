@@ -22,6 +22,9 @@ export const NodesPage: React.FC = () => {
   const [groupUsers, setGroupUsers] = useState<Record<string, string[]>>({});
   const [userEmailMap, setUserEmailMap] = useState<Record<string, string>>({});
   const [loading, setLoading] = useState(true);
+  const { user: authUser } = useAuthStore();
+  const manageableDomains: string[] = (authUser as any)?.manageable_domains || [];
+  const shouldFilter = authUser?.role !== 'super_admin' && !manageableDomains.includes('*');
   const [searchTerm, setSearchTerm] = useState('');
   const [filterStatus, setFilterStatus] = useState('all');
   const [selectedUser, setSelectedUser] = useState('all');

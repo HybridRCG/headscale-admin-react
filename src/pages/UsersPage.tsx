@@ -29,6 +29,9 @@ interface ApiKey {
 
 export const UsersPage: React.FC = () => {
   const [users, setUsers] = useState<User[]>([]);
+  const { user: authUser } = useAuthStore();
+  const manageableDomains: string[] = (authUser as any)?.manageable_domains || [];
+  const shouldFilter = authUser?.role !== 'super_admin' && !manageableDomains.includes('*');
   const [nodes, setNodes] = useState<Node[]>([]);
   const [apiKeys, setApiKeys] = useState<Map<string, ApiKey[]>>(new Map());
   const [loading, setLoading] = useState(true);
