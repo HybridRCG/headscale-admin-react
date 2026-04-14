@@ -99,10 +99,17 @@ app.post('/api/auth/logout', authenticateToken, (req, res) => {
 app.get('/api/auth/me', authenticateToken, (req, res) => {
   try {
     const usersMapping = JSON.parse(fs.readFileSync('/etc/headscale/users-mapping.json', 'utf8'));
-    const username = req.user?.username;
-    const userRecord = usersMapping.users?.[username] || {};
+    // Try username first, fall back to email lookup for old tokens
+    let username = req.user?.username;
+    let userRecord = usersMapping.users?.[username];
+    if (!userRecord && req.user?.email) {
+      const entry = Object.entries(usersMapping.users || {}).find(([_, u]) => u.email === req.user.email);
+      if (entry) { username = entry[0]; userRecord = entry[1]; }
+    }
+    userRecord = userRecord || {};
+    const role = userRecord.role || req.user?.role || 'user';
     const manageable_domains = userRecord.manageable_domains || req.user?.manageable_domains || [];
-    res.json({ user: { email: req.user?.email, username, role: req.user?.role, id: req.user?.email, manageable_domains } });
+    res.json({ user: { email: req.user?.email, username, role, id: req.user?.email, manageable_domains } });
   } catch (err) {
     res.json({ user: { email: req.user?.email, role: req.user?.role, id: req.user?.email, manageable_domains: req.user?.manageable_domains || [] } });
   }
