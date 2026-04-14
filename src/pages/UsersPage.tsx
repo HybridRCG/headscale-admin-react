@@ -450,10 +450,7 @@ export const UsersPage: React.FC = () => {
                   </div>
                   <div>
                     <div style={{ fontSize: '1.125rem', fontWeight: '700', color: '#f3f4f6' }}>
-                      {user.name}
-                    </div>
-                    <div style={{ fontSize: '0.75rem', color: '#9ca3af', marginTop: '0.25rem' }}>
-                      {user.email || '⚠️ No email (viewer only)'} • ID: {user.id}
+                      {user.name} <span style={{ fontWeight: '400', fontSize: '0.875rem', color: '#9ca3af' }}>— ID {user.id}</span>
                     </div>
                   </div>
                 </div>
@@ -540,73 +537,6 @@ export const UsersPage: React.FC = () => {
               {/* Expandable Content */}
               {expandedUserId === user.id && (
                 <div style={{ padding: '1.5rem', borderTop: '1px solid #374151' }}>
-                  {/* Display Name */}
-                  <div style={{ marginBottom: '1rem' }}>
-                    <label style={{ display: 'block', fontSize: '0.875rem', fontWeight: '600', marginBottom: '0.5rem', color: '#d1d5db' }}>
-                      Display Name:
-                    </label>
-                    <div style={{ color: '#f3f4f6' }}>
-                      {user.displayName || 'Not set'}
-                    </div>
-                  </div>
-
-                  {/* Email - EDITABLE */}
-                  <div style={{ marginBottom: '1rem', paddingBottom: '1rem', borderBottom: '1px solid #374151' }}>
-                    <label style={{ display: 'block', fontSize: '0.875rem', fontWeight: '600', marginBottom: '0.5rem', color: '#d1d5db' }}>
-                      Email (determines user role in ACL):
-                    </label>
-                    {editingEmailUserId === user.id ? (
-                      <div style={{ display: 'flex', gap: '0.5rem' }}>
-                        <input
-                          type="email"
-                          value={newEmail}
-                          onChange={(e) => setNewEmail(e.target.value)}
-                          placeholder="user@example.com"
-                          autoFocus
-                          style={{
-                            flex: 1,
-                            padding: '0.5rem',
-                            backgroundColor: '#374151',
-                            border: '1px solid #4b5563',
-                            borderRadius: '0.25rem',
-                            color: '#f3f4f6',
-                            fontSize: '0.875rem',
-                          }}
-                        />
-                        <button
-                          className="btn btn-sm btn-success"
-                          onClick={() => handleUpdateEmail(user.id, user.name)}
-                        >
-                          Save
-                        </button>
-                        <button
-                          className="btn btn-sm btn-secondary"
-                          onClick={() => {
-                            setEditingEmailUserId(null);
-                            setNewEmail('');
-                          }}
-                        >
-                          Cancel
-                        </button>
-                      </div>
-                    ) : (
-                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                        <div style={{ color: user.email ? '#f3f4f6' : '#ef5350', fontSize: '0.875rem' }}>
-                          {user.email || '⚠️ Not set (user will be viewer)'}
-                        </div>
-                        <button
-                          className="btn btn-sm btn-primary"
-                          onClick={() => {
-                            setEditingEmailUserId(user.id);
-                            setNewEmail(user.email || '');
-                          }}
-                        >
-                          ✏️ Edit
-                        </button>
-                      </div>
-                    )}
-                  </div>
-
                   {/* Provider */}
                   <div style={{ marginBottom: '1rem' }}>
                     <label style={{ display: 'block', fontSize: '0.875rem', fontWeight: '600', marginBottom: '0.5rem', color: '#d1d5db' }}>
