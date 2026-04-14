@@ -29,8 +29,11 @@ export const RoutesPage: React.FC = () => {
       const allNodes = response.data.nodes || [];
       
       const nodesWithRoutes = allNodes.filter((node: any) => 
-        (node.approvedRoutes && node.approvedRoutes.length > 0) ||
-        (node.availableRoutes && node.availableRoutes.length > 0)
+        (!shouldFilter || manageableDomains.some((d: string) => (node as any).user?.email?.endsWith(d.replace('@','')))) &&
+        (
+          (node.approvedRoutes && node.approvedRoutes.length > 0) ||
+          (node.availableRoutes && node.availableRoutes.length > 0)
+        )
       );
       
       setNodes(nodesWithRoutes);

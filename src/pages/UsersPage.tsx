@@ -186,10 +186,13 @@ export const UsersPage: React.FC = () => {
 
   const getSortedAndFilteredUsers = () => {
     let filtered = users.filter((u) =>
-      u.id.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      u.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      (u.displayName && u.displayName.toLowerCase().includes(searchQuery.toLowerCase())) ||
-      (u.email && u.email.toLowerCase().includes(searchQuery.toLowerCase()))
+      (!shouldFilter || manageableDomains.some((d: string) => u.email?.endsWith(d.replace('@','')))) &&
+      (
+        u.id.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        u.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        (u.displayName && u.displayName.toLowerCase().includes(searchQuery.toLowerCase())) ||
+        (u.email && u.email.toLowerCase().includes(searchQuery.toLowerCase()))
+      )
     );
 
     const sorted = [...filtered].sort((a, b) => {

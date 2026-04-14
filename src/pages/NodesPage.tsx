@@ -107,6 +107,12 @@ export const NodesPage: React.FC = () => {
 
   const applyFilters = () => {
     let filtered = allNodes.filter(node => {
+      // Domain filter
+      if (shouldFilter) {
+        const nodeEmail = node.user?.name ? userEmailMap[node.user.name] : undefined;
+        if (!nodeEmail || !manageableDomains.some((d: string) => nodeEmail.endsWith(d.replace('@','')))) return false;
+      }
+
       const searchMatch = node.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
                          node.hostname?.toLowerCase().includes(searchTerm.toLowerCase());
       
