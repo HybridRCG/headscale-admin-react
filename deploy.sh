@@ -8,7 +8,7 @@ BLUE='\033[0;34m'
 RED='\033[0;31m'
 NC='\033[0m'
 
-VPS="root@hs.groblers.co.uk"
+VPS="hybrid@hs.groblers.co.uk"
 PROJECT_DIR="/headscale/headscale-admin-react"
 COMPOSE_DIR="/headscale"
 
@@ -51,11 +51,11 @@ print_step "Step 3: Pulling on VPS and deploying..."
 ssh $VPS "
   set -e
   cd $PROJECT_DIR
-  git fetch origin
-  git reset --hard origin/main
-  npm install --silent
-  npm run build
-  /headscale/deploy-headscale-admin.sh ${CURRENT} ${NEXT}
+  sudo git fetch origin
+  sudo git reset --hard origin/main
+  sudo npm install --silent
+  sudo npm run build
+  sudo /headscale/deploy-headscale-admin.sh ${CURRENT} ${NEXT}
 "
 print_ok "Deployed v${NEXT} to VPS"
 
