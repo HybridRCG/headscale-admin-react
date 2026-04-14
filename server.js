@@ -97,7 +97,15 @@ app.post('/api/auth/logout', authenticateToken, (req, res) => {
 });
 
 app.get('/api/auth/me', authenticateToken, (req, res) => {
-  res.json({ user: { email: req.user?.email, role: req.user?.role, id: req.user?.email, manageable_domains: req.user?.manageable_domains || [] } });
+  try {
+    const usersMapping = JSON.parse(fs.readFileSync('/etc/headscale/users-mapping.json', 'utf8'));
+    const username = req.user?.username;
+    const userRecord = usersMapping.users?.[username] || {};
+    const manageable_domains = userRecord.manageable_domains || req.user?.manageable_domains || [];
+    res.json({ user: { email: req.user?.email, username, role: req.user?.role, id: req.user?.email, manageable_domains } });
+  } catch (err) {
+    res.json({ user: { email: req.user?.email, role: req.user?.role, id: req.user?.email, manageable_domains: req.user?.manageable_domains || [] } });
+  }
 });
 
 app.post('/api/headscale/approve-route', authenticateToken, async (req, res) => {

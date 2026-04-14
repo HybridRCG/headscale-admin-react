@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { Link } from 'react-router-dom';
+import { useAuthStore } from '../store/authStore';
 import './Navigation.css';
 
 interface NavigationProps {
@@ -9,6 +10,8 @@ interface NavigationProps {
 
 export const Navigation: React.FC<NavigationProps> = ({ isDarkMode, setIsDarkMode }) => {
   const [menuOpen, setMenuOpen] = useState(false);
+  const { user } = useAuthStore();
+  const isSuperAdmin = user?.role === 'super_admin';
 
   return (
     <nav className="navbar">
@@ -29,10 +32,10 @@ export const Navigation: React.FC<NavigationProps> = ({ isDarkMode, setIsDarkMod
           <li><Link to="/dashboard" className="navbar-link" onClick={() => setMenuOpen(false)}>Home</Link></li>
           <li><Link to="/users" className="navbar-link" onClick={() => setMenuOpen(false)}>Users</Link></li>
           <li><Link to="/nodes" className="navbar-link" onClick={() => setMenuOpen(false)}>Nodes</Link></li>
-          <li><Link to="/routes" className="navbar-link" onClick={() => setMenuOpen(false)}>Routes</Link></li>
+          {isSuperAdmin && <li><Link to="/routes" className="navbar-link" onClick={() => setMenuOpen(false)}>Routes</Link></li>}
           <li><Link to="/acl" className="navbar-link" onClick={() => setMenuOpen(false)}>ACL Editor</Link></li>
-          <li><Link to="/dns" className="navbar-link" onClick={() => setMenuOpen(false)}>DNS</Link></li>
-          <li><Link to="/settings" className="navbar-link" onClick={() => setMenuOpen(false)}>Settings</Link></li>
+          {isSuperAdmin && <li><Link to="/dns" className="navbar-link" onClick={() => setMenuOpen(false)}>DNS</Link></li>}
+          {isSuperAdmin && <li><Link to="/settings" className="navbar-link" onClick={() => setMenuOpen(false)}>Settings</Link></li>}
         </ul>
 
         {/* Theme toggle */}
