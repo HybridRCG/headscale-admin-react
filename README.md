@@ -1,3 +1,5 @@
+<!-- Copyright (c) 2026 HybridRCG - See LICENSE for terms -->
+
 # Headscale Admin — React Edition
 
 A production-ready, role-based administration dashboard for [Headscale](https://github.com/juanfont/headscale) v0.28+, built with React, TypeScript, Zustand, and Express.
@@ -134,6 +136,10 @@ Roles are defined in `/etc/headscale/users-mapping.json` (inside the container, 
 | Deploy script | `/your-path/deploy-headscale-admin.sh` |
 
 ---
+
+## Installation
+
+See [INSTALL.md](INSTALL.md) for full Docker installation instructions.
 
 ## Local Development Setup
 
