@@ -588,8 +588,8 @@ export const UsersPage: React.FC = () => {
                     </div>
                   </div>
 
-                  {/* API Keys Section */}
-                  <div style={{ marginBottom: '1.5rem', paddingBottom: '1.5rem', borderBottom: '1px solid #374151' }}>
+                  {/* API Keys Section - super_admin only */}
+                  {authUser?.role === 'super_admin' && <div style={{ marginBottom: '1.5rem', paddingBottom: '1.5rem', borderBottom: '1px solid #374151' }}>
                     <label style={{ display: 'block', fontSize: '0.875rem', fontWeight: '600', marginBottom: '0.75rem', color: '#d1d5db' }}>
                       API Keys:
                     </label>
@@ -679,7 +679,7 @@ export const UsersPage: React.FC = () => {
                     >
                       ➕ Create API Key
                     </button>
-                  </div>
+                  </div>}
 
                   {/* Associated Nodes */}
                   <div>
