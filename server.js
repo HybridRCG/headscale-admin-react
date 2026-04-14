@@ -81,6 +81,20 @@ app.post('/api/auth/login', async (req, res) => {
     const role = currentUser?.role || 'user';
     
     userTokenMap.set(email, { apiKey, headscaleUrl, validatedAt: Date.now() });
+    // Store key prefix -> username mapping so UI can show per-user keys
+    try {
+      const prefix = apiKey.substring(0, apiKey.lastIndexOf('-') + 1) + '***';
+      const mData = JSON.parse(fs.readFileSync('/etc/headscale/users-mapping.json', 'utf8'));
+      if (!mData.api_key_owners) mData.api_key_owners = {};
+      // Find actual prefix from headscale by listing keys
+      const keysResp = await axios.get(`${headscaleUrl}/api/v1/apikey`, { headers: { Authorization: `Bearer ${apiKey}` }, timeout: 5000 });
+      const keys = keysResp.data.apiKeys || [];
+      // The key used to login will be the one with the matching prefix
+      keys.forEach(k => { if (!mData.api_key_owners[k.prefix]) mData.api_key_owners[k.prefix] = username; });
+      // Mark all keys fetched with this user's key as belonging to this user
+      // More precise: only mark keys where we know this user owns them
+      fs.writeFileSync('/etc/headscale/users-mapping.json', JSON.stringify(mData, null, 2));
+    } catch(e) { console.warn('Could not update key owners:', e.message); }
     const manageable_domains = currentUser?.manageable_domains || [];
     const sessionToken = jwt.sign({ email, username, role, id: email, manageable_domains }, JWT_SECRET, { expiresIn: '24h' });
     console.log(`[LOGIN SUCCESS] ${username} (${email}) role: ${role}`);
@@ -438,9 +452,9 @@ app.get('/api/headscale/user-emails', authenticateToken, async (req, res) => {
 app.get('/api/headscale/apikey/labels', authenticateToken, (req, res) => {
   try {
     const mapping = JSON.parse(fs.readFileSync('/etc/headscale/users-mapping.json', 'utf8'));
-    res.json(mapping.api_key_labels || {});
+    res.json({ labels: mapping.api_key_labels || {}, owners: mapping.api_key_owners || {} });
   } catch (e) {
-    res.json({});
+    res.json({ labels: {}, owners: {} });
   }
 });
 

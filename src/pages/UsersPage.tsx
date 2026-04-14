@@ -53,6 +53,7 @@ export const UsersPage: React.FC = () => {
   const [showApiKeyModal, setShowApiKeyModal] = useState(false);
   const [apiKeyModalContent, setApiKeyModalContent] = useState('');
   const [apiKeyLabels, setApiKeyLabels] = useState<Record<string, string>>({});
+  const [apiKeyOwners, setApiKeyOwners] = useState<Record<string, string>>({});
   const [editingLabelPrefix, setEditingLabelPrefix] = useState<string | null>(null);
   const [labelDraft, setLabelDraft] = useState('');
   const [showEmailNote, setShowEmailNote] = useState<string | null>(null);
@@ -92,11 +93,12 @@ export const UsersPage: React.FC = () => {
     try {
       const [keyResp, labelResp] = await Promise.all([
         axios.get('/admin/api/headscale/api/v1/apikey'),
-        axios.get('/admin/api/headscale/apikey/labels').catch(() => ({ data: {} }))
+        axios.get('/admin/api/headscale/apikey/labels').catch(() => ({ data: { labels: {}, owners: {} } }))
       ]);
       const keys = keyResp.data.apiKeys || [];
       setApiKeys(prev => new Map(prev).set('all', keys).set(userId, keys));
-      setApiKeyLabels(labelResp.data || {});
+      setApiKeyLabels(labelResp.data?.labels || {});
+      setApiKeyOwners(labelResp.data?.owners || {});
     } catch (error) {
       console.error('Failed to fetch API keys:', error);
     } finally {
@@ -593,9 +595,13 @@ export const UsersPage: React.FC = () => {
                     </label>
                     {loadingApiKeys.has(user.id) ? (
                       <div style={{ color: '#9ca3af', fontSize: '0.875rem' }}>Loading...</div>
-                    ) : (apiKeys.get(user.id) || apiKeys.get('all') || []).length > 0 ? (
+                    ) : (apiKeys.get(user.id) || apiKeys.get('all') || []).filter((key) =>
+                      !apiKeyOwners[key.prefix] || apiKeyOwners[key.prefix] === user.name
+                    ).length > 0 ? (
                       <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem', marginBottom: '0.75rem' }}>
-                        {(apiKeys.get(user.id) || apiKeys.get('all') || []).map((key) => (
+                        {(apiKeys.get(user.id) || apiKeys.get('all') || []).filter((key) =>
+                          !apiKeyOwners[key.prefix] || apiKeyOwners[key.prefix] === user.name
+                        ).map((key) => (
                           <div
                             key={key.id}
                             style={{
