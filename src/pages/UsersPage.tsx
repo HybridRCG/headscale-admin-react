@@ -52,6 +52,9 @@ export const UsersPage: React.FC = () => {
   const [loadingApiKeys, setLoadingApiKeys] = useState<Set<string>>(new Set());
   const [showApiKeyModal, setShowApiKeyModal] = useState(false);
   const [apiKeyModalContent, setApiKeyModalContent] = useState('');
+  const [apiKeyLabels, setApiKeyLabels] = useState<Record<string, string>>({});
+  const [editingLabelPrefix, setEditingLabelPrefix] = useState<string | null>(null);
+  const [labelDraft, setLabelDraft] = useState('');
   const [showEmailNote, setShowEmailNote] = useState<string | null>(null);
 
   useEffect(() => {
@@ -87,10 +90,13 @@ export const UsersPage: React.FC = () => {
   const fetchApiKeysForUser = async (userId: string) => {
     setLoadingApiKeys(prev => new Set(prev).add(userId));
     try {
-      const response = await axios.get('/admin/api/headscale/api/v1/apikey');
-      // Store under 'all' since headscale keys are global, not per-user
-      const keys = response.data.apiKeys || [];
+      const [keyResp, labelResp] = await Promise.all([
+        axios.get('/admin/api/headscale/api/v1/apikey'),
+        axios.get('/admin/api/headscale/apikey/labels').catch(() => ({ data: {} }))
+      ]);
+      const keys = keyResp.data.apiKeys || [];
       setApiKeys(prev => new Map(prev).set('all', keys).set(userId, keys));
+      setApiKeyLabels(labelResp.data || {});
     } catch (error) {
       console.error('Failed to fetch API keys:', error);
     } finally {
@@ -99,6 +105,16 @@ export const UsersPage: React.FC = () => {
         next.delete(userId);
         return next;
       });
+    }
+  };
+
+  const handleSaveLabel = async (prefix: string, label: string) => {
+    try {
+      await axios.post('/admin/api/headscale/apikey/label', { prefix, label });
+      setApiKeyLabels(prev => ({ ...prev, [prefix]: label }));
+      setEditingLabelPrefix(null);
+    } catch (e) {
+      console.error('Failed to save label', e);
     }
   };
 
@@ -592,8 +608,33 @@ export const UsersPage: React.FC = () => {
                               fontSize: '0.875rem',
                             }}
                           >
-                            <div>
-                              <div style={{ color: '#f3f4f6', fontFamily: 'monospace' }}>{key.prefix}</div>
+                            <div style={{ flex: 1 }}>
+                              <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                                <span style={{ color: '#f3f4f6', fontFamily: 'monospace', fontSize: '0.8rem' }}>{key.prefix}...</span>
+                                {editingLabelPrefix === key.prefix ? (
+                                  <>
+                                    <input
+                                      type='text'
+                                      value={labelDraft}
+                                      onChange={(e) => setLabelDraft(e.target.value)}
+                                      onKeyDown={(e) => { if (e.key === 'Enter') handleSaveLabel(key.prefix, labelDraft); if (e.key === 'Escape') setEditingLabelPrefix(null); }}
+                                      autoFocus
+                                      placeholder='e.g. Login key'
+                                      style={{ padding: '0.2rem 0.4rem', backgroundColor: '#1f2937', border: '1px solid #4b5563', borderRadius: '0.25rem', color: '#f3f4f6', fontSize: '0.75rem', width: '140px' }}
+                                    />
+                                    <button className='btn btn-sm btn-success' style={{ padding: '0.2rem 0.4rem', fontSize: '0.7rem' }} onClick={() => handleSaveLabel(key.prefix, labelDraft)}>✓</button>
+                                    <button className='btn btn-sm btn-secondary' style={{ padding: '0.2rem 0.4rem', fontSize: '0.7rem' }} onClick={() => setEditingLabelPrefix(null)}>✕</button>
+                                  </>
+                                ) : (
+                                  <span
+                                    onClick={() => { setEditingLabelPrefix(key.prefix); setLabelDraft(apiKeyLabels[key.prefix] || ''); }}
+                                    style={{ color: apiKeyLabels[key.prefix] ? '#10b981' : '#6b7280', fontSize: '0.75rem', cursor: 'pointer', fontStyle: apiKeyLabels[key.prefix] ? 'normal' : 'italic' }}
+                                    title='Click to add/edit label'
+                                  >
+                                    {apiKeyLabels[key.prefix] || '+ add label'}
+                                  </span>
+                                )}
+                              </div>
                               <div style={{ color: '#9ca3af', fontSize: '0.75rem', marginTop: '0.25rem' }}>
                                 Expires: {new Date(key.expiration).toLocaleDateString()}
                               </div>
