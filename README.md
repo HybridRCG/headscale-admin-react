@@ -2,8 +2,8 @@
 
 A production-ready, role-based administration dashboard for [Headscale](https://github.com/juanfont/headscale) v0.28+, built with React, TypeScript, Zustand, and Express.
 
-**Live at:** `https://hs.groblers.co.uk/admin`  
-**GitHub:** https://github.com/HybridRCG/headscale-admin-react
+**Live at:** `https://your-headscale-domain.com/admin`  
+**GitHub:** https://github.com/YourGitHubUser/headscale-admin-react
 
 ---
 
@@ -38,7 +38,7 @@ A production-ready, role-based administration dashboard for [Headscale](https://
 
 ## Role System
 
-Roles are defined in `/etc/headscale/users-mapping.json` (inside the container, mapped from `/headscale/configs/headscale/users-mapping.json` on the host).
+Roles are defined in `/etc/headscale/users-mapping.json` (inside the container, mapped from `/your-path/configs/headscale/users-mapping.json` on the host).
 
 ### Role: `super_admin`
 - Full access to all pages and all users/nodes/routes
@@ -47,7 +47,7 @@ Roles are defined in `/etc/headscale/users-mapping.json` (inside the container, 
 - Sees all users, nodes, routes regardless of domain
 
 ### Role: `group_admin`
-- Assigned a `manageable_domains` array (e.g. `["@mvsolar.co.za"]`)
+- Assigned a `manageable_domains` array (e.g. `["@company-b.com"]`)
 - Can only see users, nodes, and ACL entries matching their domain
 - Can create API keys for users in their domain
 - Cannot access DNS, Settings, or Routes pages
@@ -62,24 +62,24 @@ Roles are defined in `/etc/headscale/users-mapping.json` (inside the container, 
 ```json
 {
   "users": {
-    "Hybrid": {
-      "email": "riaan@groblers.co.uk",
+    "AdminUser": {
+      "email": "admin@yourdomain.com",
       "role": "super_admin",
       "manageable_domains": ["*"]
     },
-    "Marius": {
-      "email": "marius@mvsolar.co.za",
+    "GroupAdminUser": {
+      "email": "groupadmin@company-b.com",
       "role": "group_admin",
-      "manageable_domains": ["@mvsolar.co.za"]
+      "manageable_domains": ["@company-b.com"]
     },
-    "Rika": {
-      "email": "rika@mvsolar.co.za",
+    "ViewerUser": {
+      "email": "viewer@company-b.com",
       "role": "user",
       "manageable_domains": []
     }
   },
   "api_key_labels": {
-    "hskey-api-abc123": "Marius Login Key"
+    "hskey-api-abc123": "GroupAdmin Login Key"
   }
 }
 ```
@@ -106,16 +106,16 @@ Roles are defined in `/etc/headscale/users-mapping.json` (inside the container, 
 
 ### Super Admin
 1. Expand any user → full API keys section with create/expire/delete/label
-2. Add a label to identify which key belongs to whom (e.g. "Marius Login Key")
+2. Add a label to identify which key belongs to whom (e.g. "GroupAdmin Login Key")
 3. Labels persist in `users-mapping.json`
 
-### Group Admin (e.g. Marius)
+### Group Admin (e.g. GroupAdminUser)
 1. Expand a user in their domain → sees **➕ Create API Key for [user]** button
 2. Key is created and shown once — copy and send securely to the user
 3. Key is auto-labelled with the user's name
 4. Cannot create keys for users outside their domain
 
-### User (e.g. Rika)
+### User (e.g. ViewerUser)
 1. Expands their own profile → sees API keys labelled with their name (read-only)
 2. Shows prefix and expiry date only
 
@@ -125,13 +125,13 @@ Roles are defined in `/etc/headscale/users-mapping.json` (inside the container, 
 
 | Component | Details |
 |-----------|---------|
-| VPS | RackNerd VPS — `204.152.218.223` |
-| Domain | `hs.groblers.co.uk` |
+| VPS | VPS — `YOUR_VPS_IP` |
+| Domain | `your-headscale-domain.com` |
 | Path | `/admin/` |
 | Container | `headscale-admin-react:vX.Y.Z` |
 | Port | `3000` (internal), proxied by Traefik |
-| Config file | `/headscale/configs/headscale/users-mapping.json` |
-| Deploy script | `/headscale/deploy-headscale-admin.sh` |
+| Config file | `/your-path/configs/headscale/users-mapping.json` |
+| Deploy script | `/your-path/deploy-headscale-admin.sh` |
 
 ---
 
@@ -143,7 +143,7 @@ Roles are defined in `/etc/headscale/users-mapping.json` (inside the container, 
 
 ### Clone and install
 ```bash
-git clone https://github.com/HybridRCG/headscale-admin-react.git
+git clone https://github.com/YourGitHubUser/headscale-admin-react.git
 cd headscale-admin-react
 npm install
 ```
@@ -173,14 +173,14 @@ This script automatically:
 
 ### Manual VPS deploy
 ```bash
-cd /headscale/headscale-admin-react
+cd /your-path/headscale-admin-react
 git pull
 npm run build
-/headscale/deploy-headscale-admin.sh <current_version> <next_version>
+/your-path/deploy-headscale-admin.sh <current_version> <next_version>
 ```
 
 ### Requirements for deploy script
-- SSH key auth set up for `hybrid@hs.groblers.co.uk`
+- SSH key auth set up for `hybrid@your-headscale-domain.com`
 - `hybrid` user has passwordless sudo
 - GitHub push access (personal access token configured)
 
@@ -265,8 +265,8 @@ headscale-admin-react/
 
 ## Author
 
-**Riaan Grobler** — [riaan@groblers.co.uk](mailto:riaan@groblers.co.uk)  
-GitHub: [@HybridRCG](https://github.com/HybridRCG)
+**Admin** — [admin@yourdomain.com](mailto:admin@yourdomain.com)  
+GitHub: [@YourGitHubUser](https://github.com/YourGitHubUser)
 
 Built for the Headscale community with ❤️
 

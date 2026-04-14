@@ -8,14 +8,14 @@ print_ok()   { echo -e "${GREEN}✅ $1${NC}"; }
 print_err()  { echo -e "${RED}❌ $1${NC}"; exit 1; }
 print_head() { echo -e "${BLUE}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}\n${BLUE}  $1${NC}\n${BLUE}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}"; }
 
-VPS="hybrid@hs.groblers.co.uk"
-PROJECT_DIR="/headscale/headscale-admin-react"
-LOCAL_DIR="/Users/riaangrobler/headscale-admin-react"
+VPS="YOUR_VPS_USER@your-headscale-domain.com"
+PROJECT_DIR="/your-path/headscale-admin-react"
+LOCAL_DIR="$(git rev-parse --show-toplevel)"
 
 # ── Get current version from running container ───────────────────────────────
 CURRENT=$(ssh $VPS "docker ps --format '{{.Image}}' | grep headscale-admin-react | head -1 | grep -oP 'v\K[\d.]+'" 2>/dev/null || echo "")
 if [ -z "$CURRENT" ]; then
-  CURRENT=$(ssh $VPS "cd $PROJECT_DIR && git describe --tags --abbrev=0 2>/dev/null | tr -d 'v'" || echo "0.7.22")
+  CURRENT=$(ssh $VPS "cd $PROJECT_DIR && git describe --tags --abbrev=0 2>/dev/null | tr -d 'v'" || echo "0.1.0")
 fi
 IFS='.' read -r MAJOR MINOR PATCH <<< "$CURRENT"
 NEXT="${MAJOR}.${MINOR}.$((PATCH + 1))"
@@ -54,8 +54,8 @@ ssh $VPS "
   sudo git reset --hard origin/main
   sudo npm install --silent
   sudo npm run build
-  sudo /headscale/deploy-headscale-admin.sh ${CURRENT} ${NEXT}
+  sudo /your-path/deploy-headscale-admin.sh ${CURRENT} ${NEXT}
 "
 print_ok "Deployed v${NEXT} to VPS"
 
-print_head "✅ v${NEXT} LIVE at https://hs.groblers.co.uk/admin"
+print_head "✅ v${NEXT} LIVE at https://your-headscale-domain.com/admin"
