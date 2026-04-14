@@ -83,16 +83,21 @@ app.post('/api/auth/login', async (req, res) => {
     userTokenMap.set(email, { apiKey, headscaleUrl, validatedAt: Date.now() });
     // Store key prefix -> username mapping so UI can show per-user keys
     try {
-      const prefix = apiKey.substring(0, apiKey.lastIndexOf('-') + 1) + '***';
       const mData = JSON.parse(fs.readFileSync('/etc/headscale/users-mapping.json', 'utf8'));
       if (!mData.api_key_owners) mData.api_key_owners = {};
-      // Find actual prefix from headscale by listing keys
-      const keysResp = await axios.get(`${headscaleUrl}/api/v1/apikey`, { headers: { Authorization: `Bearer ${apiKey}` }, timeout: 5000 });
-      const keys = keysResp.data.apiKeys || [];
-      // The key used to login will be the one with the matching prefix
-      keys.forEach(k => { if (!mData.api_key_owners[k.prefix]) mData.api_key_owners[k.prefix] = username; });
-      // Mark all keys fetched with this user's key as belonging to this user
-      // More precise: only mark keys where we know this user owns them
+      // Extract prefix from the login key itself (format: hskey-api-XXXXX-YYYYY)
+      // The prefix is the key up to and including the last segment before the secret part
+      const keyParts = apiKey.split('-');
+      // headscale prefix format is first 10 chars of the key
+      const keyPrefix = apiKey.substring(0, 10);
+      // Try to get actual prefix by listing keys (may fail for non-admins)
+      try {
+        const keysResp = await axios.get(`${headscaleUrl}/api/v1/apikey`, { headers: { Authorization: `Bearer ${apiKey}` }, timeout: 5000 });
+        const keys = keysResp.data.apiKeys || [];
+        keys.forEach(k => { if (!mData.api_key_owners[k.prefix]) mData.api_key_owners[k.prefix] = username; });
+      } catch(listErr) {
+        console.log(`[LOGIN] Could not list keys for ${username} (expected for non-admins)`);
+      }
       fs.writeFileSync('/etc/headscale/users-mapping.json', JSON.stringify(mData, null, 2));
     } catch(e) { console.warn('Could not update key owners:', e.message); }
     const manageable_domains = currentUser?.manageable_domains || [];
