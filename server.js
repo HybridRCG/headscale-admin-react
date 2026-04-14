@@ -463,6 +463,54 @@ app.post('/api/headscale/apikey/label', authenticateToken, (req, res) => {
   }
 });
 
+
+// Group admin creates an API key for a user in their domain
+app.post('/api/headscale/apikey/create-for-user', authenticateToken, async (req, res) => {
+  const { targetUsername, label, expiryDays } = req.body;
+  const adminEmail = req.user?.email;
+  const adminUsername = req.user?.username;
+  if (!targetUsername) return res.status(400).json({ message: 'targetUsername required' });
+  try {
+    const mapping = JSON.parse(fs.readFileSync('/etc/headscale/users-mapping.json', 'utf8'));
+    const adminRecord = mapping.users?.[adminUsername] || {};
+    const targetRecord = mapping.users?.[targetUsername] || {};
+    // Check admin has permission for this user's domain
+    const adminDomains = adminRecord.manageable_domains || [];
+    const targetEmail = targetRecord.email || '';
+    const canManage = adminDomains.includes('*') || adminDomains.some(d => targetEmail.endsWith(d.replace('@','')));
+    if (!canManage) return res.status(403).json({ message: 'Not authorized to manage this user' });
+    // Get the admin's API key to create the new key
+    const tokenData = userTokenMap.get(adminEmail);
+    if (!tokenData) return res.status(401).json({ message: 'Session expired' });
+    // Create the API key via headscale
+    const days = expiryDays || 90;
+    const expDate = new Date();
+    expDate.setDate(expDate.getDate() + days);
+    const createResp = await axios.post(
+      `${tokenData.headscaleUrl}/api/v1/apikey`,
+      { expiration: expDate.toISOString() },
+      { headers: { Authorization: `Bearer ${tokenData.apiKey}` }, timeout: 10000 }
+    );
+    const newKey = createResp.data.apiKey;
+    // Auto-label with target username
+    const autoLabel = label || `${targetUsername} - Login Key`;
+    // Get prefix from key list
+    const keysResp = await axios.get(`${tokenData.headscaleUrl}/api/v1/apikey`, { headers: { Authorization: `Bearer ${tokenData.apiKey}` }, timeout: 10000 });
+    const keys = keysResp.data.apiKeys || [];
+    // Find the newest key (just created)
+    const newestKey = keys.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt))[0];
+    if (newestKey) {
+      if (!mapping.api_key_labels) mapping.api_key_labels = {};
+      mapping.api_key_labels[newestKey.prefix] = autoLabel;
+      fs.writeFileSync('/etc/headscale/users-mapping.json', JSON.stringify(mapping, null, 2));
+    }
+    res.json({ apiKey: newKey, label: autoLabel, prefix: newestKey?.prefix });
+  } catch (e) {
+    console.error('[CREATE-FOR-USER]', e.message);
+    res.status(500).json({ message: e.message });
+  }
+});
+
 app.use('/api/headscale', authenticateToken, async (req, res) => {
   const userEmail = req.user?.email;
   if (!userEmail) return res.status(401).json({ message: 'Unauthorized' });

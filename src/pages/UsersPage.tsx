@@ -110,6 +110,22 @@ export const UsersPage: React.FC = () => {
     }
   };
 
+  const handleCreateKeyForUser = async (targetUsername: string) => {
+    try {
+      const response = await axios.post('/admin/api/headscale/apikey/create-for-user', {
+        targetUsername,
+        expiryDays: 90
+      });
+      setApiKeyModalContent(response.data.apiKey);
+      setShowApiKeyModal(true);
+      // Refresh keys
+      const u = users.find(u => u.name === targetUsername);
+      if (u) fetchApiKeysForUser(u.id);
+    } catch (e: any) {
+      alert('Failed to create key: ' + (e.response?.data?.message || e.message));
+    }
+  };
+
   const handleSaveLabel = async (prefix: string, label: string) => {
     try {
       await axios.post('/admin/api/headscale/apikey/label', { prefix, label });
@@ -638,27 +654,38 @@ export const UsersPage: React.FC = () => {
                       </button>
                     </div>
                   ) : (
-                    // Group admin / user: read-only, only keys labelled with their username
+                    // Group admin: can create/see keys for users in their domain
+                    // Regular user: read-only own keys only
                     (() => {
                       const myKeys = (apiKeys.get(user.id) || apiKeys.get('all') || []).filter(
                         key => apiKeyLabels[key.prefix] && apiKeyLabels[key.prefix].toLowerCase().includes(user.name.toLowerCase())
                       );
-                      return myKeys.length > 0 ? (
+                      const userEmail = user.email || userEmailMap[user.name] || '';
+                      const canCreateKey = authUser?.role === 'group_admin' &&
+                        manageableDomains.some((d: string) => userEmail.endsWith(d.replace('@','')));
+                      return (myKeys.length > 0 || canCreateKey) ? (
                         <div style={{ marginBottom: '1.5rem', paddingBottom: '1.5rem', borderBottom: '1px solid #374151' }}>
                           <label style={{ display: 'block', fontSize: '0.875rem', fontWeight: '600', marginBottom: '0.75rem', color: '#d1d5db' }}>
                             API Keys:
                           </label>
-                          <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
-                            {myKeys.map(key => (
-                              <div key={key.id} style={{ padding: '0.75rem', backgroundColor: '#374151', borderRadius: '0.25rem', fontSize: '0.875rem' }}>
-                                <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                                  <span style={{ color: '#f3f4f6', fontFamily: 'monospace', fontSize: '0.8rem' }}>{key.prefix}...</span>
-                                  <span style={{ color: '#10b981', fontSize: '0.8rem', fontWeight: 'bold' }}>{apiKeyLabels[key.prefix]}</span>
+                          {myKeys.length > 0 && (
+                            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem', marginBottom: '0.75rem' }}>
+                              {myKeys.map(key => (
+                                <div key={key.id} style={{ padding: '0.75rem', backgroundColor: '#374151', borderRadius: '0.25rem', fontSize: '0.875rem' }}>
+                                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                                    <span style={{ color: '#f3f4f6', fontFamily: 'monospace', fontSize: '0.8rem' }}>{key.prefix}...</span>
+                                    <span style={{ color: '#10b981', fontSize: '0.8rem', fontWeight: 'bold' }}>{apiKeyLabels[key.prefix]}</span>
+                                  </div>
+                                  <div style={{ color: '#9ca3af', fontSize: '0.75rem', marginTop: '0.25rem' }}>Expires: {new Date(key.expiration).toLocaleDateString()}</div>
                                 </div>
-                                <div style={{ color: '#9ca3af', fontSize: '0.75rem', marginTop: '0.25rem' }}>Expires: {new Date(key.expiration).toLocaleDateString()}</div>
-                              </div>
-                            ))}
-                          </div>
+                              ))}
+                            </div>
+                          )}
+                          {canCreateKey && (
+                            <button className='btn btn-sm btn-success' onClick={() => handleCreateKeyForUser(user.name)}>
+                              ➕ Create API Key for {user.name}
+                            </button>
+                          )}
                         </div>
                       ) : null;
                     })()
