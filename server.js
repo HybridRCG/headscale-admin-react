@@ -433,6 +433,36 @@ app.get('/api/headscale/user-emails', authenticateToken, async (req, res) => {
   }
 });
 
+
+// GET api key labels from mapping file
+app.get('/api/headscale/apikey/labels', authenticateToken, (req, res) => {
+  try {
+    const mapping = JSON.parse(fs.readFileSync('/etc/headscale/users-mapping.json', 'utf8'));
+    res.json(mapping.api_key_labels || {});
+  } catch (e) {
+    res.json({});
+  }
+});
+
+// POST update a label for an api key prefix
+app.post('/api/headscale/apikey/label', authenticateToken, (req, res) => {
+  const { prefix, label } = req.body;
+  if (!prefix) return res.status(400).json({ message: 'prefix required' });
+  try {
+    const mapping = JSON.parse(fs.readFileSync('/etc/headscale/users-mapping.json', 'utf8'));
+    if (!mapping.api_key_labels) mapping.api_key_labels = {};
+    if (label === null || label === '') {
+      delete mapping.api_key_labels[prefix];
+    } else {
+      mapping.api_key_labels[prefix] = label;
+    }
+    fs.writeFileSync('/etc/headscale/users-mapping.json', JSON.stringify(mapping, null, 2));
+    res.json({ success: true, labels: mapping.api_key_labels });
+  } catch (e) {
+    res.status(500).json({ message: e.message });
+  }
+});
+
 app.use('/api/headscale', authenticateToken, async (req, res) => {
   const userEmail = req.user?.email;
   if (!userEmail) return res.status(401).json({ message: 'Unauthorized' });
@@ -559,20 +589,11 @@ app.get('/api/headscale/apikey/list', authenticateToken, async (req, res) => {
 
 // Revoke (expire) API key
 
-// GET api key labels from mapping file
-app.get('/api/headscale/apikey/labels', authenticateToken, (req, res) => {
-  try {
-    const mapping = JSON.parse(fs.readFileSync('/etc/headscale/users-mapping.json', 'utf8'));
-    res.json(mapping.api_key_labels || {});
   } catch (e) {
     res.json({});
   }
 });
 
-// POST update a label for an api key prefix
-app.post('/api/headscale/apikey/label', authenticateToken, (req, res) => {
-  const { prefix, label } = req.body;
-  if (!prefix) return res.status(400).json({ message: 'prefix required' });
   try {
     const mapping = JSON.parse(fs.readFileSync('/etc/headscale/users-mapping.json', 'utf8'));
     if (!mapping.api_key_labels) mapping.api_key_labels = {};
