@@ -589,26 +589,6 @@ app.get('/api/headscale/apikey/list', authenticateToken, async (req, res) => {
 
 // Revoke (expire) API key
 
-  } catch (e) {
-    res.json({});
-  }
-});
-
-  try {
-    const mapping = JSON.parse(fs.readFileSync('/etc/headscale/users-mapping.json', 'utf8'));
-    if (!mapping.api_key_labels) mapping.api_key_labels = {};
-    if (label === null || label === '') {
-      delete mapping.api_key_labels[prefix];
-    } else {
-      mapping.api_key_labels[prefix] = label;
-    }
-    fs.writeFileSync('/etc/headscale/users-mapping.json', JSON.stringify(mapping, null, 2));
-    res.json({ success: true, labels: mapping.api_key_labels });
-  } catch (e) {
-    res.status(500).json({ message: e.message });
-  }
-});
-
 app.post('/api/headscale/apikey/revoke', authenticateToken, async (req, res) => {
   const { keyId } = req.body;
   const userEmail = req.user?.email;
