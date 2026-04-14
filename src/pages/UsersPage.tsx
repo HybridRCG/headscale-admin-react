@@ -88,7 +88,9 @@ export const UsersPage: React.FC = () => {
     setLoadingApiKeys(prev => new Set(prev).add(userId));
     try {
       const response = await axios.get('/admin/api/headscale/api/v1/apikey');
-      setApiKeys(prev => new Map(prev).set(userId, response.data.apiKeys || []));
+      // Store under 'all' since headscale keys are global, not per-user
+      const keys = response.data.apiKeys || [];
+      setApiKeys(prev => new Map(prev).set('all', keys).set(userId, keys));
     } catch (error) {
       console.error('Failed to fetch API keys:', error);
     } finally {
@@ -158,6 +160,17 @@ export const UsersPage: React.FC = () => {
     } catch (error) {
       console.error('Failed to expire API key:', error);
       alert('Failed to expire API key');
+    }
+  };
+
+  const handleDeleteApiKey = async (userId: string, prefix: string) => {
+    if (!window.confirm(`Delete API key ${prefix}...? This cannot be undone.`)) return;
+    try {
+      await axios.delete(`/admin/api/headscale/api/v1/apikey/${prefix}`);
+      await fetchApiKeysForUser(userId);
+    } catch (error) {
+      console.error('Failed to delete API key:', error);
+      alert('Failed to delete API key');
     }
   };
 
@@ -583,13 +596,24 @@ export const UsersPage: React.FC = () => {
                                 Expires: {new Date(key.expiration).toLocaleDateString()}
                               </div>
                             </div>
-                            <button
-                              className="btn btn-sm btn-error"
-                              onClick={() => handleExpireApiKey(user.id, key.prefix)}
-                              style={{ padding: '0.3rem 0.6rem', fontSize: '0.75rem' }}
-                            >
-                              Expire
-                            </button>
+                            <div style={{ display: 'flex', gap: '0.25rem' }}>
+                              <button
+                                className="btn btn-sm btn-warning"
+                                onClick={() => handleExpireApiKey(user.id, key.prefix)}
+                                style={{ padding: '0.3rem 0.6rem', fontSize: '0.75rem' }}
+                                title="Expire this key"
+                              >
+                                ⏱ Expire
+                              </button>
+                              <button
+                                className="btn btn-sm btn-error"
+                                onClick={() => handleDeleteApiKey(user.id, key.prefix)}
+                                style={{ padding: '0.3rem 0.6rem', fontSize: '0.75rem' }}
+                                title="Delete this key"
+                              >
+                                🗑 Delete
+                              </button>
+                            </div>
                           </div>
                         ))}
                       </div>
