@@ -628,10 +628,10 @@ export const UsersPage: React.FC = () => {
                                 ) : (
                                   <span
                                     onClick={() => { setEditingLabelPrefix(key.prefix); setLabelDraft(apiKeyLabels[key.prefix] || ''); }}
-                                    style={{ color: apiKeyLabels[key.prefix] ? '#10b981' : '#6b7280', fontSize: '0.75rem', cursor: 'pointer', fontStyle: apiKeyLabels[key.prefix] ? 'normal' : 'italic' }}
+                                    style={{ color: apiKeyLabels[key.prefix] ? '#10b981' : '#ef4444', fontSize: '0.8rem', cursor: 'pointer', fontWeight: 'bold', fontStyle: apiKeyLabels[key.prefix] ? 'normal' : 'italic' }}
                                     title='Click to add/edit label'
                                   >
-                                    {apiKeyLabels[key.prefix] || '+ add label'}
+                                    {apiKeyLabels[key.prefix] || '⚠ add label'}
                                   </span>
                                 )}
                               </div>
