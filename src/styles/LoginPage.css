@@ -154,12 +154,11 @@
 }
 
 .footer-version {
-  position: absolute;
-  bottom: 0.75rem;
-  right: 1rem;
-  color: #6b7280;
-  font-size: 0.75rem;
-  margin: 0;
+  text-align: center;
+  color: #9ca3af;
+  font-size: 0.8rem;
+  margin-top: 1rem;
+  letter-spacing: 0.05em;
 }
 
 .HomePage.css {

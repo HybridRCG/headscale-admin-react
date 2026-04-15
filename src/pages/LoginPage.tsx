@@ -92,7 +92,6 @@ export const LoginPage: React.FC = () => {
           </button>
         </form>
 
-        <p className="footer-version">v{APP_VERSION}</p>
       </div>
     </div>
   );
