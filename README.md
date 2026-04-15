@@ -8,6 +8,12 @@ A production-ready, role-based administration dashboard for [Headscale](https://
 
 **GitHub:** https://github.com/HybridRCG/headscale-admin-react
 
+## ☕ Support Me
+
+If you like this project, consider buying me a coffee!
+
+[![Buy Me a Coffee](https://img.shields.io/badge/Buy%20Me%20a%20Coffee-support-yellow?logo=buy-me-a-coffee)](https://buymeacoffee.com/hybridrcg)
+
 ---
 
 ## Features
