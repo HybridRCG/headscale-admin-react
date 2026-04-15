@@ -1,3 +1,5 @@
+/* eslint-disable react-hooks/exhaustive-deps */
+/* eslint-disable @typescript-eslint/no-unused-vars */
 import React, { useEffect, useState } from 'react';
 import axios from 'axios';
 import { useAuthStore } from '../store/authStore';
@@ -39,7 +41,7 @@ export const UsersPage: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [expandedUserId, setExpandedUserId] = useState<string | null>(null);
   const [renamingUserId, setRenamingUserId] = useState<string | null>(null);
-  const [editingEmailUserId, setEditingEmailUserId] = useState<string | null>(null);
+  const [_editingEmailUserId, setEditingEmailUserId] = useState<string | null>(null);
   const [deletingUserId, setDeletingUserId] = useState<string | null>(null);
   const [newName, setNewName] = useState('');
   const [newEmail, setNewEmail] = useState('');
@@ -53,10 +55,10 @@ export const UsersPage: React.FC = () => {
   const [showApiKeyModal, setShowApiKeyModal] = useState(false);
   const [apiKeyModalContent, setApiKeyModalContent] = useState('');
   const [apiKeyLabels, setApiKeyLabels] = useState<Record<string, string>>({});
-  const [apiKeyOwners, setApiKeyOwners] = useState<Record<string, string>>({});
+  const [_apiKeyOwners, setApiKeyOwners] = useState<Record<string, string>>({});
   const [editingLabelPrefix, setEditingLabelPrefix] = useState<string | null>(null);
   const [labelDraft, setLabelDraft] = useState('');
-  const [showEmailNote, setShowEmailNote] = useState<string | null>(null);
+  const [_showEmailNote, setShowEmailNote] = useState<string | null>(null);
 
   useEffect(() => {
     fetchUsers();

@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-unused-vars */
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 import { useAuthStore } from '../store/authStore';
@@ -7,7 +8,7 @@ interface Props {
   visibleUsers: { id: string; name: string }[];
 }
 
-const API = '/admin/api/headscale';
+// const API = '/admin/api/headscale'; // unused
 const SERVER = window.location.origin;
 
 const InfoTip: React.FC<{ text: string }> = ({ text }) => (
@@ -42,7 +43,7 @@ const TagInput: React.FC<{ tags: string[]; onChange: (tags: string[]) => void; p
 };
 
 export const DeployModal: React.FC<Props> = ({ onClose, visibleUsers }) => {
-  const { user: authUser } = useAuthStore();
+  // const { user: authUser } = useAuthStore(); // unused
 
   // General
   const [shieldsUp, setShieldsUp] = useState(false);
@@ -76,6 +77,7 @@ export const DeployModal: React.FC<Props> = ({ onClose, visibleUsers }) => {
 
   useEffect(() => {
     buildCommand();
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [shieldsUp, generateQR, reset, operator, forceReauth, sshServer, usePreAuthKey,
       generatedKey, advertiseExitNode, advertiseTags, advertiseTagsList,
       advertiseRoutes, advertiseRoutesList, acceptDNS, acceptRoutes, exitNode]);

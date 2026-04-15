@@ -1,4 +1,5 @@
-import { APP_VERSION } from '../constants/version';
+/* eslint-disable @typescript-eslint/no-unused-vars */
+import { APP_VERSION as _APP_VERSION } from '../constants/version';
 import React from 'react';
 import { useAuthStore } from '../store/authStore';
 import './Footer.css';

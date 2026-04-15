@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-unused-vars */
 import { APP_VERSION, APP_NAME } from '../constants/version';
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';

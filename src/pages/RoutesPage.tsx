@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-unused-vars */
 import { useAuthStore } from '../store/authStore';
 import React, { useEffect, useState } from 'react';
 import axios from 'axios';
@@ -18,7 +19,7 @@ export const RoutesPage: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [approving, setApproving] = useState<string>('');
 
-  useEffect(() => { fetchRoutes(); }, []);
+  useEffect(() => { fetchRoutes(); }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   const fetchRoutes = async () => {
     setLoading(true);

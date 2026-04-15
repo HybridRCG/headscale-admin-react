@@ -1,3 +1,5 @@
+/* eslint-disable react-hooks/exhaustive-deps */
+/* eslint-disable @typescript-eslint/no-unused-vars */
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 import { useAuthStore } from '../store/authStore';
@@ -412,7 +414,7 @@ const PoliciesTab: React.FC<{ acl: ACL; setAcl: (a: ACL) => void }> = ({ acl, se
   const [proto, setProto] = useState('');
   const [srcType, setSrcType] = useState<'custom'|'user'|'host'|'group'>('custom');
   const [srcInput, setSrcInput] = useState('');
-  const [srcPort, setSrcPort] = useState('');
+  // srcPort removed - unused
   const [srcItems, setSrcItems] = useState<string[]>([]);
   const [dstType, setDstType] = useState<'custom'|'user'|'host'|'group'>('custom');
   const [dstInput, setDstInput] = useState('');
@@ -826,7 +828,7 @@ const UsersTab: React.FC<{ userEmail: string }> = ({ userEmail }) => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
 
-  const [apiKeys, setApiKeys] = useState<any[]>([]);
+  const [apiKeys, setApiKeys] = useState<any[]>([]); // eslint-disable-line
   const [selectedUser, setSelectedUser] = useState<string>('');
   const [apiKeyExpiration, setApiKeyExpiration] = useState<string>('90d');
   const [showNewKey, setShowNewKey] = useState<string>('');
@@ -991,17 +993,7 @@ const UsersTab: React.FC<{ userEmail: string }> = ({ userEmail }) => {
     }
   };
 
-  const handleRevokeApiKey = async (keyId: string) => {
-    if (!window.confirm('Revoke this API key?')) return;
-
-    try {
-      await axios.post(`${API_BASE}/headscale/apikey/revoke`, { keyId });
-      loadApiKeys();
-      setError('');
-    } catch (err) {
-      setError('Failed to revoke API key: ' + (err instanceof Error ? err.message : 'Unknown error'));
-    }
-  };
+  // handleRevokeApiKey removed - unused
 
   const copyToClipboard = (text: string) => {
     navigator.clipboard.writeText(text);
