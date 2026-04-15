@@ -93,7 +93,12 @@ export const LoginPage: React.FC = () => {
         </form>
 
         <div style={{ textAlign: 'right', marginTop: '1rem' }}>
-          <span style={{ fontSize: '0.8rem', color: '#374151', fontWeight: '600' }}>v{APP_VERSION}</span>
+          <a href="https://github.com/HybridRCG/headscale-admin-react" target="_blank" rel="noopener noreferrer"
+            style={{ fontSize: '0.8rem', color: '#374151', fontWeight: '600', textDecoration: 'none' }}
+            onMouseEnter={e => (e.currentTarget.style.color = '#3b82f6')}
+            onMouseLeave={e => (e.currentTarget.style.color = '#374151')}>
+            v{APP_VERSION}
+          </a>
         </div>
 
       </div>
