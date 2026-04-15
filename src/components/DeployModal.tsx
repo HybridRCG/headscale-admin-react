@@ -189,7 +189,7 @@ export const DeployModal: React.FC<Props> = ({ onClose, visibleUsers }) => {
                 {!generatedKey ? (
                   <>
                     {/* Single row: User + Expiry + Reusable + Ephemeral + Generate */}
-                    <div style={{ display: 'flex', gap: '0.75rem', alignItems: 'flex-end', flexWrap: 'wrap' }}>
+                    <div style={{ display: 'flex', gap: '0.75rem', alignItems: 'flex-end', flexWrap: 'wrap', paddingLeft: '0.25rem' }}>
                       <div style={{ width: '180px' }}>
                         <label style={{ display: 'block', fontSize: '0.75rem', color: '#9ca3af', marginBottom: '0.25rem' }}>User:</label>
                         <select value={selectedUser} onChange={e => setSelectedUser(e.target.value)}
@@ -203,10 +203,10 @@ export const DeployModal: React.FC<Props> = ({ onClose, visibleUsers }) => {
                         <input type="number" value={preAuthKeyExpiry} onChange={e => setPreAuthKeyExpiry(Number(e.target.value))} min={1} max={90}
                           style={{ width: '100%', padding: '0.5rem', backgroundColor: '#374151', border: '1px solid #4b5563', borderRadius: '0.25rem', color: '#f3f4f6', fontSize: '0.875rem' }} />
                       </div>
-                      <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', color: '#d1d5db', fontSize: '0.875rem', cursor: 'pointer', paddingBottom: '0.1rem' }}>
+                      <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', color: '#d1d5db', fontSize: '0.875rem', cursor: 'pointer', padding: '0.25rem 0.5rem', backgroundColor: '#374151', borderRadius: '0.25rem' }}>
                         <Toggle checked={reusable} onChange={setReusable} /> Reusable
                       </label>
-                      <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', color: '#d1d5db', fontSize: '0.875rem', cursor: 'pointer', paddingBottom: '0.1rem' }}>
+                      <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', color: '#d1d5db', fontSize: '0.875rem', cursor: 'pointer', padding: '0.25rem 0.5rem', backgroundColor: '#374151', borderRadius: '0.25rem' }}>
                         <Toggle checked={ephemeral} onChange={setEphemeral} /> Ephemeral
                       </label>
                       <button onClick={handleGeneratePreAuthKey} disabled={!selectedUser || generatingKey}

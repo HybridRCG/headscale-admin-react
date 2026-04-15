@@ -11,11 +11,18 @@ interface PreAuthKey {
   used: boolean;
   expiration: string;
   createdAt: string;
-  user: string;
+  user: { id: string; name: string } | string;
   aclTags?: string[];
 }
 
 const API = '/admin/api/headscale';
+
+const getUserName = (user: any): string => {
+  if (!user) return 'Unknown';
+  if (typeof user === 'string') return user;
+  if (typeof user === 'object') return user.name || user.id || 'Unknown';
+  return String(user);
+};
 
 export const PreAuthKeysPage: React.FC = () => {
   const { user: authUser } = useAuthStore();
@@ -35,21 +42,30 @@ export const PreAuthKeysPage: React.FC = () => {
   const [filterUser, setFilterUser] = useState('all');
   const [filterStatus, setFilterStatus] = useState<'all' | 'active' | 'used' | 'expired'>('all');
 
-  useEffect(() => {
-    fetchAll();
-  }, []);
+  useEffect(() => { fetchAll(); }, []);
 
   const fetchAll = async () => {
     setLoading(true);
     try {
-      const [keysResp, usersResp, mappingResp] = await Promise.all([
-        axios.get(`${API}/api/v1/preauthkey?user=`),
+      // Fetch users first, then fetch keys per user
+      const [usersResp, mappingResp] = await Promise.all([
         axios.get(`${API}/api/v1/user`),
         axios.get(`${API}/user-mapping`).catch(() => ({ data: {} }))
       ]);
-      setKeys(keysResp.data.preAuthKeys || []);
-      setUsers(usersResp.data.users || []);
+      const allUsers = usersResp.data.users || [];
+      setUsers(allUsers);
       setUserEmailMap(mappingResp.data || {});
+
+      // Fetch keys for each user individually (headscale v0.28 requires user param)
+      const allKeys: PreAuthKey[] = [];
+      await Promise.all(allUsers.map(async (u: any) => {
+        try {
+          const resp = await axios.get(`${API}/api/v1/preauthkey?user=${encodeURIComponent(u.name)}`);
+          const userKeys = (resp.data.preAuthKeys || []).map((k: any) => ({ ...k, user: u }));
+          allKeys.push(...userKeys);
+        } catch { /* user may have no keys */ }
+      }));
+      setKeys(allKeys);
     } catch (e) {
       console.error('Failed to fetch:', e);
     } finally {
@@ -66,8 +82,9 @@ export const PreAuthKeysPage: React.FC = () => {
   const visibleUsers = users.filter(u => canManageUser(u.name));
 
   const filteredKeys = keys.filter(k => {
-    if (!canManageUser(k.user)) return false;
-    if (filterUser !== 'all' && k.user !== filterUser) return false;
+    const uname = getUserName(k.user);
+    if (!canManageUser(uname)) return false;
+    if (filterUser !== 'all' && uname !== filterUser) return false;
     const expired = new Date(k.expiration) < new Date();
     if (filterStatus === 'active') return !k.used && !expired;
     if (filterStatus === 'used') return k.used;
@@ -80,9 +97,6 @@ export const PreAuthKeysPage: React.FC = () => {
     try {
       const expDate = new Date();
       expDate.setDate(expDate.getDate() + newExpiry);
-      // newUser is the username, need to find the ID
-      const targetUser = users.find((u: any) => u.name === newUser);
-      const userId = targetUser?.id || newUser;
       const resp = await axios.post('/admin/api/headscale/preauthkey/create', {
         userId: newUser,
         reusable: newReusable,
@@ -99,7 +113,8 @@ export const PreAuthKeysPage: React.FC = () => {
 
   const handleExpire = async (key: PreAuthKey) => {
     try {
-      await axios.post(`${API}/api/v1/preauthkey/expire`, { user: key.user, key: key.key });
+      const uname = getUserName(key.user);
+      await axios.post(`${API}/api/v1/preauthkey/expire`, { user: uname, key: key.key });
       fetchAll();
     } catch (e: any) {
       alert('Failed: ' + (e.response?.data?.message || e.message));
@@ -131,8 +146,8 @@ export const PreAuthKeysPage: React.FC = () => {
         </div>
       )}
 
-      {/* Filters */}
-      <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap', marginBottom: '1.5rem' }}>
+      {/* Toolbar */}
+      <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap', marginBottom: '1.5rem', alignItems: 'center' }}>
         <select value={filterUser} onChange={e => setFilterUser(e.target.value)} style={{ padding: '0.5rem', backgroundColor: '#1f2937', border: '1px solid #374151', borderRadius: '0.375rem', color: '#f3f4f6' }}>
           <option value="all">All Users</option>
           {visibleUsers.map(u => <option key={u.id} value={u.name}>{u.name}</option>)}
@@ -140,41 +155,34 @@ export const PreAuthKeysPage: React.FC = () => {
         {(['all','active','used','expired'] as const).map(s => (
           <button key={s} className={`btn ${filterStatus === s ? 'btn-primary' : 'btn-secondary'}`} onClick={() => setFilterStatus(s)} style={{ textTransform: 'capitalize' }}>{s}</button>
         ))}
-        <button className="btn btn-primary" onClick={fetchAll} disabled={loading} style={{ marginLeft: 'auto' }}>🔄 Refresh</button>
-        <button className="btn btn-success" onClick={() => setShowCreate(!showCreate)}>➕ Create Key</button>
+        <button className="btn btn-primary" onClick={fetchAll} disabled={loading}>🔄</button>
+        <button className="btn btn-success" onClick={() => setShowCreate(!showCreate)} style={{ marginLeft: 'auto' }}>➕ Create Key</button>
       </div>
 
       {/* Create form */}
       {showCreate && (
-        <div style={{ marginBottom: '1.5rem', padding: '1.5rem', backgroundColor: '#1f2937', border: '1px solid #374151', borderRadius: '0.5rem' }}>
-          <h3 style={{ color: '#f3f4f6', marginTop: 0, marginBottom: '1rem' }}>Create Pre-Auth Key</h3>
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
-            <div>
+        <div style={{ marginBottom: '1.5rem', padding: '1rem', backgroundColor: '#1f2937', border: '1px solid #374151', borderRadius: '0.5rem' }}>
+          <div style={{ display: 'flex', gap: '0.75rem', flexWrap: 'wrap', alignItems: 'flex-end' }}>
+            <div style={{ width: '180px' }}>
               <label style={{ color: '#9ca3af', fontSize: '0.75rem', display: 'block', marginBottom: '0.25rem' }}>User:</label>
-              <select value={newUser} onChange={e => setNewUser(e.target.value)} style={{ width: '100%', padding: '0.75rem', backgroundColor: '#374151', border: '1px solid #4b5563', borderRadius: '0.25rem', color: '#f3f4f6' }}>
-                <option value="">Select user...</option>
+              <select value={newUser} onChange={e => setNewUser(e.target.value)} style={{ width: '100%', padding: '0.6rem', backgroundColor: '#374151', border: '1px solid #4b5563', borderRadius: '0.25rem', color: '#f3f4f6' }}>
+                <option value="">Select...</option>
                 {visibleUsers.map(u => <option key={u.id} value={u.name}>{u.name}</option>)}
               </select>
             </div>
-            <div>
-              <label style={{ color: '#9ca3af', fontSize: '0.75rem', display: 'block', marginBottom: '0.25rem' }}>Expires in (days):</label>
+            <div style={{ width: '90px' }}>
+              <label style={{ color: '#9ca3af', fontSize: '0.75rem', display: 'block', marginBottom: '0.25rem' }}>Expires (days):</label>
               <input type="number" value={newExpiry} onChange={e => setNewExpiry(Number(e.target.value))} min={1} max={365}
-                style={{ width: '100%', padding: '0.75rem', backgroundColor: '#374151', border: '1px solid #4b5563', borderRadius: '0.25rem', color: '#f3f4f6' }} />
+                style={{ width: '100%', padding: '0.6rem', backgroundColor: '#374151', border: '1px solid #4b5563', borderRadius: '0.25rem', color: '#f3f4f6' }} />
             </div>
-            <div style={{ display: 'flex', gap: '1rem' }}>
-              <label style={{ color: '#d1d5db', display: 'flex', alignItems: 'center', gap: '0.5rem', cursor: 'pointer' }}>
-                <input type="checkbox" checked={newReusable} onChange={e => setNewReusable(e.target.checked)} />
-                Reusable
-              </label>
-              <label style={{ color: '#d1d5db', display: 'flex', alignItems: 'center', gap: '0.5rem', cursor: 'pointer' }}>
-                <input type="checkbox" checked={newEphemeral} onChange={e => setNewEphemeral(e.target.checked)} />
-                Ephemeral
-              </label>
-            </div>
-            <div style={{ display: 'flex', gap: '0.5rem' }}>
-              <button className="btn btn-success" onClick={handleCreate}>Generate Key</button>
-              <button className="btn btn-secondary" onClick={() => setShowCreate(false)}>Cancel</button>
-            </div>
+            <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', color: '#d1d5db', fontSize: '0.875rem', cursor: 'pointer', paddingBottom: '0.1rem' }}>
+              <input type="checkbox" checked={newReusable} onChange={e => setNewReusable(e.target.checked)} /> Reusable
+            </label>
+            <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', color: '#d1d5db', fontSize: '0.875rem', cursor: 'pointer', paddingBottom: '0.1rem' }}>
+              <input type="checkbox" checked={newEphemeral} onChange={e => setNewEphemeral(e.target.checked)} /> Ephemeral
+            </label>
+            <button className="btn btn-success" onClick={handleCreate} disabled={!newUser}>Generate</button>
+            <button className="btn btn-secondary" onClick={() => setShowCreate(false)}>Cancel</button>
           </div>
         </div>
       )}
@@ -201,17 +209,18 @@ export const PreAuthKeysPage: React.FC = () => {
               {filteredKeys.map(key => {
                 const status = getStatus(key);
                 const isActive = status.label === 'Active';
+                const uname = getUserName(key.user);
                 return (
                   <tr key={key.id} style={{ borderBottom: '1px solid #374151' }}>
-                    <td style={{ padding: '0.75rem', fontFamily: 'monospace', fontSize: '0.75rem' }}>{key.key.substring(0, 20)}...</td>
-                    <td style={{ padding: '0.75rem' }}>{key.user}</td>
+                    <td style={{ padding: '0.75rem', fontFamily: 'monospace', fontSize: '0.75rem' }}>{key.key.substring(0, 22)}...</td>
+                    <td style={{ padding: '0.75rem', fontWeight: '600', color: '#60a5fa' }}>{uname}</td>
                     <td style={{ padding: '0.75rem' }}><span style={{ color: status.color, fontWeight: 'bold' }}>{status.label}</span></td>
                     <td style={{ padding: '0.75rem' }}>{key.reusable ? '✅' : '❌'}</td>
                     <td style={{ padding: '0.75rem' }}>{key.ephemeral ? '✅' : '❌'}</td>
                     <td style={{ padding: '0.75rem', fontSize: '0.75rem' }}>{new Date(key.expiration).toLocaleDateString()}</td>
                     <td style={{ padding: '0.75rem', fontSize: '0.75rem' }}>{new Date(key.createdAt).toLocaleDateString()}</td>
                     <td style={{ padding: '0.75rem' }}>
-                      {isActive && canManageUser(key.user) && (
+                      {isActive && canManageUser(uname) && (
                         <button className="btn btn-sm btn-error" onClick={() => handleExpire(key)}>Expire</button>
                       )}
                     </td>
