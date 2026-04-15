@@ -1,4 +1,5 @@
 const express = require('express');
+const rateLimit = require('express-rate-limit');
 const axios = require('axios');
 const jwt = require('jsonwebtoken');
 const cors = require('cors');
@@ -13,6 +14,9 @@ const JWT_SECRET = process.env.JWT_SECRET || 'dev-secret-change-in-prod';
 const HEADSCALE_URL = process.env.HEADSCALE_URL || 'http://headscale:8080';
 
 app.use(express.json());
+
+// Rate limit login to 20 attempts per 15 minutes per IP
+const loginLimiter = rateLimit({ windowMs: 15 * 60 * 1000, max: 20, message: { message: 'Too many login attempts, try again later' } });
 app.use(cors());
 
 app.use((req, res, next) => {
@@ -47,7 +51,7 @@ const getUserRoleFromACL = (email, aclPolicy) => {
   return 'viewer';
 };
 
-app.post('/api/auth/login', async (req, res) => {
+app.post('/api/auth/login', loginLimiter, async (req, res) => {
   const { username, apiKey } = req.body;
   const headscaleUrl = HEADSCALE_URL;
   if (!username || !apiKey) return res.status(400).json({ message: 'Missing fields: username, apiKey' });
@@ -288,6 +292,7 @@ app.post('/api/headscale/node/rename', authenticateToken, async (req, res) => {
 app.post('/api/headscale/node/delete', authenticateToken, async (req, res) => {
   const { nodeId } = req.body;
   if (!nodeId) return res.status(400).json({ message: 'nodeId required' });
+  if (!/^[0-9]+$/.test(String(nodeId))) return res.status(400).json({ message: 'Invalid nodeId' });
   try {
     const cmd = `docker exec headscale /ko-app/headscale nodes delete --identifier '${nodeId}' --force`;
     execSync(cmd, { encoding: 'utf-8' });
@@ -299,24 +304,10 @@ app.post('/api/headscale/node/delete', authenticateToken, async (req, res) => {
   }
 });
 
-app.post('/api/headscale/node/tags', authenticateToken, async (req, res) => {
-  const { nodeId, tags } = req.body;
-  if (!nodeId || !tags) return res.status(400).json({ message: 'nodeId and tags required' });
-  try {
-    const tagString = tags.map(t => `tag:${t}`).join(' ');
-    const cmd = `docker exec headscale /ko-app/headscale nodes update --identifier '${nodeId}' --tags '${tagString}'`;
-    execSync(cmd, { encoding: 'utf-8' });
-    console.log(`[NODE-TAGS] ${nodeId} → ${tagString}`);
-    res.json({ message: 'Tags updated', nodeId, tags });
-  } catch (error) {
-    console.error('Failed to update tags:', error.message);
-    res.status(500).json({ message: error.message });
-  }
-});
-
 app.post('/api/headscale/node/expire', authenticateToken, async (req, res) => {
   const { nodeId } = req.body;
   if (!nodeId) return res.status(400).json({ message: 'nodeId required' });
+  if (!/^[0-9]+$/.test(String(nodeId))) return res.status(400).json({ message: 'Invalid nodeId' });
   try {
     const cmd = `docker exec headscale /ko-app/headscale nodes update --identifier '${nodeId}' --expiration now`;
     execSync(cmd, { encoding: 'utf-8' });
@@ -382,7 +373,7 @@ app.post('/api/headscale/node/move-user', authenticateToken, async (req, res) =>
     const node = nodesResp.data.nodes.find(n => n.id.toString() === nodeId.toString());
     if (!node) return res.status(400).json({ message: 'Node not found' });
     await axios.delete(tokenData.headscaleUrl + '/api/v1/node/' + nodeId, { headers: { Authorization: 'Bearer ' + tokenData.apiKey }, timeout: 10000 });
-    const preauthResp = await axios.post(tokenData.headscaleUrl + '/api/v1/preauthkey', { user: newUser, ephemeral: false }, { headers: { Authorization: 'Bearer ' + tokenData.apiKey }, timeout: 10000 });
+    const preauthResp = await axios.post(tokenData.headscaleUrl + '/api/v1/preauthkey', { user: parseInt(targetUser.id, 10), ephemeral: false, expiration: new Date(Date.now() + 90*24*60*60*1000).toISOString() }, { headers: { Authorization: 'Bearer ' + tokenData.apiKey }, timeout: 10000 });
     const newKey = preauthResp.data.pre_auth_key.key;
     console.log('[NODE-MOVE-USER] Node ' + nodeId + ' (' + node.hostname + ') deleted. New pre-auth key created for user ' + newUser);
     res.json({ message: 'Node deleted and new pre-auth key created', nodeId, hostname: node.hostname, newUser, newKey, instructions: 'Device must reconnect with: tailscale login --auth-key=' + newKey });
@@ -617,7 +608,7 @@ app.post('/api/headscale/preauthkey/expire', authenticateToken, async (req, res)
     }
 
     // Use headscale CLI to expire by ID
-    const { execSync } = require('child_process');
+    if (!/^[0-9]+$/.test(String(keyId))) return res.status(400).json({ message: 'Invalid key id' });
     execSync(`docker exec headscale /ko-app/headscale preauthkeys expire --id ${keyId}`, { timeout: 10000 });
     logAudit(req.user.username, 'expire-preauthkey', `user: ${user}`, `id: ${keyId}`);
     res.json({ success: true });
@@ -657,23 +648,9 @@ app.use('/', (req, res) => {
 
 ;
 
-app.listen(PORT, () => console.log(`✅ Server running on port ${PORT}`));
+// NOTE: app.listen moved to end of file
 
-app.post('/api/headscale/user/update-email', authenticateToken, async (req, res) => {
-  const { username, email } = req.body;
-  if (!username || !email) return res.status(400).json({ message: 'Username and email required' });
-  
-  try {
-    console.log(`\n[UPDATE-EMAIL] Setting email for ${username}: ${email}`);
-    const cmd = `docker exec headscale /ko-app/headscale users update --name '${username}' --email '${email}'`;
-    const output = `Routes approved: ${routesStr}`; // API call simulated
-    console.log(`[UPDATE-EMAIL] Success`);
-    res.json({ message: 'Email updated', output });
-  } catch (error) {
-    console.error('Failed to update email:', error.message);
-    res.status(500).json({ message: error.message });
-  }
-});
+// update-email endpoint removed (was broken - used undefined routesStr)
 
 // GET user emails and permissions
 
@@ -701,81 +678,4 @@ app.post('/api/headscale/user-emails', authenticateToken, async (req, res) => {
 
 app.listen(PORT, () => console.log(`✅ Server running on port ${PORT}`));
 
-// Create API key for a user
-app.post('/api/headscale/apikey/create', authenticateToken, async (req, res) => {
-  const { username, expiration } = req.body;
-  const userEmail = req.user?.email;
-  
-  if (!username || !userEmail) {
-    return res.status(400).json({ message: 'Username and user email required' });
-  }
-
-  try {
-    // Check if user is super_admin
-    const usersMapping = JSON.parse(fs.readFileSync('/etc/headscale/users-mapping.json', 'utf8'));
-    const currentUser = Object.values(usersMapping.users || {}).find((u) => u.email === userEmail);
-    
-    if (!currentUser || currentUser.role !== 'super_admin') {
-      return res.status(403).json({ message: 'Only super admins can create API keys' });
-    }
-
-    const exp = expiration || '90d';
-    const cmd = `docker exec headscale /ko-app/headscale apikey create --expiration "${exp}" --output json`;
-    const { execSync } = require('child_process');
-    const output = execSync(cmd).toString();
-    const apiKeyData = JSON.parse(output);
-
-    res.json({ 
-      message: 'API key created', 
-      apiKey: apiKeyData.key,
-      user: username,
-      expiration: exp
-    });
-  } catch (error) {
-    console.error('Failed to create API key:', error.message);
-    res.status(500).json({ message: 'Failed to create API key: ' + error.message });
-  }
-});
-
-// List API keys for a user
-app.get('/api/headscale/apikey/list', authenticateToken, async (req, res) => {
-  try {
-    const { execSync } = require('child_process');
-    const output = execSync('docker exec headscale /ko-app/headscale apikey list --output json').toString();
-    const apiKeys = JSON.parse(output || '[]');
-    
-    res.json(apiKeys);
-  } catch (error) {
-    console.error('Failed to list API keys:', error.message);
-    res.status(500).json({ message: 'Failed to list API keys: ' + error.message });
-  }
-});
-
-// Revoke (expire) API key
-
-app.post('/api/headscale/apikey/revoke', authenticateToken, async (req, res) => {
-  const { keyId } = req.body;
-  const userEmail = req.user?.email;
-
-  if (!keyId || !userEmail) {
-    return res.status(400).json({ message: 'Key ID required' });
-  }
-
-  try {
-    // Check if user is super_admin
-    const usersMapping = JSON.parse(fs.readFileSync('/etc/headscale/users-mapping.json', 'utf8'));
-    const currentUser = Object.values(usersMapping.users || {}).find((u) => u.email === userEmail);
-    
-    if (!currentUser || currentUser.role !== 'super_admin') {
-      return res.status(403).json({ message: 'Only super admins can revoke API keys' });
-    }
-
-    const { execSync } = require('child_process');
-    execSync(`docker exec headscale /ko-app/headscale apikey expire ${keyId}`);
-
-    res.json({ message: 'API key revoked' });
-  } catch (error) {
-    console.error('Failed to revoke API key:', error.message);
-    res.status(500).json({ message: 'Failed to revoke API key: ' + error.message });
-  }
-});
+// apikey/create endpoint removed (superseded by create-for-user)

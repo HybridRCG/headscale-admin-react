@@ -156,7 +156,6 @@ export const UsersPage: React.FC = () => {
       return;
     }
     try {
-      console.log(`Updating email for ${username} to ${newEmail}`);
       await axios.post('/admin/api/headscale/user/update-email', { username, email: newEmail });
       await fetchUsers();
       setEditingEmailUserId(null);

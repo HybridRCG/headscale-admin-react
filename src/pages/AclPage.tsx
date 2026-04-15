@@ -26,7 +26,6 @@ export const AclPage: React.FC = () => {
   ];
 
   const userRole = useAuthStore((state) => state.user?.role || 'user');
-  console.log('[DEBUG AclPage] userRole:', userRole, 'user:', useAuthStore((state) => state.user));
   const visibleTabs = userRole === 'super_admin' ? tabs : [tabs[0]];
   const [acl, setAcl] = useState<ACL | null>(null);
   const [loading, setLoading] = useState(true);

@@ -70,7 +70,6 @@ export const NodesPage: React.FC = () => {
       
       // Fetch user-email mapping from new endpoint
       const mappingResponse = await axios.get(`${API_BASE}/headscale/user-mapping`);
-      console.log('User email map from API:', mappingResponse.data);
       setUserEmailMap(mappingResponse.data);
     } catch (err) {
       console.error('Failed to fetch users:', err);
@@ -81,13 +80,10 @@ export const NodesPage: React.FC = () => {
     try {
       const response = await axios.get(`${API_BASE}/headscale/api/v1/policy`);
       let policyData = response.data;
-      console.log('Raw policy response:', policyData);
       if (typeof policyData.policy === 'string') {
         policyData = JSON.parse(policyData.policy);
-        console.log('Parsed policy:', policyData);
-      }
+        }
       const groupsObj = policyData.groups || {};
-      console.log('Groups object:', groupsObj);
       const groupList: string[] = [];
       const userMap: Record<string, string[]> = {};
 
@@ -97,7 +93,6 @@ export const NodesPage: React.FC = () => {
         userMap[groupName] = users;
       });
 
-      console.log('Groups fetched:', groupList, 'Users map:', userMap);
       setGroups(groupList.sort());
       setGroupUsers(userMap);
     } catch (err) {
@@ -122,7 +117,6 @@ export const NodesPage: React.FC = () => {
       if (selectedGroup !== 'all') {
         const groupUsersForGroup = groupUsers[selectedGroup];
         const nodeUser = node.user?.name;
-        console.log(`Checking ${node.name}: user=${nodeUser || 'N/A'}, group=${selectedGroup}, groupUsers=${JSON.stringify(groupUsersForGroup)}, match=${nodeUser ? (groupUsersForGroup?.includes(nodeUser) || false) : false}`);
       }
       if (selectedGroup !== 'all' && node.user?.name) {
         const nodeUserEmail = userEmailMap[node.user.name];
