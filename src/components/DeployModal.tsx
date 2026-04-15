@@ -186,32 +186,41 @@ export const DeployModal: React.FC<Props> = ({ onClose, visibleUsers }) => {
 
             {usePreAuthKey && (
               <div style={{ backgroundColor: '#1f2937', border: '1px solid #374151', borderRadius: '0.5rem', padding: '1rem', display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
-                {/* Row 1: User + Expiry */}
-                <div style={{ display: 'flex', gap: '0.75rem', alignItems: 'flex-end' }}>
-                  <div style={{ width: '200px' }}>
-                    <label style={{ display: 'block', fontSize: '0.75rem', color: '#9ca3af', marginBottom: '0.25rem' }}>User:</label>
-                    <select value={selectedUser} onChange={e => setSelectedUser(e.target.value)}
-                      style={{ width: '100%', padding: '0.5rem', backgroundColor: '#374151', border: '1px solid #4b5563', borderRadius: '0.25rem', color: '#f3f4f6', fontSize: '0.875rem' }}>
-                      <option value="">Select user...</option>
-                      {visibleUsers.map(u => <option key={u.id} value={u.id}>{u.name}</option>)}
-                    </select>
-                  </div>
-                  <div style={{ width: '110px' }}>
-                    <label style={{ display: 'block', fontSize: '0.75rem', color: '#9ca3af', marginBottom: '0.25rem' }}>Expires (days):</label>
-                    <input type="number" value={preAuthKeyExpiry} onChange={e => setPreAuthKeyExpiry(Number(e.target.value))} min={1} max={90}
-                      style={{ width: '100%', padding: '0.5rem', backgroundColor: '#374151', border: '1px solid #4b5563', borderRadius: '0.25rem', color: '#f3f4f6', fontSize: '0.875rem' }} />
-                  </div>
-                </div>
-                {/* Row 2: Reusable + Ephemeral + Generate button — right aligned */}
-                <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', justifyContent: 'flex-end' }}>
-                  <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', color: '#d1d5db', fontSize: '0.875rem', cursor: 'pointer' }}>
-                    <Toggle checked={reusable} onChange={setReusable} /> Reusable
-                  </label>
-                  <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', color: '#d1d5db', fontSize: '0.875rem', cursor: 'pointer' }}>
-                    <Toggle checked={ephemeral} onChange={setEphemeral} /> Ephemeral
-                  </label>
-                {generatedKey ? (
+                {!generatedKey ? (
+                  <>
+                    {/* Single row: User + Expiry + Reusable + Ephemeral + Generate */}
+                    <div style={{ display: 'flex', gap: '0.75rem', alignItems: 'flex-end', flexWrap: 'wrap' }}>
+                      <div style={{ width: '180px' }}>
+                        <label style={{ display: 'block', fontSize: '0.75rem', color: '#9ca3af', marginBottom: '0.25rem' }}>User:</label>
+                        <select value={selectedUser} onChange={e => setSelectedUser(e.target.value)}
+                          style={{ width: '100%', padding: '0.5rem', backgroundColor: '#374151', border: '1px solid #4b5563', borderRadius: '0.25rem', color: '#f3f4f6', fontSize: '0.875rem' }}>
+                          <option value="">Select user...</option>
+                          {visibleUsers.map(u => <option key={u.id} value={u.id}>{u.name}</option>)}
+                        </select>
+                      </div>
+                      <div style={{ width: '90px' }}>
+                        <label style={{ display: 'block', fontSize: '0.75rem', color: '#9ca3af', marginBottom: '0.25rem' }}>Expires (days):</label>
+                        <input type="number" value={preAuthKeyExpiry} onChange={e => setPreAuthKeyExpiry(Number(e.target.value))} min={1} max={90}
+                          style={{ width: '100%', padding: '0.5rem', backgroundColor: '#374151', border: '1px solid #4b5563', borderRadius: '0.25rem', color: '#f3f4f6', fontSize: '0.875rem' }} />
+                      </div>
+                      <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', color: '#d1d5db', fontSize: '0.875rem', cursor: 'pointer', paddingBottom: '0.1rem' }}>
+                        <Toggle checked={reusable} onChange={setReusable} /> Reusable
+                      </label>
+                      <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', color: '#d1d5db', fontSize: '0.875rem', cursor: 'pointer', paddingBottom: '0.1rem' }}>
+                        <Toggle checked={ephemeral} onChange={setEphemeral} /> Ephemeral
+                      </label>
+                      <button onClick={handleGeneratePreAuthKey} disabled={!selectedUser || generatingKey}
+                        style={{ padding: '0.5rem 1rem', backgroundColor: selectedUser ? '#6366f1' : '#4b5563', color: 'white', border: 'none', borderRadius: '0.375rem', cursor: selectedUser ? 'pointer' : 'not-allowed', fontWeight: '600', fontSize: '0.875rem', whiteSpace: 'nowrap' }}>
+                        {generatingKey ? 'Generating...' : '🔑 Generate'}
+                      </button>
+                    </div>
+                  </>
+                ) : (
+                  /* Key generated — show key box + Copy/Clear left-aligned under user field */
                   <div>
+                    <div style={{ width: '180px', marginBottom: '0.5rem' }}>
+                      <label style={{ display: 'block', fontSize: '0.75rem', color: '#9ca3af', marginBottom: '0.25rem' }}>Pre-Auth Key:</label>
+                    </div>
                     <div style={{ backgroundColor: '#0f172a', border: '1px solid #10b981', borderRadius: '0.25rem', padding: '0.75rem', fontFamily: 'monospace', fontSize: '0.75rem', color: '#10b981', wordBreak: 'break-all', marginBottom: '0.5rem' }}>
                       {generatedKey}
                     </div>
@@ -226,13 +235,7 @@ export const DeployModal: React.FC<Props> = ({ onClose, visibleUsers }) => {
                       </button>
                     </div>
                   </div>
-                ) : (
-                  <button onClick={handleGeneratePreAuthKey} disabled={!selectedUser || generatingKey}
-                    style={{ padding: '0.5rem 1rem', backgroundColor: selectedUser ? '#6366f1' : '#4b5563', color: 'white', border: 'none', borderRadius: '0.375rem', cursor: selectedUser ? 'pointer' : 'not-allowed', fontWeight: '600', fontSize: '0.875rem' }}>
-                    {generatingKey ? 'Generating...' : '🔑 Generate'}
-                  </button>
                 )}
-                </div>
               </div>
             )}
           </div>
