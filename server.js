@@ -568,13 +568,19 @@ app.post('/api/headscale/preauthkey/create', authenticateToken, async (req, res)
     if (!targetUser) return res.status(400).json({ message: `User not found: ${userId}` });
 
     // headscale v0.28 requires numeric user ID as string for the user field
+    // headscale v0.28 uses username string for user field
+    // Expiration must be a valid RFC3339 timestamp
+    const expDate = expiration ? new Date(expiration) : new Date(Date.now() + 90 * 24 * 60 * 60 * 1000);
+    // Ensure expiry is in the future and at least 1 hour from now
+    if (expDate <= new Date()) expDate.setDate(expDate.getDate() + 90);
     const payload = {
-      user: String(targetUser.id),
+      user: targetUser.name,
       reusable: !!reusable,
       ephemeral: !!ephemeral,
+      expiration: expDate.toISOString(),
     };
-    if (expiration) payload.expiration = expiration;
     if (tags && tags.length > 0) payload.aclTags = tags;
+    console.log('[PREAUTHKEY-CREATE] payload:', JSON.stringify({...payload, expiration: expDate.toISOString()}));
 
     const resp = await axios.post(
       `${tokenData.headscaleUrl}/api/v1/preauthkey`,

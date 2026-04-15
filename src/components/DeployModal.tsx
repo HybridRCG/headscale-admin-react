@@ -53,7 +53,7 @@ export const DeployModal: React.FC<Props> = ({ onClose, visibleUsers }) => {
   const [sshServer, setSshServer] = useState(true);
   const [usePreAuthKey, setUsePreAuthKey] = useState(false);
   const [selectedUser, setSelectedUser] = useState('');
-  const [preAuthKeyExpiry, setPreAuthKeyExpiry] = useState(1);
+  const [preAuthKeyExpiry, setPreAuthKeyExpiry] = useState(90);
   const [reusable, setReusable] = useState(false);
   const [ephemeral, setEphemeral] = useState(false);
   const [generatedKey, setGeneratedKey] = useState('');
