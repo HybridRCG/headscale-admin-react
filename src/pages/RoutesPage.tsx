@@ -18,24 +18,17 @@ export const RoutesPage: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [approving, setApproving] = useState<string>('');
 
-  useEffect(() => {
-    fetchRoutes();
-  }, []);
+  useEffect(() => { fetchRoutes(); }, []);
 
   const fetchRoutes = async () => {
     setLoading(true);
     try {
       const response = await axios.get('/admin/api/headscale/api/v1/node');
       const allNodes = response.data.nodes || [];
-      
-      const nodesWithRoutes = allNodes.filter((node: any) => 
-        (!shouldFilter || manageableDomains.some((d: string) => (node as any).user?.email?.endsWith(d.replace('@','')))) &&
-        (
-          (node.approvedRoutes && node.approvedRoutes.length > 0) ||
-          (node.availableRoutes && node.availableRoutes.length > 0)
-        )
+      const nodesWithRoutes = allNodes.filter((node: any) =>
+        (!shouldFilter || manageableDomains.some((d: string) => (node as any).user?.email?.endsWith(d.replace('@', '')))) &&
+        node.availableRoutes && node.availableRoutes.length > 0
       );
-      
       setNodes(nodesWithRoutes);
     } catch (error) {
       console.error('Failed to fetch routes:', error);
@@ -52,13 +45,10 @@ export const RoutesPage: React.FC = () => {
       } else {
         await axios.post('/admin/api/headscale/approve-route', { nodeId, route });
       }
-      
-      // Wait a moment for the backend to update, then refetch
       await new Promise(resolve => setTimeout(resolve, 500));
       await fetchRoutes();
     } catch (error) {
-      console.error('Failed to toggle route:', error);
-      alert('Failed to update route. Check console for details.');
+      alert('Failed to update route.');
     } finally {
       setApproving('');
     }
@@ -66,87 +56,61 @@ export const RoutesPage: React.FC = () => {
 
   return (
     <div className="page-container">
-
-      <div style={{ marginBottom: '1rem' }}>
-        <button className="btn btn-primary" onClick={fetchRoutes} disabled={loading}>
-          🔄 Refresh
-        </button>
+      <div style={{ marginBottom: '1rem', display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
+        <button className="btn btn-secondary" onClick={fetchRoutes} disabled={loading}>🔄 Refresh</button>
+        {!loading && <span style={{ color: '#6b7280', fontSize: '0.8rem' }}>{nodes.length} node{nodes.length !== 1 ? 's' : ''} with routes</span>}
       </div>
 
       {loading ? (
         <div className="loading">Loading routes...</div>
       ) : nodes.length === 0 ? (
-        <div className="no-results">No routes found</div>
+        <div className="no-results">No nodes with advertised routes found</div>
       ) : (
-        <div style={{
-          display: 'grid',
-          gridTemplateColumns: 'repeat(auto-fill, minmax(350px, 1fr))',
-          gap: '1.5rem',
-        }}>
-          {nodes.map((node) => (
-            <div
-              key={node.id}
-              style={{
-                backgroundColor: '#1f2937',
-                border: '1px solid #374151',
-                borderRadius: '0.5rem',
-                padding: '1.5rem',
-              }}
-            >
-              <div style={{ marginBottom: '1rem' }}>
-                <h3 style={{ margin: '0 0 0.5rem 0', fontSize: '1.5rem', fontWeight: '700', color: '#f3f4f6' }}>
-                  {node.name}
-                </h3>
-                <p style={{ margin: 0, fontSize: '0.75rem', color: '#9ca3af', fontWeight: '400' }}>ID: {node.id}</p>
-              </div>
-
-              <div>
-                <p style={{ margin: '0.75rem 0 0.5rem 0', fontSize: '0.875rem', fontWeight: '600', color: '#d1d5db' }}>
-                  Routes:
-                </p>
-                <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.5rem' }}>
-                  {node.availableRoutes && node.availableRoutes.length > 0 ? (
-                    node.availableRoutes.map((route) => {
-                      const isApproved = node.approvedRoutes?.includes(route);
-                      const isApproving = approving === `${node.id}-${route}`;
-                      return (
-                        <div
-                          key={route}
-                          style={{
-                            display: 'inline-flex',
-                            alignItems: 'center',
-                            gap: '0.5rem',
-                            backgroundColor: '#374151',
-                            padding: '0.5rem 0.75rem',
-                            borderRadius: '0.25rem',
-                            fontSize: '0.75rem',
-                            color: '#f3f4f6',
-                          }}
+        <div style={{ overflowX: 'auto' }}>
+          <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.875rem', color: '#d1d5db' }}>
+            <thead>
+              <tr style={{ borderBottom: '2px solid #374151' }}>
+                <th style={{ padding: '0.75rem', textAlign: 'left', fontWeight: '700', color: '#f3f4f6' }}>Node</th>
+                <th style={{ padding: '0.75rem', textAlign: 'left', fontWeight: '700', color: '#f3f4f6' }}>Route</th>
+                <th style={{ padding: '0.75rem', textAlign: 'left', fontWeight: '700', color: '#f3f4f6' }}>Status</th>
+                <th style={{ padding: '0.75rem', textAlign: 'left', fontWeight: '700', color: '#f3f4f6' }}>Action</th>
+              </tr>
+            </thead>
+            <tbody>
+              {nodes.map(node =>
+                node.availableRoutes.map((route, ridx) => {
+                  const isApproved = node.approvedRoutes?.includes(route);
+                  const isApproving = approving === `${node.id}-${route}`;
+                  return (
+                    <tr key={`${node.id}-${route}`} style={{ borderBottom: '1px solid #1f2937', backgroundColor: ridx % 2 === 0 ? 'transparent' : 'rgba(255,255,255,0.02)' }}>
+                      {ridx === 0 && (
+                        <td style={{ padding: '0.6rem 0.75rem', verticalAlign: 'top', fontWeight: '600', color: '#f3f4f6' }} rowSpan={node.availableRoutes.length}>
+                          <div>{node.name}</div>
+                          <div style={{ color: '#6b7280', fontSize: '0.75rem', fontWeight: '400' }}>ID: {node.id}</div>
+                        </td>
+                      )}
+                      <td style={{ padding: '0.6rem 0.75rem', fontFamily: 'monospace', color: '#93c5fd' }}>{route}</td>
+                      <td style={{ padding: '0.6rem 0.75rem' }}>
+                        <span style={{ color: isApproved ? '#10b981' : '#f59e0b', fontWeight: '600', fontSize: '0.8rem' }}>
+                          {isApproved ? '✓ Approved' : '⏳ Pending'}
+                        </span>
+                      </td>
+                      <td style={{ padding: '0.6rem 0.75rem' }}>
+                        <button
+                          className={`btn btn-sm ${isApproved ? 'btn-error' : 'btn-primary'}`}
+                          onClick={() => handleToggleRoute(node.id, route, !!isApproved)}
+                          disabled={isApproving}
+                          style={{ opacity: isApproving ? 0.5 : 1, minWidth: '90px' }}
                         >
-                          <span style={{ fontFamily: 'monospace', flex: 1 }}>{route}</span>
-                          <div
-                            onClick={() => handleToggleRoute(node.id, route, isApproved)}
-                            style={{
-                              width: '20px',
-                              height: '12px',
-                              backgroundColor: isApproved ? '#86efac' : '#ef5350',
-                              borderRadius: '6px',
-                              cursor: isApproving ? 'not-allowed' : 'pointer',
-                              opacity: isApproving ? 0.5 : 1,
-                              transition: 'all 0.2s',
-                            }}
-                            title={isApproved ? 'Click to disapprove' : 'Click to approve'}
-                          />
-                        </div>
-                      );
-                    })
-                  ) : (
-                    <span style={{ fontSize: '0.875rem', color: '#9ca3af' }}>No routes</span>
-                  )}
-                </div>
-              </div>
-            </div>
-          ))}
+                          {isApproving ? '...' : isApproved ? 'Disapprove' : 'Approve'}
+                        </button>
+                      </td>
+                    </tr>
+                  );
+                })
+              )}
+            </tbody>
+          </table>
         </div>
       )}
     </div>

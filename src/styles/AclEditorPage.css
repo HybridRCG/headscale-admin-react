@@ -1,167 +1,171 @@
+/* ── ACL Container ─────────────────────────────────────────────────────── */
 .acl-container {
-  padding: 20px;
+  padding: 0 2rem 2rem 2rem;
   max-width: 1400px;
   margin: 0 auto;
 }
 
-.acl-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: 30px;
-  border-bottom: 1px solid #e5e7eb;
-  padding-bottom: 20px;
-}
-
-.acl-header h1 {
-  font-size: 28px;
-  font-weight: 700;
-  margin: 0;
-}
-
-.btn-save {
-  padding: 10px 20px;
-  background: #10b981;
-  color: white;
-  border: none;
-  border-radius: 8px;
-  cursor: pointer;
-  font-weight: 600;
-  font-size: 14px;
-}
-
+/* ── Tabs row — matches navbar style ───────────────────────────────────── */
 .acl-tabs {
   display: flex;
-  gap: 8px;
-  margin-bottom: 30px;
-  border-bottom: 2px solid #e5e7eb;
+  align-items: center;
+  gap: 0.25rem;
   flex-wrap: wrap;
+  background-color: #1e40af;
+  padding: 0.5rem 0.75rem;
+  border-radius: 0.5rem;
+  margin-bottom: 1.5rem;
 }
 
 .tab {
-  padding: 12px 20px;
+  padding: 0.4rem 0.85rem;
   background: none;
   border: none;
   cursor: pointer;
-  font-size: 14px;
-  font-weight: 600;
-  color: #6b7280;
-  border-bottom: 3px solid transparent;
-  margin-bottom: -2px;
+  font-size: 0.875rem;
+  font-weight: 500;
+  color: rgba(255,255,255,0.75);
+  border-radius: 0.375rem;
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: 0.4rem;
+  transition: all 0.15s;
+  white-space: nowrap;
 }
 
 .tab:hover {
-  color: #1f2937;
+  color: white;
+  opacity: 0.9;
 }
 
 .tab.active {
-  color: #3b82f6;
-  border-bottom-color: #3b82f6;
-}
-
-.acl-content {
-  background: white;
-  padding: 20px;
-  border-radius: 12px;
-  min-height: 500px;
-}
-
-.acl-content h2 {
-  margin: 0 0 20px 0;
-  color: #1f2937;
-  font-size: 20px;
+  background-color: rgba(255,255,255,0.2);
+  color: white;
   font-weight: 700;
+  box-shadow: 0 2px 0 rgba(255,255,255,0.6);
 }
 
+/* ── Save button in tab row ────────────────────────────────────────────── */
+.btn-save {
+  padding: 0.4rem 1rem;
+  background: #10b981;
+  color: white;
+  border: none;
+  border-radius: 0.375rem;
+  cursor: pointer;
+  font-weight: 600;
+  font-size: 0.875rem;
+  margin-left: auto;
+  white-space: nowrap;
+}
+
+.btn-save:hover { background: #059669; }
+.btn-save:disabled { background: #374151; cursor: not-allowed; }
+
+/* ── Content area ──────────────────────────────────────────────────────── */
+.acl-content {
+  background: transparent;
+  min-height: 400px;
+  color: #d1d5db;
+}
+
+/* Hide all h2 headings inside tabs — nav tells you where you are */
+.acl-content h2 { display: none; }
+
+/* ── Form sections ─────────────────────────────────────────────────────── */
 .form-section {
-  margin-bottom: 25px;
-  padding: 20px;
-  background-color: #f9fafb;
-  border-radius: 10px;
-  border: 1px solid #e5e7eb;
+  margin-bottom: 1rem;
+  padding: 1rem;
+  background-color: #1f2937;
+  border-radius: 0.5rem;
+  border: 1px solid #374151;
 }
 
 .form-section h3 {
-  margin: 0 0 15px 0;
-  font-size: 14px;
-  font-weight: 600;
-  color: #374151;
+  margin: 0 0 0.75rem 0;
+  font-size: 0.8rem;
+  font-weight: 700;
+  color: #9ca3af;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
 }
 
 .form-section input,
 .form-section select {
-  padding: 10px 12px;
-  border: 1px solid #d1d5db;
-  border-radius: 6px;
-  font-size: 14px;
-  background: white;
-  color: #1f2937;
+  padding: 0.5rem 0.6rem;
+  border: 1px solid #374151;
+  border-radius: 0.375rem;
+  font-size: 0.875rem;
+  background: #374151;
+  color: #f3f4f6;
 }
 
-.group-card,
-.tag-card,
-.policy-card {
-  background: white;
-  border: 1px solid #e5e7eb;
-  border-radius: 10px;
-  padding: 12px 16px;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+.form-section input:focus,
+.form-section select:focus {
+  outline: none;
+  border-color: #6366f1;
 }
 
-.group-card h3,
-.tag-card h3,
-.policy-card h3 {
-  margin: 0 0 5px 0;
-  font-size: 16px;
+/* ── Cards ─────────────────────────────────────────────────────────────── */
+.group-card, .tag-card, .policy-card {
+  background: #111827;
+  border: 1px solid #374151;
+  border-radius: 0.5rem;
+  padding: 0.75rem 1rem;
+}
+
+.group-card h3, .tag-card h3, .policy-card h3 {
+  margin: 0 0 0.25rem 0;
+  font-size: 0.95rem;
   font-weight: 700;
-  color: #1f2937;
+  color: #f3f4f6;
 }
 
-.group-card p,
-.tag-card p,
-.policy-card p {
+.group-card p, .tag-card p, .policy-card p {
   margin: 0;
-  font-size: 12px;
+  font-size: 0.75rem;
   color: #6b7280;
 }
 
+/* ── Member items ──────────────────────────────────────────────────────── */
 .member-item {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  padding: 10px;
-  background: #f3f4f6;
-  margin: 5px 0;
-  border-radius: 6px;
-  border: 1px solid #e5e7eb;
-  font-size: 13px;
-  color: #1f2937;
+  padding: 0.4rem 0.75rem;
+  background: #374151;
+  margin: 0.25rem 0;
+  border-radius: 0.375rem;
+  border: 1px solid #4b5563;
+  font-size: 0.8rem;
+  color: #d1d5db;
 }
 
+/* ── Buttons ───────────────────────────────────────────────────────────── */
 .btn-create {
-  padding: 8px 16px;
+  padding: 0.4rem 0.75rem;
   background: #10b981;
   color: white;
   border: none;
-  border-radius: 6px;
+  border-radius: 0.375rem;
   cursor: pointer;
   font-weight: 600;
-  font-size: 13px;
+  font-size: 0.8rem;
 }
 
+.btn-create:hover { background: #059669; }
+
 .btn-delete {
-  padding: 4px 8px;
+  padding: 0.2rem 0.5rem;
   background: #ef4444;
   color: white;
   border: none;
-  border-radius: 4px;
+  border-radius: 0.25rem;
   cursor: pointer;
-  font-size: 12px;
+  font-size: 0.75rem;
 }
 
+/* ── Accordion ─────────────────────────────────────────────────────────── */
 .accordion-header {
   display: flex;
   justify-content: space-between;
@@ -170,30 +174,28 @@
   background: none;
   border: none;
   width: 100%;
-  padding: 8px 0;
+  padding: 0.5rem 0;
+  color: #d1d5db;
 }
 
-.accordion-icon {
-  font-size: 18px;
-  transition: transform 0.2s;
-}
+.accordion-icon { font-size: 1rem; transition: transform 0.2s; }
+.accordion-icon.open { transform: rotate(180deg); }
 
-.accordion-icon.open {
-  transform: rotate(180deg);
-}
-
+/* ── Error box ─────────────────────────────────────────────────────────── */
 .error-box {
-  padding: 15px;
-  background: #fee2e2;
-  color: #991b1b;
-  border: 1px solid #fca5a5;
-  border-radius: 8px;
-  margin-bottom: 20px;
+  padding: 0.75rem 1rem;
+  background: #7f1d1d;
+  color: #fecaca;
+  border: 1px solid #991b1b;
+  border-radius: 0.5rem;
+  margin-bottom: 1rem;
+  font-size: 0.875rem;
 }
 
+/* ── Table ─────────────────────────────────────────────────────────────── */
 .table-container {
-  border: 1px solid #e5e7eb;
-  border-radius: 8px;
+  border: 1px solid #374151;
+  border-radius: 0.5rem;
   overflow: auto;
 }
 
@@ -203,125 +205,51 @@
 }
 
 .table-container th {
-  padding: 12px;
-  background: #f9fafb;
-  border-bottom: 2px solid #e5e7eb;
+  padding: 0.6rem 0.75rem;
+  background: #111827;
+  border-bottom: 2px solid #374151;
   font-weight: 700;
   text-align: left;
+  color: #f3f4f6;
+  font-size: 0.8rem;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
 }
 
 .table-container td {
-  padding: 12px;
-  border-bottom: 1px solid #e5e7eb;
+  padding: 0.5rem 0.75rem;
+  border-bottom: 1px solid #374151;
+  color: #d1d5db;
+  font-size: 0.875rem;
 }
 
+/* ── Textarea ──────────────────────────────────────────────────────────── */
 textarea {
   width: 100%;
-  padding: 10px;
-  border: 1px solid #d1d5db;
-  border-radius: 6px;
+  padding: 0.6rem;
+  border: 1px solid #374151;
+  border-radius: 0.375rem;
   font-family: monospace;
-  color: #1f2937;
-  background: white;
-}
-
-/* DARK MODE */
-body.dark-mode {
-  background: #0f172a;
+  font-size: 0.875rem;
   color: #f3f4f6;
-}
-
-body.dark-mode .acl-content {
   background: #1f2937;
-  color: #f3f4f6;
 }
 
-body.dark-mode .acl-content h2 {
-  color: #f3f4f6;
+textarea:focus {
+  outline: none;
+  border-color: #6366f1;
 }
 
-body.dark-mode .group-card,
-body.dark-mode .tag-card,
-body.dark-mode .policy-card {
-  background: #1f2937;
-  border-color: #374151;
-  color: #f3f4f6;
-}
-
-body.dark-mode .group-card h3,
-body.dark-mode .tag-card h3,
-body.dark-mode .policy-card h3 {
-  color: #f3f4f6;
-}
-
-body.dark-mode .group-card p,
-body.dark-mode .tag-card p,
-body.dark-mode .policy-card p {
-  color: #d1d5db;
-}
-
-body.dark-mode input,
-body.dark-mode select,
-body.dark-mode textarea {
+/* ── Input/select global for ACL ───────────────────────────────────────── */
+.acl-content input,
+.acl-content select {
   background: #374151;
   color: #f3f4f6;
   border-color: #4b5563;
 }
 
-body.dark-mode .form-section {
-  background: #111827;
-  border-color: #374151;
-  color: #f3f4f6;
+.acl-content input:focus,
+.acl-content select:focus {
+  outline: none;
+  border-color: #6366f1;
 }
-
-body.dark-mode .form-section h3 {
-  color: #e5e7eb;
-}
-
-body.dark-mode .member-item {
-  background: #111827;
-  border-color: #374151;
-  color: #f3f4f6;
-}
-
-body.dark-mode .btn-create {
-  background: #10b981;
-}
-
-body.dark-mode .btn-delete {
-  background: #ef4444;
-}
-
-body.dark-mode .error-box {
-  background: #7f1d1d;
-  color: #fecaca;
-  border-color: #991b1b;
-}
-
-body.dark-mode .table-container {
-  border-color: #374151;
-}
-
-body.dark-mode .table-container th {
-  background: #111827;
-  border-color: #374151;
-  color: #f3f4f6;
-}
-
-body.dark-mode .table-container td {
-  border-color: #374151;
-  color: #f3f4f6;
-}
-
-body.dark-mode .tab {
-  color: #9ca3af;
-}
-
-body.dark-mode .tab:hover {
-  color: #f3f4f6;
-}
-
-body.dark-mode .tab.active {
-  color: #60a5fa;
-}
-

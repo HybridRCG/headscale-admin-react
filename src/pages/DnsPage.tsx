@@ -2,396 +2,166 @@ import React, { useEffect, useState } from 'react';
 import axios from 'axios';
 import '../styles/Pages.css';
 
-interface DnsRecord {
-  name: string;
-  type: 'A' | 'AAAA' | 'CNAME' | 'MX';
-  value: string;
+interface DnsRecord { name: string; type: 'A' | 'AAAA' | 'CNAME' | 'MX'; value: string; }
+interface DnsConfig {
+  tailnetName: string; magicDns: boolean; overrideLocalDns: boolean;
+  nameservers: string[]; searchDomains: string[];
+  splitDns: Record<string, string[]>; extraRecords: DnsRecord[];
 }
 
-interface DnsConfig {
-  tailnetName: string;
-  magicDns: boolean;
-  overrideLocalDns: boolean;
-  nameservers: string[];
-  searchDomains: string[];
-  splitDns: Record<string, string[]>;
-  extraRecords: DnsRecord[];
-}
+const inputStyle: React.CSSProperties = {
+  flex: 1, padding: '0.4rem 0.6rem', backgroundColor: '#1f2937',
+  border: '1px solid #374151', borderRadius: '0.375rem', color: '#f3f4f6', fontSize: '0.875rem',
+};
+
+const SectionLabel: React.FC<{ children: React.ReactNode }> = ({ children }) => (
+  <div style={{ color: '#6b7280', fontSize: '0.7rem', fontWeight: '700', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: '0.5rem' }}>{children}</div>
+);
+
+const Row: React.FC<{ children: React.ReactNode }> = ({ children }) => (
+  <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center', marginBottom: '0.4rem' }}>{children}</div>
+);
 
 export const DnsPage: React.FC = () => {
   const [config, setConfig] = useState<DnsConfig | null>(null);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [saved, setSaved] = useState(false);
   const [error, setError] = useState('');
-  const API_BASE = '/admin/api';
 
-  useEffect(() => {
-    fetchDnsConfig();
-  }, []);
+  useEffect(() => { fetchDnsConfig(); }, []);
 
   const fetchDnsConfig = async () => {
     setLoading(true);
     try {
-      const response = await axios.get(`${API_BASE}/config/dns`);
-      setConfig(response.data);
-      setError('');
-    } catch (err) {
-      setError('Failed to fetch DNS config');
-      console.error(err);
-    } finally {
-      setLoading(false);
-    }
+      const r = await axios.get('/admin/api/config/dns');
+      setConfig(r.data); setError('');
+    } catch { setError('Failed to fetch DNS config'); }
+    finally { setLoading(false); }
   };
 
   const handleSave = async () => {
     if (!config) return;
     setSaving(true);
     try {
-      await axios.post(`${API_BASE}/config/dns`, config);
-      setError('');
-      alert('DNS configuration saved successfully!');
-    } catch (err) {
-      setError('Failed to save DNS config');
-      console.error(err);
-    } finally {
-      setSaving(false);
-    }
+      await axios.post('/admin/api/config/dns', config);
+      setError(''); setSaved(true);
+      setTimeout(() => setSaved(false), 2000);
+    } catch { setError('Failed to save DNS config'); }
+    finally { setSaving(false); }
   };
 
-  if (loading) {
-    return (
-      <div className="page-container">
-        <div className="loading">Loading DNS config...</div>
-      </div>
-    );
-  }
-
-  if (!config) {
-    return (
-      <div className="page-container">
-        <div style={{ color: '#ef5350' }}>Failed to load DNS configuration</div>
-      </div>
-    );
-  }
+  if (loading) return <div className="page-container"><div className="loading">Loading DNS config...</div></div>;
+  if (!config) return <div className="page-container"><div style={{ color: '#ef5350' }}>Failed to load DNS configuration</div></div>;
 
   return (
-    <div className="page-container">
+    <div className="page-container" style={{ paddingTop: 0 }}>
 
-      {error && (
-        <div style={{ backgroundColor: '#7f1d1d', color: '#fecaca', padding: '1rem', borderRadius: '0.375rem', marginBottom: '1rem' }}>
-          {error}
-        </div>
-      )}
+      {/* Sticky toolbar */}
+      <div style={{ position: 'sticky', top: 0, zIndex: 10, backgroundColor: '#111827', borderBottom: '1px solid #374151', padding: '0.75rem 0', marginBottom: '1.5rem', display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+        <button className="btn btn-primary" onClick={handleSave} disabled={saving} style={{ minWidth: '130px' }}>
+          {saving ? 'Saving...' : saved ? '✓ Saved!' : '💾 Save DNS Config'}
+        </button>
+        <button className="btn btn-secondary" onClick={fetchDnsConfig} disabled={saving}>🔄 Reload</button>
+        {error && <span style={{ color: '#ef4444', fontSize: '0.875rem' }}>{error}</span>}
+      </div>
 
-      <div style={{ maxWidth: '900px' }}>
+      <div style={{ maxWidth: '800px', display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
+
         {/* Tailnet Name */}
-        <div style={{ marginBottom: '2rem', paddingBottom: '2rem', borderBottom: '1px solid #374151' }}>
-          <label style={{ display: 'block', fontSize: '0.875rem', fontWeight: '600', marginBottom: '0.5rem', color: '#d1d5db' }}>
-            Tailnet Base Domain
-          </label>
-          <input
-            type="text"
-            value={config.tailnetName}
-            onChange={(e) => setConfig({ ...config, tailnetName: e.target.value })}
-            style={{
-              width: '100%',
-              padding: '0.75rem',
-              backgroundColor: '#1f2937',
-              border: '1px solid #374151',
-              borderRadius: '0.375rem',
-              color: '#f3f4f6',
-              fontSize: '1rem',
-            }}
-          />
+        <div style={{ backgroundColor: '#1f2937', border: '1px solid #374151', borderRadius: '0.5rem', padding: '1rem' }}>
+          <SectionLabel>Tailnet Base Domain</SectionLabel>
+          <input type="text" value={config.tailnetName} onChange={e => setConfig({ ...config, tailnetName: e.target.value })} style={{ ...inputStyle, width: '100%' }} />
         </div>
 
-        {/* Magic DNS */}
-        <div style={{ marginBottom: '2rem', paddingBottom: '2rem', borderBottom: '1px solid #374151' }}>
+        {/* Toggles */}
+        <div style={{ backgroundColor: '#1f2937', border: '1px solid #374151', borderRadius: '0.5rem', padding: '1rem', display: 'flex', gap: '2rem', flexWrap: 'wrap' }}>
           <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', cursor: 'pointer' }}>
-            <input
-              type="checkbox"
-              checked={config.magicDns}
-              onChange={(e) => setConfig({ ...config, magicDns: e.target.checked })}
-            />
-            <span style={{ color: '#d1d5db', fontWeight: '600' }}>Magic DNS</span>
-          </label>
-          <p style={{ color: '#9ca3af', fontSize: '0.875rem', marginTop: '0.5rem' }}>
-            Automatically register domain names for each device on the tailnet
-          </p>
-        </div>
-
-        {/* Override Local DNS */}
-        <div style={{ marginBottom: '2rem', paddingBottom: '2rem', borderBottom: '1px solid #374151' }}>
-          <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', cursor: 'pointer' }}>
-            <input
-              type="checkbox"
-              checked={config.overrideLocalDns}
-              onChange={(e) => setConfig({ ...config, overrideLocalDns: e.target.checked })}
-            />
-            <span style={{ color: '#d1d5db', fontWeight: '600' }}>Override Local DNS</span>
-          </label>
-          <p style={{ color: '#9ca3af', fontSize: '0.875rem', marginTop: '0.5rem' }}>
-            Override DNS servers on devices with the Tailnet nameservers
-          </p>
-        </div>
-
-        {/* Global Nameservers */}
-        <div style={{ marginBottom: '2rem', paddingBottom: '2rem', borderBottom: '1px solid #374151' }}>
-          <label style={{ display: 'block', fontSize: '0.875rem', fontWeight: '600', marginBottom: '0.75rem', color: '#d1d5db' }}>
-            Global Nameservers
-          </label>
-          {config.nameservers.map((ns, idx) => (
-            <div key={idx} style={{ display: 'flex', gap: '0.5rem', marginBottom: '0.5rem' }}>
-              <input
-                type="text"
-                value={ns}
-                onChange={(e) => {
-                  const updated = [...config.nameservers];
-                  updated[idx] = e.target.value;
-                  setConfig({ ...config, nameservers: updated });
-                }}
-                style={{
-                  flex: 1,
-                  padding: '0.75rem',
-                  backgroundColor: '#1f2937',
-                  border: '1px solid #374151',
-                  borderRadius: '0.375rem',
-                  color: '#f3f4f6',
-                }}
-              />
-              <button
-                className="btn btn-sm btn-error"
-                onClick={() => setConfig({ ...config, nameservers: config.nameservers.filter((_, i) => i !== idx) })}
-              >
-                Remove
-              </button>
+            <input type="checkbox" checked={config.magicDns} onChange={e => setConfig({ ...config, magicDns: e.target.checked })} />
+            <div>
+              <div style={{ color: '#f3f4f6', fontWeight: '700', fontSize: '0.875rem' }}>Magic DNS</div>
+              <div style={{ color: '#6b7280', fontSize: '0.75rem' }}>Auto-register device names</div>
             </div>
+          </label>
+          <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', cursor: 'pointer' }}>
+            <input type="checkbox" checked={config.overrideLocalDns} onChange={e => setConfig({ ...config, overrideLocalDns: e.target.checked })} />
+            <div>
+              <div style={{ color: '#f3f4f6', fontWeight: '700', fontSize: '0.875rem' }}>Override Local DNS</div>
+              <div style={{ color: '#6b7280', fontSize: '0.75rem' }}>Push tailnet nameservers to devices</div>
+            </div>
+          </label>
+        </div>
+
+        {/* Nameservers */}
+        <div style={{ backgroundColor: '#1f2937', border: '1px solid #374151', borderRadius: '0.5rem', padding: '1rem' }}>
+          <SectionLabel>Global Nameservers</SectionLabel>
+          {config.nameservers.map((ns, idx) => (
+            <Row key={idx}>
+              <input type="text" value={ns} onChange={e => { const u = [...config.nameservers]; u[idx] = e.target.value; setConfig({ ...config, nameservers: u }); }} style={inputStyle} placeholder="e.g. 1.1.1.1" />
+              <button className="btn btn-sm btn-error" onClick={() => setConfig({ ...config, nameservers: config.nameservers.filter((_, i) => i !== idx) })}>✕</button>
+            </Row>
           ))}
-          <button
-            className="btn btn-sm btn-primary"
-            onClick={() => setConfig({ ...config, nameservers: [...config.nameservers, ''] })}
-          >
-            + Add Nameserver
-          </button>
+          <button className="btn btn-sm btn-secondary" onClick={() => setConfig({ ...config, nameservers: [...config.nameservers, ''] })}>+ Add</button>
         </div>
 
         {/* Search Domains */}
-        <div style={{ marginBottom: '2rem', paddingBottom: '2rem', borderBottom: '1px solid #374151' }}>
-          <label style={{ display: 'block', fontSize: '0.875rem', fontWeight: '600', marginBottom: '0.75rem', color: '#d1d5db' }}>
-            Search Domains
-          </label>
-          {config.searchDomains.map((domain, idx) => (
-            <div key={idx} style={{ display: 'flex', gap: '0.5rem', marginBottom: '0.5rem' }}>
-              <input
-                type="text"
-                value={domain}
-                onChange={(e) => {
-                  const updated = [...config.searchDomains];
-                  updated[idx] = e.target.value;
-                  setConfig({ ...config, searchDomains: updated });
-                }}
-                style={{
-                  flex: 1,
-                  padding: '0.75rem',
-                  backgroundColor: '#1f2937',
-                  border: '1px solid #374151',
-                  borderRadius: '0.375rem',
-                  color: '#f3f4f6',
-                }}
-              />
-              <button
-                className="btn btn-sm btn-error"
-                onClick={() => setConfig({ ...config, searchDomains: config.searchDomains.filter((_, i) => i !== idx) })}
-              >
-                Remove
-              </button>
-            </div>
+        <div style={{ backgroundColor: '#1f2937', border: '1px solid #374151', borderRadius: '0.5rem', padding: '1rem' }}>
+          <SectionLabel>Search Domains</SectionLabel>
+          {config.searchDomains.map((d, idx) => (
+            <Row key={idx}>
+              <input type="text" value={d} onChange={e => { const u = [...config.searchDomains]; u[idx] = e.target.value; setConfig({ ...config, searchDomains: u }); }} style={inputStyle} placeholder="e.g. company.local" />
+              <button className="btn btn-sm btn-error" onClick={() => setConfig({ ...config, searchDomains: config.searchDomains.filter((_, i) => i !== idx) })}>✕</button>
+            </Row>
           ))}
-          <button
-            className="btn btn-sm btn-primary"
-            onClick={() => setConfig({ ...config, searchDomains: [...config.searchDomains, ''] })}
-          >
-            + Add Search Domain
-          </button>
+          <button className="btn btn-sm btn-secondary" onClick={() => setConfig({ ...config, searchDomains: [...config.searchDomains, ''] })}>+ Add</button>
         </div>
 
         {/* Split DNS */}
-        <div style={{ marginBottom: '2rem', paddingBottom: '2rem', borderBottom: '1px solid #374151' }}>
-          <label style={{ display: 'block', fontSize: '0.875rem', fontWeight: '600', marginBottom: '0.75rem', color: '#d1d5db' }}>
-            Split DNS (Domain-specific Nameservers)
-          </label>
+        <div style={{ backgroundColor: '#1f2937', border: '1px solid #374151', borderRadius: '0.5rem', padding: '1rem' }}>
+          <SectionLabel>Split DNS</SectionLabel>
           {Object.entries(config.splitDns).map(([domain, servers], idx) => (
-            <div key={idx} style={{ marginBottom: '1.5rem', paddingBottom: '1rem', borderLeft: '2px solid #374151', paddingLeft: '1rem' }}>
-              <div style={{ display: 'flex', gap: '0.5rem', marginBottom: '0.5rem' }}>
-                <input
-                  type="text"
-                  value={domain}
-                  placeholder="Domain (e.g., local.example.com)"
-                  onChange={(e) => {
-                    const newSplitDns = { ...config.splitDns };
-                    delete newSplitDns[domain];
-                    newSplitDns[e.target.value] = servers;
-                    setConfig({ ...config, splitDns: newSplitDns });
-                  }}
-                  style={{
-                    flex: 1,
-                    padding: '0.75rem',
-                    backgroundColor: '#1f2937',
-                    border: '1px solid #374151',
-                    borderRadius: '0.375rem',
-                    color: '#f3f4f6',
-                  }}
-                />
-                <button
-                  className="btn btn-sm btn-error"
-                  onClick={() => {
-                    const newSplitDns = { ...config.splitDns };
-                    delete newSplitDns[domain];
-                    setConfig({ ...config, splitDns: newSplitDns });
-                  }}
-                >
-                  Remove
-                </button>
-              </div>
-              {servers.map((server, sidx) => (
-                <div key={sidx} style={{ display: 'flex', gap: '0.5rem', marginBottom: '0.5rem', marginLeft: '1rem' }}>
-                  <input
-                    type="text"
-                    value={server}
-                    placeholder="Nameserver IP"
-                    onChange={(e) => {
-                      const newServers = [...servers];
-                      newServers[sidx] = e.target.value;
-                      setConfig({ ...config, splitDns: { ...config.splitDns, [domain]: newServers } });
-                    }}
-                    style={{
-                      flex: 1,
-                      padding: '0.75rem',
-                      backgroundColor: '#1f2937',
-                      border: '1px solid #374151',
-                      borderRadius: '0.375rem',
-                      color: '#f3f4f6',
-                    }}
-                  />
-                  <button
-                    className="btn btn-sm btn-error"
-                    onClick={() => {
-                      const newServers = servers.filter((_, i) => i !== sidx);
-                      setConfig({ ...config, splitDns: { ...config.splitDns, [domain]: newServers } });
-                    }}
-                  >
-                    Remove
-                  </button>
-                </div>
+            <div key={idx} style={{ marginBottom: '0.75rem', paddingLeft: '0.75rem', borderLeft: '2px solid #374151' }}>
+              <Row>
+                <input type="text" value={domain} placeholder="domain.local" onChange={e => { const n = { ...config.splitDns }; delete n[domain]; n[e.target.value] = servers; setConfig({ ...config, splitDns: n }); }} style={{ ...inputStyle, fontWeight: '600' }} />
+                <button className="btn btn-sm btn-error" onClick={() => { const n = { ...config.splitDns }; delete n[domain]; setConfig({ ...config, splitDns: n }); }}>✕</button>
+              </Row>
+              {servers.map((srv, sidx) => (
+                <Row key={sidx}>
+                  <div style={{ width: '16px' }} />
+                  <input type="text" value={srv} placeholder="Nameserver IP" onChange={e => { const ns = [...servers]; ns[sidx] = e.target.value; setConfig({ ...config, splitDns: { ...config.splitDns, [domain]: ns } }); }} style={inputStyle} />
+                  <button className="btn btn-sm btn-error" onClick={() => { const ns = servers.filter((_, i) => i !== sidx); setConfig({ ...config, splitDns: { ...config.splitDns, [domain]: ns } }); }}>✕</button>
+                </Row>
               ))}
-              <button
-                className="btn btn-sm btn-secondary"
-                onClick={() => {
-                  const newServers = [...servers, ''];
-                  setConfig({ ...config, splitDns: { ...config.splitDns, [domain]: newServers } });
-                }}
-              >
-                + Add Nameserver
-              </button>
+              <button className="btn btn-sm btn-secondary" style={{ marginLeft: '24px', marginTop: '0.25rem' }} onClick={() => setConfig({ ...config, splitDns: { ...config.splitDns, [domain]: [...servers, ''] } })}>+ Add NS</button>
             </div>
           ))}
-          <button
-            className="btn btn-sm btn-primary"
-            onClick={() => setConfig({ ...config, splitDns: { ...config.splitDns, 'domain.local': [''] } })}
-          >
-            + Add Split DNS Domain
-          </button>
+          <button className="btn btn-sm btn-secondary" onClick={() => setConfig({ ...config, splitDns: { ...config.splitDns, 'domain.local': [''] } })}>+ Add Domain</button>
         </div>
 
-        {/* DNS Records */}
-        <div style={{ marginBottom: '2rem', paddingBottom: '2rem', borderBottom: '1px solid #374151' }}>
-          <label style={{ display: 'block', fontSize: '0.875rem', fontWeight: '600', marginBottom: '0.75rem', color: '#d1d5db' }}>
-            Extra DNS Records
-          </label>
-          {config.extraRecords.map((record, idx) => (
-            <div key={idx} style={{ display: 'flex', gap: '0.5rem', marginBottom: '0.75rem', alignItems: 'flex-start' }}>
-              <input
-                type="text"
-                value={record.name}
-                placeholder="Name (e.g., server.local)"
-                onChange={(e) => {
-                  const updated = [...config.extraRecords];
-                  updated[idx].name = e.target.value;
-                  setConfig({ ...config, extraRecords: updated });
-                }}
-                style={{
-                  flex: 2,
-                  padding: '0.75rem',
-                  backgroundColor: '#1f2937',
-                  border: '1px solid #374151',
-                  borderRadius: '0.375rem',
-                  color: '#f3f4f6',
-                }}
-              />
-              <select
-                value={record.type}
-                onChange={(e) => {
-                  const updated = [...config.extraRecords];
-                  updated[idx].type = e.target.value as 'A' | 'AAAA' | 'CNAME' | 'MX';
-                  setConfig({ ...config, extraRecords: updated });
-                }}
-                style={{
-                  flex: 1,
-                  padding: '0.75rem',
-                  backgroundColor: '#1f2937',
-                  border: '1px solid #374151',
-                  borderRadius: '0.375rem',
-                  color: '#f3f4f6',
-                }}
-              >
-                <option value="A">A</option>
-                <option value="AAAA">AAAA</option>
-                <option value="CNAME">CNAME</option>
-                <option value="MX">MX</option>
+        {/* Extra Records */}
+        <div style={{ backgroundColor: '#1f2937', border: '1px solid #374151', borderRadius: '0.5rem', padding: '1rem' }}>
+          <SectionLabel>Extra DNS Records</SectionLabel>
+          {config.extraRecords.length > 0 && (
+            <div style={{ display: 'grid', gridTemplateColumns: '2fr 80px 2fr auto', gap: '0.5rem', marginBottom: '0.5rem' }}>
+              <div style={{ color: '#6b7280', fontSize: '0.7rem', fontWeight: '700' }}>NAME</div>
+              <div style={{ color: '#6b7280', fontSize: '0.7rem', fontWeight: '700' }}>TYPE</div>
+              <div style={{ color: '#6b7280', fontSize: '0.7rem', fontWeight: '700' }}>VALUE</div>
+              <div />
+            </div>
+          )}
+          {config.extraRecords.map((rec, idx) => (
+            <div key={idx} style={{ display: 'grid', gridTemplateColumns: '2fr 80px 2fr auto', gap: '0.5rem', marginBottom: '0.4rem', alignItems: 'center' }}>
+              <input type="text" value={rec.name} placeholder="server.local" onChange={e => { const u = [...config.extraRecords]; u[idx] = { ...u[idx], name: e.target.value }; setConfig({ ...config, extraRecords: u }); }} style={inputStyle} />
+              <select value={rec.type} onChange={e => { const u = [...config.extraRecords]; u[idx] = { ...u[idx], type: e.target.value as any }; setConfig({ ...config, extraRecords: u }); }} style={{ ...inputStyle, flex: 'unset' }}>
+                <option>A</option><option>AAAA</option><option>CNAME</option><option>MX</option>
               </select>
-              <input
-                type="text"
-                value={record.value}
-                placeholder="Value (e.g., 192.168.1.1)"
-                onChange={(e) => {
-                  const updated = [...config.extraRecords];
-                  updated[idx].value = e.target.value;
-                  setConfig({ ...config, extraRecords: updated });
-                }}
-                style={{
-                  flex: 2,
-                  padding: '0.75rem',
-                  backgroundColor: '#1f2937',
-                  border: '1px solid #374151',
-                  borderRadius: '0.375rem',
-                  color: '#f3f4f6',
-                }}
-              />
-              <button
-                className="btn btn-sm btn-error"
-                onClick={() => setConfig({ ...config, extraRecords: config.extraRecords.filter((_, i) => i !== idx) })}
-              >
-                Remove
-              </button>
+              <input type="text" value={rec.value} placeholder="192.168.1.1" onChange={e => { const u = [...config.extraRecords]; u[idx] = { ...u[idx], value: e.target.value }; setConfig({ ...config, extraRecords: u }); }} style={inputStyle} />
+              <button className="btn btn-sm btn-error" onClick={() => setConfig({ ...config, extraRecords: config.extraRecords.filter((_, i) => i !== idx) })}>✕</button>
             </div>
           ))}
-          <button
-            className="btn btn-sm btn-primary"
-            onClick={() => setConfig({ ...config, extraRecords: [...config.extraRecords, { name: '', type: 'A', value: '' }] })}
-          >
-            + Add DNS Record
-          </button>
+          <button className="btn btn-sm btn-secondary" onClick={() => setConfig({ ...config, extraRecords: [...config.extraRecords, { name: '', type: 'A', value: '' }] })}>+ Add Record</button>
         </div>
 
-        {/* Save Button */}
-        <div style={{ display: 'flex', gap: '0.5rem' }}>
-          <button className="btn btn-primary" onClick={handleSave} disabled={saving}>
-            {saving ? 'Saving...' : '💾 Save DNS Config'}
-          </button>
-          <button className="btn btn-secondary" onClick={fetchDnsConfig} disabled={saving}>
-            🔄 Reload
-          </button>
-        </div>
       </div>
     </div>
   );

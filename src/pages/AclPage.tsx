@@ -65,14 +65,14 @@ export const AclPage: React.FC = () => {
     }
   };
 
-  if (loading && !acl) return <div className="acl-container"><p>Loading ACL...</p></div>;
+  if (loading && !acl) return <div className="page-container"><p>Loading ACL...</p></div>;
 
 
   // Filter tabs based on user role
 
 
   return (
-    <div className="acl-container">
+    <div className="page-container">
       {error && <div className="error-box">{error}</div>}
       <div className="acl-tabs" style={{ display: 'flex', alignItems: 'center', gap: '0.25rem', flexWrap: 'wrap' }}>
         {visibleTabs.map((tab, idx) => (
@@ -150,7 +150,6 @@ const GroupsTab: React.FC<{ acl: ACL; setAcl: (a: ACL) => void }> = ({ acl, setA
 
   return (
     <div>
-      <h2>Groups</h2>
       <div className="form-section">
         <h3>Create New Group</h3>
         <div style={{ display: 'flex', gap: '10px' }}>
@@ -244,7 +243,6 @@ const TagOwnersTab: React.FC<{ acl: ACL; setAcl: (a: ACL) => void }> = ({ acl, s
 
   return (
     <div>
-      <h2>Tag Owners</h2>
       <div className="form-section">
         <h3>Create New Tag</h3>
         <div style={{ display: 'flex', gap: '10px' }}>
@@ -329,7 +327,6 @@ const HostsTab: React.FC<{ acl: ACL; setAcl: (a: ACL) => void }> = ({ acl, setAc
 
   return (
     <div>
-      <h2>Hosts</h2>
       <div className="form-section">
         <h3>Add Host Mapping</h3>
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr auto', gap: '10px' }}>
@@ -402,7 +399,6 @@ const PoliciesTab: React.FC<{ acl: ACL; setAcl: (a: ACL) => void }> = ({ acl, se
 
   return (
     <div>
-      <h2>Policies</h2>
       <div className="form-section">
         <h3>Create New Policy</h3>
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr 1fr', gap: '10px', marginBottom: '10px' }}>
@@ -481,7 +477,6 @@ const SshTab: React.FC<{ acl: ACL; setAcl: (a: ACL) => void }> = ({ acl, setAcl 
 
   return (
     <div>
-      <h2>SSH Rules</h2>
       <div className="form-section">
         <h3>Create New SSH Rule</h3>
         <div style={{ display: 'flex', gap: '10px', marginBottom: '10px' }}>
@@ -531,7 +526,6 @@ const ConfigTab: React.FC<{ acl: ACL; setAcl: (a: ACL) => void }> = ({ acl, setA
 
   return (
     <div>
-      <h2>Raw Config (JSON)</h2>
       <textarea value={jsonText} onChange={(e) => setJsonText(e.target.value)} rows={30} />
       <button onClick={handleUpdateJson} className="btn-save" style={{ marginTop: '15px' }}>💾 Update Config</button>
     </div>
@@ -730,7 +724,6 @@ const UsersTab: React.FC<{ userEmail: string }> = ({ userEmail }) => {
 
   return (
     <div>
-      <h2>Users & Permissions</h2>
       {error && <div className="error-box">{error}</div>}
 
       {canAddUser() && (
