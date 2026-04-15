@@ -92,11 +92,10 @@ export const AclPage: React.FC = () => {
         <div className="acl-content">
           {activeTab === 0 && <UsersTab userEmail={userEmail} />}
           {activeTab === 1 && <GroupsTab acl={acl} setAcl={setAcl} />}
-          {activeTab === 2 && <TagOwnersTab acl={acl} setAcl={setAcl} />}
-          {activeTab === 3 && <HostsTab acl={acl} setAcl={setAcl} />}
-          {activeTab === 4 && <PoliciesTab acl={acl} setAcl={setAcl} />}
-          {activeTab === 5 && <SshTab acl={acl} setAcl={setAcl} />}
-          {activeTab === 6 && <ConfigTab acl={acl} setAcl={setAcl} />}
+          {activeTab === 2 && <HostsTab acl={acl} setAcl={setAcl} />}
+          {activeTab === 3 && <PoliciesTab acl={acl} setAcl={setAcl} />}
+          {activeTab === 4 && <SshTab acl={acl} setAcl={setAcl} />}
+          {activeTab === 5 && <ConfigTab acl={acl} setAcl={setAcl} />}
         </div>
       )}
     </div>
