@@ -120,6 +120,14 @@ export const PreAuthKeysPage: React.FC = () => {
     }
   };
 
+  const handleDeleteExpired = async () => {
+    if (!window.confirm('Remove all expired keys from the list? (This clears the display — Headscale keeps its own records)')) return;
+    setKeys(prev => prev.filter(k => {
+      const expired = new Date(k.expiration) < new Date();
+      return !expired && !k.used;
+    }));
+  };
+
   const handleExpire = async (key: PreAuthKey) => {
     try {
       const uname = getUserName(key.user);
@@ -168,7 +176,8 @@ export const PreAuthKeysPage: React.FC = () => {
           <button key={s} className={`btn ${filterStatus === s ? 'btn-primary' : 'btn-secondary'}`} onClick={() => setFilterStatus(s)} style={{ textTransform: 'capitalize' }}>{s}</button>
         ))}
         <button className="btn btn-primary" onClick={fetchAll} disabled={loading}>🔄</button>
-        <button className="btn btn-success" onClick={() => setShowCreate(!showCreate)} style={{ marginLeft: 'auto' }}>➕ Create Key</button>
+        <button className="btn btn-secondary" onClick={handleDeleteExpired} style={{ marginLeft: 'auto' }}>🗑 Clear Expired</button>
+        <button className="btn btn-success" onClick={() => setShowCreate(!showCreate)}>➕ Create Key</button>
       </div>
 
       {/* Create form */}

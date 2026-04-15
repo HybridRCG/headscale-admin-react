@@ -20,7 +20,6 @@ export const AclPage: React.FC = () => {
   const tabs = [
     { icon: '👤', label: 'Users' },
     { icon: '👥', label: 'Groups' },
-    { icon: '🏷️', label: 'Tag Owners' },
     { icon: '🖥️', label: 'Hosts' },
     { icon: '🔒', label: 'Policies' },
     { icon: '🔐', label: 'SSH' },
