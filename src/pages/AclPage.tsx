@@ -402,83 +402,264 @@ const HostsTab: React.FC<{ acl: ACL; setAcl: (a: ACL) => void }> = ({ acl, setAc
   );
 };
 
-// POLICIES TAB
-const PoliciesTab: React.FC<{ acl: ACL; setAcl: (a: ACL) => void }> = ({ acl, setAcl }) => {
-  const [newPolicy, setNewPolicy] = useState({ action: 'accept', src: '', dst: '', proto: 'tcp' });
-  const [expandedPolicy, setExpandedPolicy] = useState<number | null>(null);
 
-  const handleCreatePolicy = () => {
-    if (!newPolicy.src || !newPolicy.dst) return;
-    const updated = { ...acl };
-    updated.acls.push({
-      action: newPolicy.action,
-      src: newPolicy.src.split(',').map(s => s.trim()).filter(s => s),
-      dst: newPolicy.dst.split(',').map(d => d.trim()).filter(d => d),
-      proto: newPolicy.proto || undefined
-    });
-    setAcl(updated);
-    setNewPolicy({ action: 'accept', src: '', dst: '', proto: 'tcp' });
+// POLICIES TAB - Visual policy builder
+const PoliciesTab: React.FC<{ acl: ACL; setAcl: (a: ACL) => void }> = ({ acl, setAcl }) => {
+  const [expandedPolicy, setExpandedPolicy] = useState<number | null>(null);
+  const [creating, setCreating] = useState(false);
+
+  // New policy state
+  const [proto, setProto] = useState('');
+  const [srcType, setSrcType] = useState<'custom'|'user'|'host'|'group'>('custom');
+  const [srcInput, setSrcInput] = useState('');
+  const [srcPort, setSrcPort] = useState('');
+  const [srcItems, setSrcItems] = useState<string[]>([]);
+  const [dstType, setDstType] = useState<'custom'|'user'|'host'|'group'>('custom');
+  const [dstInput, setDstInput] = useState('');
+  const [dstPort, setDstPort] = useState('');
+  const [dstItems, setDstItems] = useState<Array<{obj:string;ports:string}>>([]);
+  const [action, setAction] = useState('accept');
+
+  // Available options from ACL
+  const groups = Object.keys(acl.groups);
+  const hosts = Object.keys(acl.hosts);
+  const [users, setUsers] = useState<string[]>([]);
+  useEffect(() => {
+    axios.get('/admin/api/headscale/api/v1/user').then(r => {
+      setUsers((r.data.users || []).map((u: any) => u.name));
+    }).catch(() => {});
+  }, []);
+
+  const getOptions = (type: string) => {
+    if (type === 'group') return groups.map(g => g);
+    if (type === 'host') return hosts;
+    if (type === 'user') return users;
+    return [];
   };
 
-  const handleDeletePolicy = (idx: number) => {
+  const addSrcItem = () => {
+    const val = srcInput.trim();
+    if (!val || srcItems.includes(val)) return;
+    setSrcItems([...srcItems, val]);
+    setSrcInput('');
+  };
+
+  const addDstItem = () => {
+    const val = dstInput.trim();
+    if (!val) return;
+    const entry = { obj: val, ports: dstPort.trim() || '*' };
+    setDstItems([...dstItems, entry]);
+    setDstInput('');
+    setDstPort('');
+  };
+
+  const handleCreate = () => {
+    if (srcItems.length === 0 || dstItems.length === 0) return;
+    const newAcl = { ...acl };
+    newAcl.acls.push({
+      action,
+      src: srcItems,
+      dst: dstItems.map(d => d.ports && d.ports !== '*' ? `${d.obj}:${d.ports}` : d.obj),
+      ...(proto ? { proto } : {})
+    });
+    setAcl(newAcl);
+    // Reset
+    setProto(''); setSrcItems([]); setDstItems([]);
+    setSrcInput(''); setDstInput(''); setDstPort('');
+    setSrcType('custom'); setDstType('custom');
+    setAction('accept'); setCreating(false);
+  };
+
+  const handleDelete = (idx: number) => {
     if (!window.confirm('Delete this policy?')) return;
     const updated = { ...acl };
     updated.acls.splice(idx, 1);
     setAcl(updated);
   };
 
-  const handleReorderPolicy = (idx: number, direction: 'up' | 'down') => {
-    if ((idx === 0 && direction === 'up') || (idx === acl.acls.length - 1 && direction === 'down')) return;
+  const handleMove = (idx: number, dir: 'up'|'down') => {
     const updated = { ...acl };
-    const targetIdx = direction === 'up' ? idx - 1 : idx + 1;
-    [updated.acls[idx], updated.acls[targetIdx]] = [updated.acls[targetIdx], updated.acls[idx]];
+    const t = dir === 'up' ? idx - 1 : idx + 1;
+    [updated.acls[idx], updated.acls[t]] = [updated.acls[t], updated.acls[idx]];
     setAcl(updated);
   };
 
+  // Type selector buttons
+  const TypeBar: React.FC<{ value: string; onChange: (v: any) => void; excludeTags?: boolean }> = ({ value, onChange, excludeTags }) => (
+    <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap', marginBottom: '0.75rem' }}>
+      {(['custom','user','host','group'] as const).map(t => (
+        <button key={t} onClick={() => onChange(t)}
+          style={{ padding: '0.35rem 0.85rem', borderRadius: '0.375rem', border: 'none', cursor: 'pointer', fontSize: '0.8rem', fontWeight: '600', textTransform: 'capitalize',
+            backgroundColor: value === t ? '#3b82f6' : '#374151', color: value === t ? 'white' : '#9ca3af' }}>
+          {t === 'custom' ? '✏️ Custom' : t === 'user' ? '👤 User' : t === 'host' ? '🖥️ Host' : '👥 Group'}
+        </button>
+      ))}
+    </div>
+  );
+
   return (
     <div>
-      <div className="form-section">
-        <h3>Create New Policy</h3>
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr 1fr', gap: '10px', marginBottom: '10px' }}>
-          <select value={newPolicy.action} onChange={(e) => setNewPolicy({ ...newPolicy, action: e.target.value as any })}>
-            <option value="accept">✅ Accept</option>
-            <option value="reject">❌ Reject</option>
-          </select>
-          <input type="text" placeholder="Source (comma-separated)" value={newPolicy.src} onChange={(e) => setNewPolicy({ ...newPolicy, src: e.target.value })} />
-          <input type="text" placeholder="Destination (comma-separated)" value={newPolicy.dst} onChange={(e) => setNewPolicy({ ...newPolicy, dst: e.target.value })} />
-          <select value={newPolicy.proto} onChange={(e) => setNewPolicy({ ...newPolicy, proto: e.target.value })}>
-            <option value="tcp">TCP</option>
-            <option value="udp">UDP</option>
-            <option value="">Any</option>
-          </select>
-        </div>
-        <button onClick={handleCreatePolicy} className="btn-create" style={{ width: '100%' }}>➕ Create Policy</button>
+      {/* Toolbar */}
+      <div style={{ display: 'flex', gap: '0.5rem', marginBottom: '1rem', alignItems: 'center' }}>
+        <button className="btn-create" onClick={() => setCreating(!creating)}>
+          {creating ? '✕ Cancel' : '➕ Create Policy'}
+        </button>
+        {acl.acls.length > 0 && <span style={{ color: '#6b7280', fontSize: '0.8rem' }}>{acl.acls.length} polic{acl.acls.length === 1 ? 'y' : 'ies'}</span>}
       </div>
 
-      {acl.acls.length === 0 ? (
-        <p style={{ color: '#9ca3af', textAlign: 'center', padding: '40px 20px' }}>No policies configured yet</p>
-      ) : (
-        <div>
-          {acl.acls.map((p, idx) => (
-            <div key={idx} className="policy-card" style={{ marginBottom: '15px' }}>
-              <div className="accordion-header" onClick={() => setExpandedPolicy(expandedPolicy === idx ? null : idx)}>
-                <div>
-                  <h3>Policy #{idx + 1} - {p.action === 'accept' ? '✅ Accept' : '❌ Reject'}</h3>
-                  <p>{p.src.join(', ')} → {p.dst.join(', ')}</p>
+      {/* Create Policy Form */}
+      {creating && (
+        <div style={{ backgroundColor: '#111827', border: '1px solid #374151', borderRadius: '0.5rem', padding: '1.25rem', marginBottom: '1.5rem' }}>
+
+          {/* Action + Protocol row */}
+          <div style={{ display: 'flex', gap: '1.5rem', marginBottom: '1.25rem', flexWrap: 'wrap' }}>
+            <div>
+              <div style={{ color: '#9ca3af', fontSize: '0.7rem', fontWeight: '700', textTransform: 'uppercase', marginBottom: '0.5rem' }}>Action</div>
+              <div style={{ display: 'flex', gap: '0.5rem' }}>
+                {['accept','reject'].map(a => (
+                  <button key={a} onClick={() => setAction(a)}
+                    style={{ padding: '0.35rem 0.85rem', borderRadius: '0.375rem', border: 'none', cursor: 'pointer', fontSize: '0.8rem', fontWeight: '600', textTransform: 'capitalize',
+                      backgroundColor: action === a ? (a === 'accept' ? '#10b981' : '#ef4444') : '#374151', color: action === a ? 'white' : '#9ca3af' }}>
+                    {a === 'accept' ? '✅ Accept' : '❌ Reject'}
+                  </button>
+                ))}
+              </div>
+            </div>
+            <div>
+              <div style={{ color: '#9ca3af', fontSize: '0.7rem', fontWeight: '700', textTransform: 'uppercase', marginBottom: '0.5rem' }}>Protocol</div>
+              <div style={{ display: 'flex', gap: '0.5rem' }}>
+                {[{v:'',l:'Any'},{v:'tcp',l:'TCP'},{v:'udp',l:'UDP'},{v:'icmp',l:'ICMP'}].map(p => (
+                  <button key={p.v} onClick={() => setProto(p.v)}
+                    style={{ padding: '0.35rem 0.75rem', borderRadius: '0.375rem', border: 'none', cursor: 'pointer', fontSize: '0.8rem', fontWeight: '600',
+                      backgroundColor: proto === p.v ? '#6366f1' : '#374151', color: proto === p.v ? 'white' : '#9ca3af' }}>
+                    {p.l}
+                  </button>
+                ))}
+              </div>
+            </div>
+          </div>
+
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1.25rem' }}>
+            {/* Sources */}
+            <div style={{ backgroundColor: '#1f2937', borderRadius: '0.5rem', padding: '1rem' }}>
+              <div style={{ color: '#f3f4f6', fontWeight: '700', fontSize: '0.875rem', marginBottom: '0.75rem' }}>Sources</div>
+              <TypeBar value={srcType} onChange={setSrcType} />
+              {/* Context list for non-custom */}
+              {srcType !== 'custom' && getOptions(srcType).length > 0 && (
+                <div style={{ backgroundColor: '#374151', borderRadius: '0.375rem', padding: '0.5rem', marginBottom: '0.5rem', maxHeight: '100px', overflowY: 'auto' }}>
+                  {getOptions(srcType).map(opt => (
+                    <div key={opt} onClick={() => setSrcInput(srcType === 'group' ? opt : srcType === 'user' ? opt : opt)}
+                      style={{ padding: '0.25rem 0.5rem', cursor: 'pointer', borderRadius: '0.25rem', color: '#d1d5db', fontSize: '0.8rem' }}
+                      onMouseEnter={e => (e.currentTarget.style.backgroundColor = '#4b5563')}
+                      onMouseLeave={e => (e.currentTarget.style.backgroundColor = 'transparent')}>
+                      {opt}
+                    </div>
+                  ))}
                 </div>
-                <span className={`accordion-icon ${expandedPolicy === idx ? 'open' : ''}`}>▼</span>
+              )}
+              <div style={{ display: 'flex', gap: '0.5rem' }}>
+                <input value={srcInput} onChange={e => setSrcInput(e.target.value)}
+                  onKeyDown={e => e.key === 'Enter' && addSrcItem()}
+                  placeholder={srcType === 'group' ? 'group:name' : srcType === 'user' ? 'username' : srcType === 'host' ? 'hostname' : 'custom value'}
+                  style={{ flex: 1, padding: '0.4rem 0.6rem', backgroundColor: '#374151', border: '1px solid #4b5563', borderRadius: '0.375rem', color: '#f3f4f6', fontSize: '0.8rem' }} />
+                <button onClick={addSrcItem} className="btn-create" style={{ padding: '0.4rem 0.75rem' }}>Add</button>
+              </div>
+              {srcItems.length > 0 && (
+                <div style={{ marginTop: '0.5rem', display: 'flex', flexDirection: 'column', gap: '0.25rem' }}>
+                  {srcItems.map(item => (
+                    <div key={item} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '0.3rem 0.6rem', backgroundColor: '#374151', borderRadius: '0.25rem', fontSize: '0.8rem', color: '#d1d5db' }}>
+                      <span style={{ fontFamily: 'monospace' }}>{item}</span>
+                      <button onClick={() => setSrcItems(srcItems.filter(s => s !== item))} style={{ background: 'none', border: 'none', color: '#ef4444', cursor: 'pointer', fontSize: '1rem', lineHeight: 1 }}>✕</button>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+
+            {/* Destinations */}
+            <div style={{ backgroundColor: '#1f2937', borderRadius: '0.5rem', padding: '1rem' }}>
+              <div style={{ color: '#f3f4f6', fontWeight: '700', fontSize: '0.875rem', marginBottom: '0.75rem' }}>Destinations</div>
+              <TypeBar value={dstType} onChange={setDstType} />
+              {dstType !== 'custom' && getOptions(dstType).length > 0 && (
+                <div style={{ backgroundColor: '#374151', borderRadius: '0.375rem', padding: '0.5rem', marginBottom: '0.5rem', maxHeight: '100px', overflowY: 'auto' }}>
+                  {getOptions(dstType).map(opt => (
+                    <div key={opt} onClick={() => setDstInput(opt)}
+                      style={{ padding: '0.25rem 0.5rem', cursor: 'pointer', borderRadius: '0.25rem', color: '#d1d5db', fontSize: '0.8rem' }}
+                      onMouseEnter={e => (e.currentTarget.style.backgroundColor = '#4b5563')}
+                      onMouseLeave={e => (e.currentTarget.style.backgroundColor = 'transparent')}>
+                      {opt}
+                    </div>
+                  ))}
+                </div>
+              )}
+              <div style={{ display: 'flex', gap: '0.5rem', marginBottom: '0.25rem' }}>
+                <input value={dstInput} onChange={e => setDstInput(e.target.value)}
+                  placeholder={dstType === 'group' ? 'group:name' : dstType === 'host' ? 'hostname' : dstType === 'user' ? 'username' : 'destination'}
+                  style={{ flex: 2, padding: '0.4rem 0.6rem', backgroundColor: '#374151', border: '1px solid #4b5563', borderRadius: '0.375rem', color: '#f3f4f6', fontSize: '0.8rem' }} />
+                <input value={dstPort} onChange={e => setDstPort(e.target.value)}
+                  placeholder="ports (e.g. 80,443)"
+                  onKeyDown={e => e.key === 'Enter' && addDstItem()}
+                  style={{ flex: 1, padding: '0.4rem 0.6rem', backgroundColor: '#374151', border: '1px solid #4b5563', borderRadius: '0.375rem', color: '#f3f4f6', fontSize: '0.8rem' }} />
+                <button onClick={addDstItem} className="btn-create" style={{ padding: '0.4rem 0.75rem' }}>Add</button>
+              </div>
+              {dstItems.length > 0 && (
+                <div style={{ marginTop: '0.5rem', display: 'flex', flexDirection: 'column', gap: '0.25rem' }}>
+                  {dstItems.map((item, i) => (
+                    <div key={i} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '0.3rem 0.6rem', backgroundColor: '#374151', borderRadius: '0.25rem', fontSize: '0.8rem', color: '#d1d5db' }}>
+                      <span style={{ fontFamily: 'monospace' }}>{item.obj}</span>
+                      <span style={{ color: '#60a5fa', marginLeft: '0.5rem' }}>{item.ports !== '*' ? item.ports : 'any port'}</span>
+                      <button onClick={() => setDstItems(dstItems.filter((_, j) => j !== i))} style={{ background: 'none', border: 'none', color: '#ef4444', cursor: 'pointer', fontSize: '1rem', lineHeight: 1 }}>✕</button>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          </div>
+
+          {/* Create button */}
+          <div style={{ marginTop: '1rem', display: 'flex', justifyContent: 'flex-end' }}>
+            <button onClick={handleCreate} disabled={srcItems.length === 0 || dstItems.length === 0}
+              style={{ padding: '0.5rem 1.5rem', backgroundColor: srcItems.length > 0 && dstItems.length > 0 ? '#10b981' : '#374151', color: 'white', border: 'none', borderRadius: '0.375rem', fontWeight: '700', cursor: srcItems.length > 0 && dstItems.length > 0 ? 'pointer' : 'not-allowed', fontSize: '0.875rem' }}>
+              ➕ Add Policy
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* Policy list */}
+      {acl.acls.length === 0 ? (
+        <p style={{ color: '#9ca3af', textAlign: 'center', padding: '2rem' }}>No policies configured yet</p>
+      ) : (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+          {acl.acls.map((p, idx) => (
+            <div key={idx} className="policy-card">
+              <div className="accordion-header" onClick={() => setExpandedPolicy(expandedPolicy === idx ? null : idx)}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', flex: 1 }}>
+                  <span style={{ fontSize: '0.7rem', fontWeight: '700', color: '#6b7280' }}>#{idx + 1}</span>
+                  <span style={{ fontSize: '0.75rem', padding: '0.15rem 0.5rem', borderRadius: '0.25rem', backgroundColor: p.action === 'accept' ? '#065f46' : '#7f1d1d', color: p.action === 'accept' ? '#6ee7b7' : '#fca5a5', fontWeight: '700' }}>
+                    {p.action.toUpperCase()}
+                  </span>
+                  {p.proto && <span style={{ fontSize: '0.7rem', color: '#818cf8', fontWeight: '600', backgroundColor: '#1e1b4b', padding: '0.1rem 0.4rem', borderRadius: '0.25rem' }}>{p.proto.toUpperCase()}</span>}
+                  <span style={{ fontSize: '0.8rem', color: '#93c5fd', fontFamily: 'monospace' }}>{p.src.join(', ')}</span>
+                  <span style={{ color: '#6b7280' }}>→</span>
+                  <span style={{ fontSize: '0.8rem', color: '#86efac', fontFamily: 'monospace' }}>{p.dst.join(', ')}</span>
+                </div>
+                <div style={{ display: 'flex', gap: '0.25rem', alignItems: 'center' }}>
+                  <button onClick={e => { e.stopPropagation(); handleMove(idx, 'up'); }} disabled={idx === 0} style={{ background: 'none', border: 'none', color: idx === 0 ? '#374151' : '#9ca3af', cursor: idx === 0 ? 'default' : 'pointer', fontSize: '0.8rem' }}>⬆</button>
+                  <button onClick={e => { e.stopPropagation(); handleMove(idx, 'down'); }} disabled={idx === acl.acls.length - 1} style={{ background: 'none', border: 'none', color: idx === acl.acls.length - 1 ? '#374151' : '#9ca3af', cursor: idx === acl.acls.length - 1 ? 'default' : 'pointer', fontSize: '0.8rem' }}>⬇</button>
+                  <button onClick={e => { e.stopPropagation(); handleDelete(idx); }} style={{ background: 'none', border: 'none', color: '#ef4444', cursor: 'pointer', fontSize: '0.9rem' }}>🗑</button>
+                  <span className={`accordion-icon ${expandedPolicy === idx ? 'open' : ''}`} style={{ fontSize: '0.75rem', color: '#6b7280' }}>▼</span>
+                </div>
               </div>
               {expandedPolicy === idx && (
-                <div style={{ marginTop: '15px', paddingTop: '15px', borderTop: '1px solid #e5e7eb' }}>
-                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '15px', marginBottom: '15px' }}>
-                    <div><strong>Source:</strong><p style={{ color: '#6b7280', margin: '5px 0' }}>{p.src.join(', ')}</p></div>
-                    <div><strong>Destination:</strong><p style={{ color: '#6b7280', margin: '5px 0' }}>{p.dst.join(', ')}</p></div>
-                    {p.proto && <div style={{ gridColumn: '1 / -1' }}><strong>Protocol:</strong><p style={{ color: '#6b7280', margin: '5px 0' }}>{p.proto}</p></div>}
+                <div style={{ marginTop: '0.75rem', paddingTop: '0.75rem', borderTop: '1px solid #374151', display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
+                  <div>
+                    <div style={{ color: '#9ca3af', fontSize: '0.7rem', fontWeight: '700', textTransform: 'uppercase', marginBottom: '0.5rem' }}>Sources</div>
+                    {p.src.map(s => <div key={s} style={{ fontFamily: 'monospace', color: '#93c5fd', fontSize: '0.8rem', padding: '0.2rem 0' }}>{s}</div>)}
                   </div>
-                  <div style={{ display: 'flex', gap: '10px' }}>
-                    <button onClick={() => handleReorderPolicy(idx, 'up')} disabled={idx === 0} className="btn-create" style={{ flex: 1 }}>⬆️ Move Up</button>
-                    <button onClick={() => handleReorderPolicy(idx, 'down')} disabled={idx === acl.acls.length - 1} className="btn-create" style={{ flex: 1 }}>⬇️ Move Down</button>
-                    <button onClick={() => handleDeletePolicy(idx)} className="btn-delete">🗑️</button>
+                  <div>
+                    <div style={{ color: '#9ca3af', fontSize: '0.7rem', fontWeight: '700', textTransform: 'uppercase', marginBottom: '0.5rem' }}>Destinations</div>
+                    {p.dst.map(d => <div key={d} style={{ fontFamily: 'monospace', color: '#86efac', fontSize: '0.8rem', padding: '0.2rem 0' }}>{d}</div>)}
                   </div>
                 </div>
               )}
@@ -490,7 +671,7 @@ const PoliciesTab: React.FC<{ acl: ACL; setAcl: (a: ACL) => void }> = ({ acl, se
   );
 };
 
-// SSH TAB
+// SSH TAB// SSH TAB
 const SshTab: React.FC<{ acl: ACL; setAcl: (a: ACL) => void }> = ({ acl, setAcl }) => {
   const [newSsh, setNewSsh] = useState({ action: 'accept', src: '', dst: '' });
 
