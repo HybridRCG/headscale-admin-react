@@ -1,8 +1,10 @@
 import { APP_VERSION } from '../constants/version';
 import React, { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import '../styles/Pages.css';
 
 export const SettingsPage: React.FC = () => {
+  const navigate = useNavigate();
   const [settings, setSettings] = useState({
     serverUrl: 'https://hs.groblers.co.uk',
     autoRefresh: true,

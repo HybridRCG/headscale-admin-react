@@ -226,34 +226,26 @@ export const NodesPage: React.FC = () => {
   return (
     <div className="page-container">
       
-      <div style={{ marginBottom: '1.5rem' }}>
+      <div style={{ marginBottom: '1.5rem', display: 'flex', gap: '0.5rem', flexWrap: 'wrap', alignItems: 'center' }}>
+        <button className={`btn ${filterStatus === 'all' ? 'btn-primary' : 'btn-secondary'}`} onClick={() => setFilterStatus('all')}>All</button>
+        <button className={`btn ${filterStatus === 'online' ? 'btn-primary' : 'btn-secondary'}`} onClick={() => setFilterStatus('online')}>Online</button>
+        <button className={`btn ${filterStatus === 'offline' ? 'btn-primary' : 'btn-secondary'}`} onClick={() => setFilterStatus('offline')}>Offline</button>
         <input
           type="text"
-          placeholder="Search..."
+          placeholder="🔍 Search..."
           value={searchTerm}
           onChange={(e) => setSearchTerm(e.target.value)}
-          style={{ width: '100%', padding: '0.75rem', marginBottom: '1rem', backgroundColor: '#1f2937', border: '1px solid #374151', borderRadius: '0.375rem', color: '#f3f4f6' }}
+          style={{ flex: 1, minWidth: '140px', padding: '0.6rem 0.75rem', backgroundColor: '#1f2937', border: '1px solid #374151', borderRadius: '0.375rem', color: '#f3f4f6' }}
         />
-
-        <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
-          <button className={`btn ${filterStatus === 'all' ? 'btn-primary' : 'btn-secondary'}`} onClick={() => setFilterStatus('all')}>All</button>
-          <button className={`btn ${filterStatus === 'online' ? 'btn-primary' : 'btn-secondary'}`} onClick={() => setFilterStatus('online')}>Online</button>
-          <button className={`btn ${filterStatus === 'offline' ? 'btn-primary' : 'btn-secondary'}`} onClick={() => setFilterStatus('offline')}>Offline</button>
-          
-          <select value={selectedUser} onChange={(e) => setSelectedUser(e.target.value)} style={{ padding: '0.75rem', backgroundColor: '#1f2937', border: '1px solid #374151', borderRadius: '0.375rem', color: '#f3f4f6' }}>
-            <option value="all">All Users</option>
-            {users.map(u => <option key={u} value={u}>{u}</option>)}
-          </select>
-
-          <select value={selectedGroup} onChange={(e) => setSelectedGroup(e.target.value)} style={{ padding: '0.75rem', backgroundColor: '#1f2937', border: '1px solid #374151', borderRadius: '0.375rem', color: '#f3f4f6' }}>
-            <option value="all">All Groups</option>
-            {groups.map(g => <option key={g} value={g}>{g}</option>)}
-          </select>
-
-          <div style={{ marginLeft: 'auto' }}>
-            <button className="btn btn-success" onClick={() => { setDeployModal(true); setDeployCommand(''); }}>+ Deploy</button>
-          </div>
-        </div>
+        <select value={selectedUser} onChange={(e) => setSelectedUser(e.target.value)} style={{ padding: '0.6rem', backgroundColor: '#1f2937', border: '1px solid #374151', borderRadius: '0.375rem', color: '#f3f4f6' }}>
+          <option value="all">All Users</option>
+          {users.map(u => <option key={u} value={u}>{u}</option>)}
+        </select>
+        <select value={selectedGroup} onChange={(e) => setSelectedGroup(e.target.value)} style={{ padding: '0.6rem', backgroundColor: '#1f2937', border: '1px solid #374151', borderRadius: '0.375rem', color: '#f3f4f6' }}>
+          <option value="all">All Groups</option>
+          {groups.map(g => <option key={g} value={g}>{g}</option>)}
+        </select>
+        <button className="btn btn-success" onClick={() => { setDeployModal(true); setDeployCommand(''); }} style={{ whiteSpace: 'nowrap' }}>+ Deploy</button>
       </div>
 
       <div style={{ overflowX: 'auto' }}>

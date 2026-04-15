@@ -64,7 +64,6 @@ export const HomePage: React.FC = () => {
     { title: 'Nodes', icon: '🖥️', path: '/nodes', border: 'border-purple-700', stat: stats.onlineNodes, statLabel: `online / ${stats.totalNodes}`, show: true },
     { title: 'Routes', icon: '🛣️', path: '/routes', border: 'border-green-700', show: isSuperAdmin },
     { title: 'ACL Editor', icon: '📋', path: '/acl', border: 'border-orange-700', show: true },
-    { title: 'Pre-Auth Keys', icon: '🔐', path: '/preauthkeys', border: 'border-yellow-700', stat: stats.activeKeys, statLabel: 'active', show: true },
     { title: 'DNS', icon: '🌐', path: '/dns', border: 'border-red-700', show: isSuperAdmin },
     { title: 'Audit Log', icon: '📜', path: '/auditlog', border: 'border-indigo-700', show: isSuperAdmin },
     { title: 'Settings', icon: '⚙️', path: '/settings', border: 'border-gray-700', show: isSuperAdmin },

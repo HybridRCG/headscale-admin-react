@@ -328,119 +328,48 @@ export const UsersPage: React.FC = () => {
         </div>
       )}
 
-      {/* Create User Section */}
-      <div style={{ marginBottom: '1.5rem', padding: '1rem', backgroundColor: '#1f2937', borderRadius: '0.5rem', border: '1px solid #374151' }}>
-        {showCreateUser ? (
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
-            <div>
-              <label style={{ fontSize: '0.75rem', color: '#9ca3af', display: 'block', marginBottom: '0.25rem' }}>
-                Username (required):
-              </label>
-              <input
-                type="text"
-                value={newUsername}
-                onChange={(e) => setNewUsername(e.target.value)}
-                placeholder="Username..."
-                autoFocus
-                style={{
-                  width: '100%',
-                  padding: '0.75rem',
-                  backgroundColor: '#374151',
-                  border: '1px solid #4b5563',
-                  borderRadius: '0.25rem',
-                  color: '#f3f4f6',
-                  fontSize: '1rem',
-                }}
-              />
-            </div>
-            <div>
-              <label style={{ fontSize: '0.75rem', color: '#9ca3af', display: 'block', marginBottom: '0.25rem' }}>
-                Email (optional):
-              </label>
-              <input
-                type="email"
-                value={newUserEmail}
-                onChange={(e) => setNewUserEmail(e.target.value)}
-                placeholder="user@example.com"
-                style={{
-                  width: '100%',
-                  padding: '0.75rem',
-                  backgroundColor: '#374151',
-                  border: '1px solid #4b5563',
-                  borderRadius: '0.25rem',
-                  color: '#f3f4f6',
-                  fontSize: '1rem',
-                }}
-              />
-            </div>
-            <div style={{ display: 'flex', gap: '0.5rem' }}>
-              <button
-                className="btn btn-sm btn-success"
-                onClick={handleCreateUser}
-              >
-                Create User
-              </button>
-              <button
-                className="btn btn-sm btn-secondary"
-                onClick={() => {
-                  setShowCreateUser(false);
-                  setNewUsername('');
-                  setNewUserEmail('');
-                }}
-              >
-                Cancel
-              </button>
-            </div>
-          </div>
-        ) : (
-          <button
-            className="btn btn-primary"
-            onClick={() => setShowCreateUser(true)}
-          >
-            ➕ Create New User
-          </button>
-        )}
-      </div>
-
-      {/* Search Bar */}
-      <div style={{ marginBottom: '1.5rem' }}>
+      {/* Toolbar: Create + Search + Sort all on one line */}
+      <div style={{ marginBottom: '1.5rem', display: 'flex', gap: '0.5rem', flexWrap: 'wrap', alignItems: 'center' }}>
+        <button className="btn btn-success" onClick={() => setShowCreateUser(!showCreateUser)} style={{ whiteSpace: 'nowrap' }}>
+          ➕ New User
+        </button>
         <input
           type="text"
           placeholder="🔍 Search users..."
           value={searchQuery}
           onChange={(e) => setSearchQuery(e.target.value)}
-          style={{
-            width: '100%',
-            padding: '0.75rem',
-            backgroundColor: '#1f2937',
-            border: '1px solid #374151',
-            borderRadius: '0.5rem',
-            color: '#f3f4f6',
-            fontSize: '1rem',
-          }}
+          style={{ flex: 1, minWidth: '150px', padding: '0.6rem 0.75rem', backgroundColor: '#1f2937', border: '1px solid #374151', borderRadius: '0.375rem', color: '#f3f4f6', fontSize: '0.95rem' }}
         />
+        <button className="btn btn-secondary" onClick={() => toggleSort('id')} style={{ fontWeight: sortMethod === 'id' ? 'bold' : 'normal', whiteSpace: 'nowrap' }}>
+          ID {sortMethod === 'id' ? (sortDirection === 'up' ? '↑' : '↓') : ''}
+        </button>
+        <button className="btn btn-secondary" onClick={() => toggleSort('name')} style={{ fontWeight: sortMethod === 'name' ? 'bold' : 'normal', whiteSpace: 'nowrap' }}>
+          Name {sortMethod === 'name' ? (sortDirection === 'up' ? '↑' : '↓') : ''}
+        </button>
+        <button className="btn btn-secondary" onClick={fetchUsers} disabled={loading}>🔄</button>
       </div>
 
-      {/* Sort Controls */}
-      <div style={{ marginBottom: '1rem', display: 'flex', gap: '0.5rem' }}>
-        <button
-          className="btn btn-primary"
-          onClick={() => toggleSort('id')}
-          style={{ fontWeight: sortMethod === 'id' ? 'bold' : 'normal' }}
-        >
-          {sortMethod === 'id' ? '📊 ' : ''} ID {sortDirection === 'up' ? '↑' : '↓'}
-        </button>
-        <button
-          className="btn btn-primary"
-          onClick={() => toggleSort('name')}
-          style={{ fontWeight: sortMethod === 'name' ? 'bold' : 'normal' }}
-        >
-          {sortMethod === 'name' ? '📊 ' : ''} Name {sortDirection === 'up' ? '↑' : '↓'}
-        </button>
-        <button className="btn btn-primary" onClick={fetchUsers} disabled={loading}>
-          🔄 Refresh
-        </button>
-      </div>
+      {/* Create User expand form */}
+      {showCreateUser && (
+        <div style={{ marginBottom: '1.5rem', padding: '1rem', backgroundColor: '#1f2937', borderRadius: '0.5rem', border: '1px solid #374151' }}>
+          <div style={{ display: 'flex', gap: '0.75rem', flexWrap: 'wrap', alignItems: 'flex-end' }}>
+            <div style={{ flex: 1, minWidth: '150px' }}>
+              <label style={{ fontSize: '0.75rem', color: '#9ca3af', display: 'block', marginBottom: '0.25rem' }}>Username (required):</label>
+              <input type="text" value={newUsername} onChange={(e) => setNewUsername(e.target.value)} placeholder="Username..." autoFocus
+                style={{ width: '100%', padding: '0.6rem', backgroundColor: '#374151', border: '1px solid #4b5563', borderRadius: '0.25rem', color: '#f3f4f6' }} />
+            </div>
+            <div style={{ flex: 1, minWidth: '150px' }}>
+              <label style={{ fontSize: '0.75rem', color: '#9ca3af', display: 'block', marginBottom: '0.25rem' }}>Email (optional):</label>
+              <input type="email" value={newUserEmail} onChange={(e) => setNewUserEmail(e.target.value)} placeholder="user@example.com"
+                style={{ width: '100%', padding: '0.6rem', backgroundColor: '#374151', border: '1px solid #4b5563', borderRadius: '0.25rem', color: '#f3f4f6' }} />
+            </div>
+            <div style={{ display: 'flex', gap: '0.5rem' }}>
+              <button className="btn btn-sm btn-success" onClick={handleCreateUser}>Create</button>
+              <button className="btn btn-sm btn-secondary" onClick={() => { setShowCreateUser(false); setNewUsername(''); setNewUserEmail(''); }}>Cancel</button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {loading ? (
         <div className="loading">Loading users...</div>
