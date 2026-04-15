@@ -27,7 +27,7 @@ curl -O https://raw.githubusercontent.com/HybridRCG/headscale-admin-react/main/.
 cp .env.example .env
 # Edit .env — set JWT_SECRET and HEADSCALE_DOMAIN
 
-# 3. Run  (users-mapping.json is auto-created on first start)
+# 3. Run — users-mapping.json auto-created on first start
 docker compose up -d
 ```
 
@@ -152,35 +152,6 @@ The **+ Deploy** button on the Nodes page opens a full wizard:
 - Expire uses key ID via `headscale preauthkeys expire --id <N>` CLI
 - No node move API — changing owner deletes the node and creates a new pre-auth key
 - Pre-auth keys do **not** disconnect active nodes — only needed at initial registration
-
----
-
-## Installation
-
-### Prerequisites
-- Node.js 20+
-- Docker + Docker Compose
-- Headscale v0.28+ in Docker
-- Traefik or nginx reverse proxy
-
-### Clone and install
-```bash
-git clone https://github.com/HybridRCG/headscale-admin-react.git
-cd headscale-admin-react
-npm install
-```
-
-### Run locally
-```bash
-REACT_APP_API_URL=/admin/api PUBLIC_URL=/admin npm start
-```
-
-### Build and deploy
-```bash
-npm run build
-docker build -t hs-react:v1.0.0 .
-docker compose up -d hs-react
-```
 
 ---
 
