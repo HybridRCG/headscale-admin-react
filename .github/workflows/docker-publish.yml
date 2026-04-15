@@ -3,11 +3,11 @@ name: Build and Push Docker Image
 on:
   push:
     branches: [ main ]
-    tags: [ 'v*' ]
+  workflow_dispatch:
 
 env:
   REGISTRY: ghcr.io
-  IMAGE_NAME: hybridrcg/hs-react
+  IMAGE_NAME: ${{ github.repository_owner }}/hs-react
 
 jobs:
   build-and-push:
@@ -34,6 +34,7 @@ jobs:
         env:
           PUBLIC_URL: /admin
           REACT_APP_API_URL: /admin/api
+          CI: false
 
       - name: Log in to GitHub Container Registry
         uses: docker/login-action@v3
@@ -42,21 +43,11 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Extract metadata
-        id: meta
-        uses: docker/metadata-action@v5
-        with:
-          images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
-          tags: |
-            type=ref,event=branch
-            type=semver,pattern={{version}}
-            type=semver,pattern={{major}}.{{minor}}
-            type=raw,value=latest,enable={{is_default_branch}}
-
       - name: Build and push Docker image
         uses: docker/build-push-action@v5
         with:
           context: .
           push: true
-          tags: ${{ steps.meta.outputs.tags }}
-          labels: ${{ steps.meta.outputs.labels }}
+          tags: |
+            ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:latest
+            ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:main
