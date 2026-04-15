@@ -567,8 +567,9 @@ app.post('/api/headscale/preauthkey/create', authenticateToken, async (req, res)
     const targetUser = allUsers.find(u => String(u.id) === String(userId) || u.name === userId);
     if (!targetUser) return res.status(400).json({ message: `User not found: ${userId}` });
 
+    // headscale v0.28 requires numeric user ID as string for the user field
     const payload = {
-      user: targetUser.name,
+      user: String(targetUser.id),
       reusable: !!reusable,
       ephemeral: !!ephemeral,
     };

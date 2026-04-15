@@ -144,20 +144,22 @@ export const DeployModal: React.FC<Props> = ({ onClose, visibleUsers }) => {
 
   return (
     <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(0,0,0,0.7)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000 }}>
-      <div style={{ backgroundColor: '#111827', border: '1px solid #374151', borderRadius: '0.75rem', width: '90%', maxWidth: '780px', maxHeight: '90vh', overflowY: 'auto', color: '#d1d5db' }}>
+      <div style={{ backgroundColor: '#111827', border: '1px solid #374151', borderRadius: '0.75rem', width: '95%', maxWidth: '1100px', maxHeight: '90vh', overflowY: 'auto', color: '#d1d5db' }}>
 
-        {/* Header + command */}
-        <div style={{ padding: '1.5rem', borderBottom: '1px solid #374151' }}>
+        {/* Header + command - sticky */}
+        <div style={{ padding: '1.5rem', borderBottom: '1px solid #374151', position: 'sticky', top: 0, backgroundColor: '#111827', zIndex: 10 }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
             <h2 style={{ margin: 0, color: '#f3f4f6', fontSize: '1.25rem' }}>🚀 Deploy New Node</h2>
-            <button onClick={onClose} style={{ background: 'none', border: 'none', color: '#9ca3af', fontSize: '1.5rem', cursor: 'pointer', lineHeight: 1 }}>×</button>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+              <button onClick={handleCopy} style={{ padding: '0.4rem 1rem', backgroundColor: copied ? '#10b981' : '#6366f1', color: 'white', border: 'none', borderRadius: '0.375rem', cursor: 'pointer', fontWeight: '600', fontSize: '0.875rem' }}>
+                {copied ? '✓ Copied!' : '📋 Copy Command'}
+              </button>
+              <button onClick={onClose} style={{ background: 'none', border: 'none', color: '#9ca3af', fontSize: '1.5rem', cursor: 'pointer', lineHeight: 1 }}>×</button>
+            </div>
           </div>
           <div style={{ backgroundColor: '#0f172a', border: '1px dashed #374151', borderRadius: '0.375rem', padding: '1rem', fontFamily: 'monospace', fontSize: '0.8rem', color: '#86efac', wordBreak: 'break-all', lineHeight: 1.6 }}>
             {command || 'Configure options below...'}
           </div>
-          <button onClick={handleCopy} style={{ marginTop: '0.75rem', padding: '0.5rem 1.25rem', backgroundColor: copied ? '#10b981' : '#6366f1', color: 'white', border: 'none', borderRadius: '0.375rem', cursor: 'pointer', fontWeight: '600', fontSize: '0.875rem' }}>
-            {copied ? '✓ Copied!' : '📋 Copy Command'}
-          </button>
         </div>
 
         {/* Options */}
@@ -184,8 +186,9 @@ export const DeployModal: React.FC<Props> = ({ onClose, visibleUsers }) => {
 
             {usePreAuthKey && (
               <div style={{ backgroundColor: '#1f2937', border: '1px solid #374151', borderRadius: '0.5rem', padding: '1rem', display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
-                <div style={{ display: 'flex', gap: '0.75rem', flexWrap: 'wrap' }}>
-                  <div style={{ flex: 1, minWidth: '150px' }}>
+                {/* Row 1: User + Expiry */}
+                <div style={{ display: 'flex', gap: '0.75rem', alignItems: 'flex-end' }}>
+                  <div style={{ width: '200px' }}>
                     <label style={{ display: 'block', fontSize: '0.75rem', color: '#9ca3af', marginBottom: '0.25rem' }}>User:</label>
                     <select value={selectedUser} onChange={e => setSelectedUser(e.target.value)}
                       style={{ width: '100%', padding: '0.5rem', backgroundColor: '#374151', border: '1px solid #4b5563', borderRadius: '0.25rem', color: '#f3f4f6', fontSize: '0.875rem' }}>
@@ -193,20 +196,20 @@ export const DeployModal: React.FC<Props> = ({ onClose, visibleUsers }) => {
                       {visibleUsers.map(u => <option key={u.id} value={u.id}>{u.name}</option>)}
                     </select>
                   </div>
-                  <div style={{ minWidth: '100px' }}>
+                  <div style={{ width: '110px' }}>
                     <label style={{ display: 'block', fontSize: '0.75rem', color: '#9ca3af', marginBottom: '0.25rem' }}>Expires (days):</label>
                     <input type="number" value={preAuthKeyExpiry} onChange={e => setPreAuthKeyExpiry(Number(e.target.value))} min={1} max={90}
                       style={{ width: '100%', padding: '0.5rem', backgroundColor: '#374151', border: '1px solid #4b5563', borderRadius: '0.25rem', color: '#f3f4f6', fontSize: '0.875rem' }} />
                   </div>
                 </div>
-                <div style={{ display: 'flex', gap: '1.5rem' }}>
+                {/* Row 2: Reusable + Ephemeral + Generate button — right aligned */}
+                <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', justifyContent: 'flex-end' }}>
                   <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', color: '#d1d5db', fontSize: '0.875rem', cursor: 'pointer' }}>
                     <Toggle checked={reusable} onChange={setReusable} /> Reusable
                   </label>
                   <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', color: '#d1d5db', fontSize: '0.875rem', cursor: 'pointer' }}>
                     <Toggle checked={ephemeral} onChange={setEphemeral} /> Ephemeral
                   </label>
-                </div>
                 {generatedKey ? (
                   <div>
                     <div style={{ backgroundColor: '#0f172a', border: '1px solid #10b981', borderRadius: '0.25rem', padding: '0.75rem', fontFamily: 'monospace', fontSize: '0.75rem', color: '#10b981', wordBreak: 'break-all', marginBottom: '0.5rem' }}>
@@ -225,10 +228,11 @@ export const DeployModal: React.FC<Props> = ({ onClose, visibleUsers }) => {
                   </div>
                 ) : (
                   <button onClick={handleGeneratePreAuthKey} disabled={!selectedUser || generatingKey}
-                    style={{ padding: '0.5rem 1rem', backgroundColor: selectedUser ? '#6366f1' : '#374151', color: 'white', border: 'none', borderRadius: '0.375rem', cursor: selectedUser ? 'pointer' : 'not-allowed', fontWeight: '600', fontSize: '0.875rem', width: 'fit-content' }}>
-                    {generatingKey ? 'Generating...' : '🔑 Generate Pre-Auth Key'}
+                    style={{ padding: '0.5rem 1rem', backgroundColor: selectedUser ? '#6366f1' : '#4b5563', color: 'white', border: 'none', borderRadius: '0.375rem', cursor: selectedUser ? 'pointer' : 'not-allowed', fontWeight: '600', fontSize: '0.875rem' }}>
+                    {generatingKey ? 'Generating...' : '🔑 Generate'}
                   </button>
                 )}
+                </div>
               </div>
             )}
           </div>
