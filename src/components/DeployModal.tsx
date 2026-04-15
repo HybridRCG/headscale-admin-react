@@ -4,7 +4,7 @@ import { useAuthStore } from '../store/authStore';
 
 interface Props {
   onClose: () => void;
-  visibleUsers: string[];
+  visibleUsers: { id: string; name: string }[];
 }
 
 const API = '/admin/api/headscale';
@@ -103,14 +103,15 @@ export const DeployModal: React.FC<Props> = ({ onClose, visibleUsers }) => {
     try {
       const expDate = new Date();
       expDate.setDate(expDate.getDate() + preAuthKeyExpiry);
-      const resp = await axios.post(`${API}/api/v1/preauthkey`, {
-        user: selectedUser,
+      // Use the server endpoint which handles auth correctly
+      const resp = await axios.post('/admin/api/headscale/preauthkey/create', {
+        userId: selectedUser,
         reusable,
         ephemeral,
         expiration: expDate.toISOString(),
-        aclTags: advertiseTags ? advertiseTagsList : []
+        tags: advertiseTags ? advertiseTagsList : []
       });
-      setGeneratedKey(resp.data.preAuthKey?.key || '');
+      setGeneratedKey(resp.data.key || '');
     } catch (e: any) {
       alert('Failed to generate key: ' + (e.response?.data?.message || e.message));
     } finally {
@@ -189,7 +190,7 @@ export const DeployModal: React.FC<Props> = ({ onClose, visibleUsers }) => {
                     <select value={selectedUser} onChange={e => setSelectedUser(e.target.value)}
                       style={{ width: '100%', padding: '0.5rem', backgroundColor: '#374151', border: '1px solid #4b5563', borderRadius: '0.25rem', color: '#f3f4f6', fontSize: '0.875rem' }}>
                       <option value="">Select user...</option>
-                      {visibleUsers.map(u => <option key={u} value={u}>{u}</option>)}
+                      {visibleUsers.map(u => <option key={u.id} value={u.id}>{u.name}</option>)}
                     </select>
                   </div>
                   <div style={{ minWidth: '100px' }}>

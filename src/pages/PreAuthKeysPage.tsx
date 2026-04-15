@@ -80,14 +80,17 @@ export const PreAuthKeysPage: React.FC = () => {
     try {
       const expDate = new Date();
       expDate.setDate(expDate.getDate() + newExpiry);
-      const resp = await axios.post(`${API}/api/v1/preauthkey`, {
-        user: newUser,
+      // newUser is the username, need to find the ID
+      const targetUser = users.find((u: any) => u.name === newUser);
+      const userId = targetUser?.id || newUser;
+      const resp = await axios.post('/admin/api/headscale/preauthkey/create', {
+        userId: newUser,
         reusable: newReusable,
         ephemeral: newEphemeral,
         expiration: expDate.toISOString(),
-        aclTags: []
+        tags: []
       });
-      setNewKey(resp.data.preAuthKey?.key || '');
+      setNewKey(resp.data.key || '');
       fetchAll();
     } catch (e: any) {
       alert('Failed: ' + (e.response?.data?.message || e.message));

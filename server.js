@@ -487,6 +487,10 @@ app.post('/api/headscale/apikey/create-for-user', authenticateToken, async (req,
     const days = expiryDays || 90;
     const expDate = new Date();
     expDate.setDate(expDate.getDate() + days);
+    // Get user ID for the target user
+    const allUsersResp = await axios.get(`${tokenData.headscaleUrl}/api/v1/user`, { headers: { Authorization: `Bearer ${tokenData.apiKey}` }, timeout: 10000 });
+    const targetUserObj = allUsersResp.data.users?.find((u) => u.name === targetUsername);
+    if (!targetUserObj) return res.status(400).json({ message: `User ${targetUsername} not found` });
     const createResp = await axios.post(
       `${tokenData.headscaleUrl}/api/v1/apikey`,
       { expiration: expDate.toISOString() },
@@ -545,6 +549,44 @@ app.get('/api/headscale/audit-log', authenticateToken, (req, res) => {
   const entries = readAuditLog();
   // Filter by manageable_domains for non-super_admins
   res.json(entries.reverse()); // newest first
+});
+
+
+// Create pre-auth key - properly handles user lookup
+app.post('/api/headscale/preauthkey/create', authenticateToken, async (req, res) => {
+  const { userId, reusable, ephemeral, expiration, tags } = req.body;
+  if (!userId) return res.status(400).json({ message: 'userId required' });
+  try {
+    const userEmail = req.user.email;
+    const tokenData = userTokenMap.get(userEmail);
+    if (!tokenData) return res.status(401).json({ message: 'Session expired' });
+
+    // Find user by id or name
+    const usersResp = await axios.get(`${tokenData.headscaleUrl}/api/v1/user`, { headers: { Authorization: `Bearer ${tokenData.apiKey}` }, timeout: 10000 });
+    const allUsers = usersResp.data.users || [];
+    const targetUser = allUsers.find(u => String(u.id) === String(userId) || u.name === userId);
+    if (!targetUser) return res.status(400).json({ message: `User not found: ${userId}` });
+
+    const payload = {
+      user: targetUser.name,
+      reusable: !!reusable,
+      ephemeral: !!ephemeral,
+    };
+    if (expiration) payload.expiration = expiration;
+    if (tags && tags.length > 0) payload.aclTags = tags;
+
+    const resp = await axios.post(
+      `${tokenData.headscaleUrl}/api/v1/preauthkey`,
+      payload,
+      { headers: { Authorization: `Bearer ${tokenData.apiKey}` }, timeout: 10000 }
+    );
+    const key = resp.data.preAuthKey?.key || resp.data.pre_auth_key?.key || '';
+    logAudit(req.user.username, 'create-preauthkey', `user: ${targetUser.name}`, `reusable:${reusable} ephemeral:${ephemeral}`);
+    res.json({ key, user: targetUser.name });
+  } catch (e) {
+    console.error('[PREAUTHKEY-CREATE]', e.response?.data || e.message);
+    res.status(500).json({ message: e.response?.data?.message || e.message });
+  }
 });
 
 app.use('/api/headscale', authenticateToken, async (req, res) => {

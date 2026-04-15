@@ -19,6 +19,7 @@ export const NodesPage: React.FC = () => {
   const [allNodes, setAllNodes] = useState<Node[]>([]);
   const [filteredNodes, setFilteredNodes] = useState<Node[]>([]);
   const [users, setUsers] = useState<string[]>([]);
+  const [userObjects, setUserObjects] = useState<{id:string; name:string}[]>([]);
   const [groups, setGroups] = useState<string[]>([]);
   const [groupUsers, setGroupUsers] = useState<Record<string, string[]>>({});
   const [userEmailMap, setUserEmailMap] = useState<Record<string, string>>({});
@@ -63,8 +64,9 @@ export const NodesPage: React.FC = () => {
   const fetchUsers = async () => {
     try {
       const response = await axios.get(`${API_BASE}/headscale/api/v1/user`);
-      const userList = response.data.users?.map((u: any) => u.name) || [];
-      setUsers(userList);
+      const rawUsers = response.data.users || [];
+      setUsers(rawUsers.map((u: any) => u.name));
+      setUserObjects(rawUsers.map((u: any) => ({ id: String(u.id), name: u.name })));
       
       // Fetch user-email mapping from new endpoint
       const mappingResponse = await axios.get(`${API_BASE}/headscale/user-mapping`);
@@ -341,7 +343,7 @@ export const NodesPage: React.FC = () => {
         </div>
       )}
 
-      {deployModal && <DeployModal onClose={() => setDeployModal(false)} visibleUsers={users} />}
+      {deployModal && <DeployModal onClose={() => setDeployModal(false)} visibleUsers={userObjects} />}
 
       <button className="btn btn-secondary" onClick={fetchNodes} style={{ marginTop: '1rem' }}>🔄 Refresh</button>
     </div>
