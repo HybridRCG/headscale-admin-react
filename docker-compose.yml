@@ -1,0 +1,41 @@
+# HS React — standalone docker-compose.yml
+# Pull pre-built image from GitHub Container Registry - no build required
+#
+# QUICK START:
+#   1. Copy this file to your server
+#   2. Create /etc/headscale/users-mapping.json (see INSTALL.md)
+#   3. Set JWT_SECRET environment variable
+#   4. Run: docker compose up -d
+
+services:
+  hs-react:
+    image: ghcr.io/hybridrcg/hs-react:latest
+    container_name: hs-react
+    restart: unless-stopped
+    environment:
+      - JWT_SECRET=${JWT_SECRET:?JWT_SECRET is required - run: export JWT_SECRET=$(openssl rand -base64 32)}
+      - HEADSCALE_URL=${HEADSCALE_URL:-http://headscale:8080}
+      - PORT=3000
+    volumes:
+      # Docker socket needed to run headscale CLI commands (expire nodes, pre-auth keys etc.)
+      - /var/run/docker.sock:/var/run/docker.sock
+      # Headscale config dir - needs write access for DNS config saves
+      - /etc/headscale:/etc/headscale
+    ports:
+      # Uncomment if NOT using Traefik - direct port access
+      # - "3000:3000"
+    networks:
+      - headscale_default
+    labels:
+      # Traefik labels - remove if using nginx/caddy
+      - traefik.enable=true
+      - traefik.http.routers.hs-react.rule=Host(`${HEADSCALE_DOMAIN:?HEADSCALE_DOMAIN required}`) && PathPrefix(`/admin`)
+      - traefik.http.routers.hs-react.entrypoints=websecure
+      - traefik.http.routers.hs-react.tls=true
+      - traefik.http.middlewares.hs-react-strip.stripprefix.prefixes=/admin
+      - traefik.http.routers.hs-react.middlewares=hs-react-strip
+      - traefik.http.services.hs-react.loadbalancer.server.port=3000
+
+networks:
+  headscale_default:
+    external: true

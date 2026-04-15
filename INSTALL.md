@@ -1,35 +1,33 @@
-# Installation Guide
+# HS React — Installation Guide
 
 ## Requirements
 
 - Docker + Docker Compose
-- Headscale v0.28+
-- Traefik reverse proxy (or any reverse proxy)
+- Headscale v0.28+ running in Docker
+- A reverse proxy (Traefik recommended, nginx/Caddy also work)
 
-## Quick Start with Docker
+---
 
-### 1. Clone the repo
+## Option A — Pre-built Image (Recommended)
 
-```bash
-git clone https://github.com/HybridRCG/headscale-admin-react.git
-cd headscale-admin-react
-```
+No build required. Pull directly from GitHub Container Registry.
 
-### 2. Configure environment
+### 1. Create your environment file
 
 ```bash
 cp .env.example .env
-# Edit .env with your values
 ```
 
-Generate a JWT secret:
-```bash
-openssl rand -base64 32
+Edit `.env`:
+```env
+JWT_SECRET=        # Generate: openssl rand -base64 32
+HEADSCALE_DOMAIN=  # e.g. headscale.yourdomain.com
+HEADSCALE_URL=     # e.g. http://headscale:8080 (internal Docker URL)
 ```
 
-### 3. Create the users mapping file
+### 2. Create the users mapping file
 
-Create `/etc/headscale/users-mapping.json` (or adjust the path in docker-compose):
+Create `/etc/headscale/users-mapping.json`:
 
 ```json
 {
@@ -38,87 +36,101 @@ Create `/etc/headscale/users-mapping.json` (or adjust the path in docker-compose
       "email": "admin@yourdomain.com",
       "role": "super_admin",
       "manageable_domains": ["*"]
-    },
-    "GroupAdminUsername": {
-      "email": "groupadmin@company.com",
-      "role": "group_admin",
-      "manageable_domains": ["@company.com"]
-    },
-    "ViewerUsername": {
-      "email": "viewer@company.com",
-      "role": "user",
-      "manageable_domains": []
     }
   },
   "api_key_labels": {}
 }
 ```
 
-> **Important:** Headscale v0.28 does not support setting emails via API.
-> This mapping file is the source of truth for roles and email addresses.
-> Usernames must match exactly the headscale usernames.
+> **Important:** Usernames must match your Headscale usernames exactly (case-sensitive).
 
-### 4. Build and run
+### 3. Run
 
 ```bash
-# Build the React app first
+docker compose up -d
+```
+
+That's it. Open `https://your-domain.com/admin`.
+
+---
+
+## Option B — Build from Source
+
+If you want to customise the code:
+
+### 1. Clone
+
+```bash
+git clone https://github.com/HybridRCG/headscale-admin-react.git
+cd headscale-admin-react
+```
+
+### 2. Install and build
+
+```bash
 npm install
 npm run build
-
-# Build Docker image
-docker build -t headscale-admin-react:latest .
-
-# Run with Docker Compose (add to your existing headscale docker-compose.yml)
-docker compose up -d headscale-admin
 ```
 
-### 5. Docker Compose snippet
+### 3. Build Docker image
 
-Add this service to your existing `docker-compose.yml`:
-
-```yaml
-headscale-admin:
-  image: headscale-admin-react:latest
-  container_name: headscale-admin
-  environment:
-    - JWT_SECRET=your-jwt-secret-here
-    - HEADSCALE_URL=http://headscale:8080
-  restart: unless-stopped
-  networks:
-    - headscale_default
-  volumes:
-    - /var/run/docker.sock:/var/run/docker.sock
-    - /etc/headscale:/etc/headscale:ro
-  labels:
-    - traefik.enable=true
-    - traefik.http.routers.headscale-admin.rule=Host(`your-domain.com`) && PathPrefix(`/admin`)
-    - traefik.http.routers.headscale-admin.entrypoints=websecure
-    - traefik.http.routers.headscale-admin.tls=true
-    - traefik.http.middlewares.admin-stripprefix.stripprefix.prefixes=/admin
-    - traefik.http.routers.headscale-admin.middlewares=admin-stripprefix
-    - traefik.http.services.headscale-admin.loadbalancer.server.port=3000
+```bash
+docker build -t hs-react:latest .
 ```
 
-### 6. First login
+### 4. Update docker-compose.yml
+
+Change `image: ghcr.io/hybridrcg/hs-react:latest` to `image: hs-react:latest` in `docker-compose.yml`.
+
+### 5. Run
+
+```bash
+docker compose up -d
+```
+
+---
+
+## First Login
 
 1. Create a Headscale API key for your admin user:
    ```bash
-   headscale apikey create --expiration 90d
+   docker exec headscale /ko-app/headscale apikey create --expiration 90d
    ```
 2. Open `https://your-domain.com/admin`
-3. Enter your headscale **username** and the **API key**
-4. You're in!
+3. Enter your Headscale **username** and the **API key** you just created
+4. You're in as `super_admin`
+
+---
+
+## Nginx / Caddy (no Traefik)
+
+Remove the `labels:` section from `docker-compose.yml` and uncomment the `ports:` line, then proxy to port 3000.
+
+**Nginx example:**
+```nginx
+location /admin {
+    proxy_pass http://localhost:3000;
+    proxy_set_header Host $host;
+    proxy_set_header X-Real-IP $remote_addr;
+}
+```
+
+**Caddyfile example:**
+```
+your-domain.com {
+    handle_path /admin* {
+        reverse_proxy localhost:3000
+    }
+}
+```
 
 ---
 
 ## Updating
 
 ```bash
-git pull
-npm run build
-docker build -t headscale-admin-react:latest .
-docker compose down headscale-admin
-docker compose up -d headscale-admin
+docker compose pull
+docker compose up -d
 ```
 
 ---
@@ -127,15 +139,19 @@ docker compose up -d headscale-admin
 
 | Role | Access |
 |------|--------|
-| `super_admin` | Full access to all features |
-| `group_admin` | Own domain users/nodes only, can create API keys for their users |
-| `user` | Read-only, own profile only |
+| `super_admin` | Full access — all users, nodes, DNS, settings, routes |
+| `group_admin` | Own domain only — users/nodes/ACL for their `@domain.com` |
+| `user` | Read-only — own profile and labelled API keys only |
 
-See [README.md](README.md) for full role documentation.
+See [README.md](README.md) for full role and permission documentation.
 
 ---
 
-## Attribution
+## Volumes Explained
 
-This project is built by [HybridRCG](https://github.com/HybridRCG).  
-If you use or deploy this project, please include visible attribution as required by the LICENSE.
+| Volume | Purpose |
+|--------|---------|
+| `/var/run/docker.sock` | Allows hs-react to run `headscale` CLI commands (expire nodes, pre-auth keys, etc.) |
+| `/etc/headscale` | Reads `config.yaml` for DNS settings; reads/writes `users-mapping.json` for roles |
+
+> **Security note:** Mounting the Docker socket gives the container elevated access. Only deploy on trusted infrastructure.

@@ -25,3 +25,11 @@ yarn-error.log*
 # Private files
 deploy.sh
 server.js.bak
+
+# Local environment - never commit
+.env
+
+# Backup files
+*.bak
+*.tmp
+*.backup
