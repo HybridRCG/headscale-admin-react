@@ -61,9 +61,9 @@ export const HomePage: React.FC = () => {
     load();
   }, []);
 
-  const cards = [
-    { title: 'Users', icon: '👤', path: '/users', border: 'border-blue-700', stat: stats.totalUsers, statLabel: 'total', show: true },
-    { title: 'Nodes', icon: '🖥️', path: '/nodes', border: 'border-purple-700', stat: stats.onlineNodes, statLabel: `online / ${stats.totalNodes}`, show: true },
+  const cards: { title: string; icon: string; path: string; border: string; show: boolean; stat?: number; statLabel?: string }[] = [
+    { title: 'Users', icon: '👤', path: '/users', border: 'border-blue-700', show: true },
+    { title: 'Nodes', icon: '🖥️', path: '/nodes', border: 'border-purple-700', show: true },
     { title: 'Routes', icon: '🛣️', path: '/routes', border: 'border-green-700', show: isSuperAdmin },
     { title: 'ACL Editor', icon: '📋', path: '/acl', border: 'border-orange-700', show: true },
     { title: 'DNS', icon: '🌐', path: '/dns', border: 'border-red-700', show: isSuperAdmin },
