@@ -4,8 +4,6 @@
 
 A production-ready, role-based administration dashboard for [Headscale](https://github.com/juanfont/headscale) v0.28+, built with React, TypeScript, Zustand, and Express.
 
-> Originally forked from [headscale-admin](https://github.com/HybridRCG/headscale-admin) (Svelte). That project became unmaintained so this is a full React rewrite — now published independently as **HS React**.
-
 **GitHub:** https://github.com/HybridRCG/headscale-admin-react
 
 ## ☕ Support Me
