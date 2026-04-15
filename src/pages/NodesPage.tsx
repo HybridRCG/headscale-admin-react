@@ -2,6 +2,7 @@ import { useAuthStore } from '../store/authStore';
 import React, { useEffect, useState } from 'react';
 import axios from 'axios';
 import '../styles/Pages.css';
+import { DeployModal } from '../components/DeployModal';
 
 interface Node {
   id: number;
@@ -35,9 +36,6 @@ export const NodesPage: React.FC = () => {
   const [routesModal, setRoutesModal] = useState<number | null>(null);
   const [modalNode, setModalNode] = useState<Node | null>(null);
   const [deployModal, setDeployModal] = useState(false);
-  const [deployHostname, setDeployHostname] = useState('');
-  const [deployTags, setDeployTags] = useState('tag:server');
-  const [deployCommand, setDeployCommand] = useState('');
   const API_BASE = '/admin/api';
 
   useEffect(() => {
@@ -154,8 +152,17 @@ export const NodesPage: React.FC = () => {
 
   const handleMoveUser = async (nodeId: number) => {
     if (!editUser.trim()) return;
+    const confirmed = window.confirm(
+      `⚠️ Changing node owner requires deleting and re-registering the node.\n\n` +
+      `The device will need to run:\n  tailscale login --auth-key <new-key>\n\n` +
+      `A new pre-auth key will be shown after confirming.\n\nContinue?`
+    );
+    if (!confirmed) return;
     try {
-      await axios.post(`${API_BASE}/headscale/node/move-user`, { nodeId, newUser: editUser });
+      const result = await axios.post(`${API_BASE}/headscale/node/move-user`, { nodeId, newUser: editUser });
+      if (result.data.newKey) {
+        alert(`✅ Node moved to ${editUser}.\n\nRun this on the device:\ntailscale login --auth-key ${result.data.newKey}`);
+      }
       setEditingNode(null);
       setEditUser('');
       await fetchNodes();
@@ -206,18 +213,6 @@ export const NodesPage: React.FC = () => {
     }
   };
 
-  const generateDeployCommand = () => {
-    let cmd = `tailscale up --login-server=https://hs.groblers.co.uk`;
-    if (deployTags) cmd += ` --advertise-tags=${deployTags}`;
-    if (deployHostname) cmd += ` --hostname=${deployHostname}`;
-    cmd += ` --advertise-routes=10.1.1.0/24 --accept-dns --accept-routes`;
-    setDeployCommand(cmd);
-  };
-
-  const copyDeployCommand = () => {
-    navigator.clipboard.writeText(deployCommand);
-    alert('Copied to clipboard!');
-  };
 
   if (loading) {
     return <div className="page-container"><h1 className="page-title">Nodes</h1><div className="loading">Loading...</div></div>;
@@ -245,7 +240,7 @@ export const NodesPage: React.FC = () => {
           <option value="all">All Groups</option>
           {groups.map(g => <option key={g} value={g}>{g}</option>)}
         </select>
-        <button className="btn btn-success" onClick={() => { setDeployModal(true); setDeployCommand(''); }} style={{ whiteSpace: 'nowrap' }}>+ Deploy</button>
+        <button className="btn btn-success" onClick={() => setDeployModal(true)} style={{ whiteSpace: 'nowrap' }}>+ Deploy</button>
       </div>
 
       <div style={{ overflowX: 'auto' }}>
@@ -286,7 +281,13 @@ export const NodesPage: React.FC = () => {
                   ) : (
                     <div style={{ display: 'flex', gap: '0.25rem', flexWrap: 'wrap' }}>
                       <button className="btn btn-sm btn-warning" onClick={() => { setEditingNode(node.id); setEditName(node.name); setEditUser(node.user?.name || ''); }}>Edit</button>
-                      <button className="btn btn-sm btn-info" onClick={() => { setRoutesModal(node.id); setModalNode(node); }}>Routes</button>
+                      <button
+                        className="btn btn-sm btn-info"
+                        onClick={() => { setRoutesModal(node.id); setModalNode(node); }}
+                        disabled={!node.availableRoutes || node.availableRoutes.length === 0}
+                        title={!node.availableRoutes || node.availableRoutes.length === 0 ? 'No routes advertised' : 'Manage routes'}
+                        style={{ opacity: (!node.availableRoutes || node.availableRoutes.length === 0) ? 0.35 : 1, cursor: (!node.availableRoutes || node.availableRoutes.length === 0) ? 'not-allowed' : 'pointer' }}
+                      >Routes</button>
                       <button className="btn btn-sm btn-error" onClick={() => handleDelete(node.id)}>Delete</button>
                       <button className="btn btn-sm btn-error" onClick={() => handleExpire(node.id)}>Expire</button>
                     </div>
@@ -340,49 +341,7 @@ export const NodesPage: React.FC = () => {
         </div>
       )}
 
-      {deployModal && (
-        <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(0,0,0,0.5)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000 }}>
-          <div style={{ backgroundColor: '#111827', border: '1px solid #374151', borderRadius: '0.5rem', padding: '2rem', maxWidth: '700px', width: '90%', color: '#d1d5db' }}>
-            <h2 style={{ marginTop: 0, marginBottom: '1rem' }}>Deploy New Node</h2>
-            
-            <div style={{ marginBottom: '1rem' }}>
-              <label style={{ display: 'block', marginBottom: '0.5rem', color: '#d1d5db' }}>Hostname:</label>
-              <input
-                type="text"
-                value={deployHostname}
-                onChange={(e) => setDeployHostname(e.target.value)}
-                placeholder="node-name"
-                style={{ width: '100%', padding: '0.75rem', backgroundColor: '#1f2937', border: '1px solid #374151', borderRadius: '0.375rem', color: '#f3f4f6', boxSizing: 'border-box' }}
-              />
-            </div>
-
-            <div style={{ marginBottom: '1rem' }}>
-              <label style={{ display: 'block', marginBottom: '0.5rem', color: '#d1d5db' }}>Tags (comma-separated):</label>
-              <input
-                type="text"
-                value={deployTags}
-                onChange={(e) => setDeployTags(e.target.value)}
-                placeholder="tag:server,tag:production"
-                style={{ width: '100%', padding: '0.75rem', backgroundColor: '#1f2937', border: '1px solid #374151', borderRadius: '0.375rem', color: '#f3f4f6', boxSizing: 'border-box' }}
-              />
-            </div>
-
-            <button className="btn btn-primary" onClick={generateDeployCommand} style={{ marginBottom: '1rem' }}>Generate Command</button>
-
-            {deployCommand && (
-              <div style={{ marginTop: '1.5rem', backgroundColor: '#0f1419', border: '1px solid #374151', borderRadius: '0.375rem', padding: '1rem' }}>
-                <p style={{ color: '#d1d5db', marginBottom: '0.5rem' }}>Copy and run on the new node:</p>
-                <div style={{ backgroundColor: '#111827', padding: '1rem', borderRadius: '0.375rem', overflow: 'auto', marginBottom: '1rem', maxHeight: '150px' }}>
-                  <code style={{ color: '#10b981', fontFamily: 'monospace', fontSize: '0.875rem', whiteSpace: 'pre-wrap', wordBreak: 'break-all' }}>{deployCommand}</code>
-                </div>
-                <button className="btn btn-primary" onClick={copyDeployCommand}>📋 Copy to Clipboard</button>
-              </div>
-            )}
-
-            <button className="btn btn-secondary" onClick={() => setDeployModal(false)} style={{ marginTop: '1rem' }}>Close</button>
-          </div>
-        </div>
-      )}
+      {deployModal && <DeployModal onClose={() => setDeployModal(false)} visibleUsers={users} />}
 
       <button className="btn btn-secondary" onClick={fetchNodes} style={{ marginTop: '1rem' }}>🔄 Refresh</button>
     </div>
