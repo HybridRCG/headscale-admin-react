@@ -74,7 +74,7 @@ export const AclPage: React.FC = () => {
   return (
     <div className="page-container">
       {error && <div className="error-box">{error}</div>}
-      <div className="acl-tabs" style={{ display: 'flex', alignItems: 'center', gap: '0.25rem', flexWrap: 'wrap' }}>
+      <div className="acl-tabs" style={{ display: 'flex', alignItems: 'center', gap: '0.25rem', flexWrap: 'wrap', position: 'sticky', top: 0, zIndex: 9 }}>
         {visibleTabs.map((tab, idx) => (
           <button
             key={idx}
@@ -163,7 +163,7 @@ const GroupsTab: React.FC<{ acl: ACL; setAcl: (a: ACL) => void }> = ({ acl, setA
           <div key={groupName} className="group-card">
             <div className="accordion-header" onClick={() => setExpandedGroup(expandedGroup === groupName ? null : groupName)} style={{ cursor: 'pointer' }}>
               <div style={{ flex: 1 }}>
-                <h3 style={{ margin: '0 0 5px 0' }}>{groupName.replace(/^group:/,'')}</h3>
+                <h3 style={{ margin: '0 0 5px 0', fontSize: '1.1rem', fontWeight: '800', color: '#f3f4f6', letterSpacing: '-0.01em' }}>{groupName.replace(/^group:/,'')}</h3>
                 <p style={{ margin: '0', fontSize: '12px', color: '#6b7280' }}>{members.length} member{members.length !== 1 ? 's' : ''}</p>
               </div>
               <span className={`accordion-icon ${expandedGroup === groupName ? 'open' : ''}`}>▼</span>
@@ -311,12 +311,29 @@ const TagOwnersTab: React.FC<{ acl: ACL; setAcl: (a: ACL) => void }> = ({ acl, s
 const HostsTab: React.FC<{ acl: ACL; setAcl: (a: ACL) => void }> = ({ acl, setAcl }) => {
   const [newHost, setNewHost] = useState('');
   const [newIp, setNewIp] = useState('');
+  const [nodes, setNodes] = useState<any[]>([]);
+  const [selectedNode, setSelectedNode] = useState('');
+
+  useEffect(() => {
+    axios.get('/admin/api/headscale/api/v1/node').then(r => {
+      setNodes(r.data.nodes || []);
+    }).catch(() => {});
+  }, []);
+
+  const handleNodeSelect = (nodeId: string) => {
+    setSelectedNode(nodeId);
+    if (!nodeId) { setNewHost(''); setNewIp(''); return; }
+    const node = nodes.find(n => n.id === nodeId);
+    if (node) {
+      setNewHost(node.givenName || node.name);
+      setNewIp(node.ipAddresses?.[0] || '');
+    }
+  };
 
   const handleAddHost = () => {
     if (!newHost.trim() || !newIp.trim()) return;
     setAcl({ ...acl, hosts: { ...acl.hosts, [newHost]: newIp } });
-    setNewHost('');
-    setNewIp('');
+    setNewHost(''); setNewIp(''); setSelectedNode('');
   };
 
   const handleDeleteHost = (hostname: string) => {
@@ -329,10 +346,31 @@ const HostsTab: React.FC<{ acl: ACL; setAcl: (a: ACL) => void }> = ({ acl, setAc
     <div>
       <div className="form-section">
         <h3>Add Host Mapping</h3>
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr auto', gap: '10px' }}>
-          <input type="text" placeholder="Hostname" value={newHost} onChange={(e) => setNewHost(e.target.value)} />
-          <input type="text" placeholder="IP Address" value={newIp} onChange={(e) => setNewIp(e.target.value)} />
-          <button onClick={handleAddHost} className="btn-create">➕ Add</button>
+        <p style={{ color: '#6b7280', fontSize: '0.75rem', marginTop: '-0.5rem', marginBottom: '0.75rem' }}>Select a registered node to auto-fill, or enter manually.</p>
+        <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap', alignItems: 'flex-end', marginBottom: '0.75rem' }}>
+          <div>
+            <label style={{ display: 'block', fontSize: '0.7rem', color: '#9ca3af', marginBottom: '0.25rem' }}>Select Node:</label>
+            <select value={selectedNode} onChange={e => handleNodeSelect(e.target.value)}
+              style={{ padding: '0.4rem 0.6rem', backgroundColor: '#374151', border: '1px solid #4b5563', borderRadius: '0.375rem', color: '#f3f4f6', fontSize: '0.875rem', minWidth: '180px' }}>
+              <option value="">-- pick a node --</option>
+              {nodes.map(n => (
+                <option key={n.id} value={n.id}>
+                  {n.online ? '🟢' : '🔴'} {n.givenName || n.name} ({n.ipAddresses?.[0] || 'no IP'})
+                </option>
+              ))}
+            </select>
+          </div>
+          <div>
+            <label style={{ display: 'block', fontSize: '0.7rem', color: '#9ca3af', marginBottom: '0.25rem' }}>Hostname alias:</label>
+            <input type="text" placeholder="e.g. myserver" value={newHost} onChange={e => setNewHost(e.target.value)}
+              style={{ padding: '0.4rem 0.6rem', backgroundColor: '#374151', border: '1px solid #4b5563', borderRadius: '0.375rem', color: '#f3f4f6', fontSize: '0.875rem', width: '150px' }} />
+          </div>
+          <div>
+            <label style={{ display: 'block', fontSize: '0.7rem', color: '#9ca3af', marginBottom: '0.25rem' }}>IP Address:</label>
+            <input type="text" placeholder="100.64.x.x" value={newIp} onChange={e => setNewIp(e.target.value)}
+              style={{ padding: '0.4rem 0.6rem', backgroundColor: '#374151', border: '1px solid #4b5563', borderRadius: '0.375rem', color: '#f3f4f6', fontSize: '0.875rem', width: '130px', fontFamily: 'monospace' }} />
+          </div>
+          <button onClick={handleAddHost} className="btn-create" style={{ marginBottom: '0' }}>➕ Add</button>
         </div>
       </div>
 
@@ -513,21 +551,57 @@ const SshTab: React.FC<{ acl: ACL; setAcl: (a: ACL) => void }> = ({ acl, setAcl 
 // CONFIG TAB
 const ConfigTab: React.FC<{ acl: ACL; setAcl: (a: ACL) => void }> = ({ acl, setAcl }) => {
   const [jsonText, setJsonText] = useState(JSON.stringify(acl, null, 2));
+  const [syntaxError, setSyntaxError] = useState('');
+  const [syntaxOk, setSyntaxOk] = useState(false);
+
+  const handleJsonChange = (val: string) => {
+    setJsonText(val);
+    setSyntaxOk(false);
+    try {
+      JSON.parse(val);
+      setSyntaxError('');
+    } catch (err: any) {
+      setSyntaxError(err.message);
+    }
+  };
+
+  const handleCheckSyntax = () => {
+    try {
+      JSON.parse(jsonText);
+      setSyntaxError('');
+      setSyntaxOk(true);
+    } catch (err: any) {
+      setSyntaxError(err.message);
+      setSyntaxOk(false);
+    }
+  };
 
   const handleUpdateJson = () => {
     try {
       const parsed = JSON.parse(jsonText);
+      setSyntaxError('');
       setAcl(parsed);
+      setSyntaxOk(false);
       alert('✅ Config updated!');
-    } catch (err) {
-      alert('❌ Invalid JSON');
+    } catch (err: any) {
+      setSyntaxError(err.message);
+      setSyntaxOk(false);
     }
   };
 
   return (
     <div>
-      <textarea value={jsonText} onChange={(e) => setJsonText(e.target.value)} rows={30} />
-      <button onClick={handleUpdateJson} className="btn-save" style={{ marginTop: '15px' }}>💾 Update Config</button>
+      <div style={{ display: 'flex', gap: '0.5rem', marginBottom: '0.75rem', alignItems: 'center' }}>
+        <button onClick={handleCheckSyntax} className="btn-create" style={{ backgroundColor: '#6366f1' }}>🔍 Check Syntax</button>
+        <button onClick={handleUpdateJson} className="btn-save" disabled={!!syntaxError}>💾 Apply Config</button>
+        {syntaxOk && !syntaxError && <span style={{ color: '#10b981', fontWeight: '700', fontSize: '0.875rem' }}>✓ Valid JSON</span>}
+      </div>
+      {syntaxError && (
+        <div style={{ padding: '0.5rem 0.75rem', backgroundColor: '#7f1d1d', color: '#fecaca', borderRadius: '0.375rem', marginBottom: '0.75rem', fontSize: '0.8rem', fontFamily: 'monospace' }}>
+          ❌ {syntaxError}
+        </div>
+      )}
+      <textarea value={jsonText} onChange={(e) => handleJsonChange(e.target.value)} rows={30} style={{ fontFamily: 'monospace', fontSize: '0.8rem' }} />
     </div>
   );
 };
@@ -782,26 +856,37 @@ const UsersTab: React.FC<{ userEmail: string }> = ({ userEmail }) => {
       )}
 
       {canManagePermissions() && (
-        <div className="form-section" style={{ marginTop: '30px' }}>
-          <h3>🔐 Manage Permissions</h3>
-          {Object.entries(usersData?.users || {}).map(([username, user]: any) => (
-            <div key={username} style={{ marginBottom: '15px', padding: '12px', backgroundColor: '#f9fafb', borderRadius: '8px', border: '1px solid #e5e7eb' }}>
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
-                <div>
-                  <label style={{ fontSize: '12px', fontWeight: '600', display: 'block', marginBottom: '5px' }}>{username} - Role:</label>
-                  <select value={user.role} onChange={(e) => handleUpdateUser(username, 'role', e.target.value)} style={{ width: '100%', padding: '6px', borderRadius: '4px', border: '1px solid #d1d5db', fontSize: '13px' }}>
-                    <option value="user">User</option>
-                    <option value="group_admin">Group Admin</option>
-                    <option value="super_admin">Super Admin</option>
-                  </select>
-                </div>
-                <div>
-                  <label style={{ fontSize: '12px', fontWeight: '600', display: 'block', marginBottom: '5px' }}>Domains (comma-separated):</label>
-                  <input type="text" value={user.manageable_domains.join(', ')} onChange={(e) => handleUpdateUser(username, 'manageable_domains', e.target.value.split(',').map((s: string) => s.trim()))} placeholder="@domain.com" style={{ width: '100%', padding: '6px', borderRadius: '4px', border: '1px solid #d1d5db', fontSize: '13px' }} />
-                </div>
-              </div>
-            </div>
-          ))}
+        <div className="form-section" style={{ marginTop: '1.5rem' }}>
+          <h3>🔐 User Roles &amp; Domain Access</h3>
+          <p style={{ color: '#6b7280', fontSize: '0.75rem', marginBottom: '1rem', marginTop: '-0.5rem' }}>Controls what each user can see and manage in this admin panel. Role and domain changes take effect on next login.</p>
+          <div style={{ overflowX: 'auto' }}>
+            <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.875rem' }}>
+              <thead>
+                <tr style={{ borderBottom: '2px solid #374151' }}>
+                  <th style={{ padding: '0.5rem 0.75rem', textAlign: 'left', color: '#f3f4f6', fontWeight: '700' }}>User</th>
+                  <th style={{ padding: '0.5rem 0.75rem', textAlign: 'left', color: '#f3f4f6', fontWeight: '700' }}>Role</th>
+                  <th style={{ padding: '0.5rem 0.75rem', textAlign: 'left', color: '#f3f4f6', fontWeight: '700' }}>Manageable Domains</th>
+                </tr>
+              </thead>
+              <tbody>
+                {Object.entries(usersData?.users || {}).map(([username, user]: any) => (
+                  <tr key={username} style={{ borderBottom: '1px solid #374151' }}>
+                    <td style={{ padding: '0.4rem 0.75rem', fontWeight: '600', color: '#60a5fa' }}>{username}</td>
+                    <td style={{ padding: '0.4rem 0.75rem' }}>
+                      <select value={user.role} onChange={(e) => handleUpdateUser(username, 'role', e.target.value)} style={{ padding: '0.3rem 0.5rem', fontSize: '0.8rem', borderRadius: '0.25rem', backgroundColor: '#374151', border: '1px solid #4b5563', color: '#f3f4f6' }}>
+                        <option value="user">User</option>
+                        <option value="group_admin">Group Admin</option>
+                        <option value="super_admin">Super Admin</option>
+                      </select>
+                    </td>
+                    <td style={{ padding: '0.4rem 0.75rem' }}>
+                      <input type="text" value={user.manageable_domains.join(', ')} onChange={(e) => handleUpdateUser(username, 'manageable_domains', e.target.value.split(',').map((s: string) => s.trim()))} placeholder="@domain.com or *" style={{ padding: '0.3rem 0.5rem', fontSize: '0.8rem', borderRadius: '0.25rem', backgroundColor: '#374151', border: '1px solid #4b5563', color: '#f3f4f6', width: '200px' }} />
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
         </div>
       )}
 

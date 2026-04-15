@@ -55,10 +55,10 @@ export const DnsPage: React.FC = () => {
   if (!config) return <div className="page-container"><div style={{ color: '#ef5350' }}>Failed to load DNS configuration</div></div>;
 
   return (
-    <div className="page-container" style={{ paddingTop: 0 }}>
+    <div className="page-container" style={{ paddingTop: 0, paddingLeft: 0, paddingRight: 0 }}>
 
       {/* Sticky toolbar */}
-      <div style={{ position: 'sticky', top: 0, zIndex: 10, backgroundColor: '#111827', borderBottom: '1px solid #374151', padding: '0.75rem 0', marginBottom: '1.5rem', display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+      <div style={{ position: 'sticky', top: 0, zIndex: 10, backgroundColor: '#111827', borderBottom: '1px solid #374151', padding: '0.75rem 2rem', marginBottom: '1.5rem', display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
         <button className="btn btn-primary" onClick={handleSave} disabled={saving} style={{ minWidth: '130px' }}>
           {saving ? 'Saving...' : saved ? '✓ Saved!' : '💾 Save DNS Config'}
         </button>
@@ -66,12 +66,12 @@ export const DnsPage: React.FC = () => {
         {error && <span style={{ color: '#ef4444', fontSize: '0.875rem' }}>{error}</span>}
       </div>
 
-      <div style={{ maxWidth: '800px', display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
+      <div style={{ maxWidth: '800px', display: 'flex', flexDirection: 'column', gap: '1.25rem', padding: '0 2rem' }}>
 
         {/* Tailnet Name */}
         <div style={{ backgroundColor: '#1f2937', border: '1px solid #374151', borderRadius: '0.5rem', padding: '1rem' }}>
           <SectionLabel>Tailnet Base Domain</SectionLabel>
-          <input type="text" value={config.tailnetName} onChange={e => setConfig({ ...config, tailnetName: e.target.value })} style={{ ...inputStyle, width: '100%' }} />
+          <input type="text" value={config.tailnetName} onChange={e => setConfig({ ...config, tailnetName: e.target.value })} style={{ ...inputStyle, width: '300px' }} />
         </div>
 
         {/* Toggles */}
