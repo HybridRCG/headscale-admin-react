@@ -56,15 +56,22 @@ export const PreAuthKeysPage: React.FC = () => {
       setUsers(allUsers);
       setUserEmailMap(mappingResp.data || {});
 
-      // Fetch keys for each user individually (headscale v0.28 requires user param)
-      const allKeys: PreAuthKey[] = [];
-      await Promise.all(allUsers.map(async (u: any) => {
-        try {
-          const resp = await axios.get(`${API}/api/v1/preauthkey?user=${encodeURIComponent(u.name)}`);
-          const userKeys = (resp.data.preAuthKeys || []).map((k: any) => ({ ...k, user: u }));
-          allKeys.push(...userKeys);
-        } catch { /* user may have no keys */ }
-      }));
+      // Fetch all keys once - headscale v0.28 may ignore user param
+      // Use the first available user's token to fetch all keys
+      let allKeys: PreAuthKey[] = [];
+      try {
+        // Try fetching all keys without user filter
+        const resp = await axios.get(`${API}/api/v1/preauthkey?user=${encodeURIComponent(allUsers[0]?.name || '')}`);
+        const rawKeys = resp.data.preAuthKeys || [];
+        // Each key has user object - use it to assign correctly, deduplicate by id
+        const seen = new Set<string>();
+        rawKeys.forEach((k: any) => {
+          if (!seen.has(k.id)) {
+            seen.add(k.id);
+            allKeys.push(k);
+          }
+        });
+      } catch(e) { console.error('Failed to fetch keys:', e); }
       setKeys(allKeys);
     } catch (e) {
       console.error('Failed to fetch:', e);
