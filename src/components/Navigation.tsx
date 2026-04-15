@@ -17,7 +17,7 @@ export const Navigation: React.FC<NavigationProps> = ({ isDarkMode, setIsDarkMod
     <nav className="navbar">
       <div className="navbar-container">
         <a href="https://github.com/HybridRCG/headscale-admin-react" target="_blank" rel="noopener noreferrer" className="navbar-logo">
-          🔗 Headscale Admin
+          🔗 HS-React
         </a>
 
         {/* Hamburger menu button */}

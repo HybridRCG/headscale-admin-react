@@ -34,7 +34,7 @@ export const LoginPage: React.FC = () => {
     <div className="login-container">
       <div className="login-box">
         <div className="login-header">
-          <h1>Headscale Admin</h1>
+          <h1>HS React</h1>
         </div>
 
         <form onSubmit={handleSubmit} className="login-form">

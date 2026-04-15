@@ -45,7 +45,7 @@ export const SettingsPage: React.FC = () => {
               <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
                 <span style={{ fontSize: '1.75rem' }}>🖥️</span>
                 <div>
-                  <div style={{ color: '#f3f4f6', fontWeight: '600', fontSize: '0.95rem' }}>Headscale Admin React</div>
+                  <div style={{ color: '#f3f4f6', fontWeight: '600', fontSize: '0.95rem' }}>HS React</div>
                   <div style={{ color: '#9ca3af', fontSize: '0.8rem', marginTop: '0.2rem' }}>
                     Version <span style={{ color: '#10b981', fontWeight: '700' }}>v{APP_VERSION}</span>
                     <span style={{ margin: '0 0.5rem', color: '#374151' }}>·</span>

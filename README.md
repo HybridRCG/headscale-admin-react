@@ -1,27 +1,37 @@
 <!-- Copyright (c) 2026 HybridRCG - See LICENSE for terms -->
 
-# Headscale Admin — React Edition
+# HS React
 
 A production-ready, role-based administration dashboard for [Headscale](https://github.com/juanfont/headscale) v0.28+, built with React, TypeScript, Zustand, and Express.
 
-**Live at:** `https://your-headscale-domain.com/admin`  
-**GitHub:** https://github.com/YourGitHubUser/headscale-admin-react
+> Originally forked from [headscale-admin](https://github.com/HybridRCG/headscale-admin) (Svelte). That project became unmaintained so this is a full React rewrite — now published independently as **HS React**.
+
+**GitHub:** https://github.com/HybridRCG/headscale-admin-react
 
 ---
 
 ## Features
 
-- **Email-based login** — username + Headscale API key, no passwords stored
-- **Role-based access control** — three roles defined in `users-mapping.json`
-- **Domain-based filtering** — group admins only see their own domain's users, nodes, and ACL entries
-- **Nodes management** — view, rename, move, expire, delete, deploy new nodes
-- **Users management** — create, rename, delete users, manage API keys per user
-- **ACL editor** — edit groups, policies, SSH rules, tag owners, view users per domain
-- **DNS management** — view and edit Headscale DNS configuration (super_admin only)
-- **Routes management** — approve/disapprove subnet routes (super_admin only)
-- **Settings** — manage `users-mapping.json` directly from the UI (super_admin only)
-- **API key management** — create, label, expire, delete API keys; group admins can create keys for their domain users
-- **Auto-versioned deploys** — single `deploy.sh` command handles everything
+- **Login** — username + Headscale API key, JWT session (24h)
+- **Role-based access** — `super_admin`, `group_admin`, `user` via `users-mapping.json`
+- **Domain filtering** — group admins only see users/nodes/ACL for their domain(s)
+- **Nodes** — view, search, filter, rename, change owner, expire, delete
+- **Deploy wizard** — visual `tailscale up` command builder with live preview, flag toggles, pre-auth key generation
+- **Users** — create, rename, delete, login key management with labels
+- **Pre-Auth Keys** — create/expire per user, filter by status, user column shown
+- **Routes** — table view with per-route approve/disapprove; nodes without routes excluded
+- **ACL Editor** — 7-tab editor with sticky navbar-style tab bar:
+  - **Users** — view/create/delete users, manage role & domain permissions table
+  - **Groups** — create/edit/delete ACL groups with member management
+  - **Tag Owners** — define which users can apply ACL tags to nodes
+  - **Hosts** — hostname→IP mappings; node dropdown with 🟢/🔴 status + auto IP fill
+  - **Policies** — visual policy builder: protocol buttons (Any/TCP/UDP/ICMP), source/destination type selectors (Custom/User/Host/Group), port fields, edit policies in-place
+  - **SSH** — SSH access rules
+  - **Config** — raw JSON editor with Check Syntax → Apply Config (disabled if invalid)
+- **DNS** — sticky toolbar, compact dark form for tailnet name, Magic DNS, nameservers, split DNS, extra records
+- **Settings** — pre-auth key management, audit log
+- **Audit log** — all create/expire/delete actions logged with actor, action, target
+- **Dark/light mode** toggle
 
 ---
 
@@ -31,7 +41,7 @@ A production-ready, role-based administration dashboard for [Headscale](https://
 |-------|-----------|
 | Frontend | React 18, TypeScript, Zustand, React Router |
 | Backend | Node.js, Express |
-| Auth | JWT sessions, Headscale API key validation |
+| Auth | JWT, Headscale API key validation |
 | Container | Docker, Alpine Linux |
 | Reverse Proxy | Traefik (strips `/admin` prefix) |
 | Config | `users-mapping.json` for roles and domain mapping |
@@ -40,26 +50,18 @@ A production-ready, role-based administration dashboard for [Headscale](https://
 
 ## Role System
 
-Roles are defined in `/etc/headscale/users-mapping.json` (inside the container, mapped from `/your-path/configs/headscale/users-mapping.json` on the host).
+Roles are defined in `/etc/headscale/users-mapping.json` inside the container.
 
-### Role: `super_admin`
-- Full access to all pages and all users/nodes/routes
-- Can manage DNS, Settings, Routes
-- Can manage all API keys with labels
-- Sees all users, nodes, routes regardless of domain
+### `super_admin`
+Full access to all pages, users, nodes, routes, DNS, settings.
 
-### Role: `group_admin`
-- Assigned a `manageable_domains` array (e.g. `["@company-b.com"]`)
-- Can only see users, nodes, and ACL entries matching their domain
-- Can create API keys for users in their domain
-- Cannot access DNS, Settings, or Routes pages
+### `group_admin`
+Assigned `manageable_domains` (e.g. `["@company.com"]`). Only sees/manages users, nodes, and ACL entries matching their domain. No DNS, Settings, or Routes access.
 
-### Role: `user`
-- Read-only access to their own profile
-- Can see API keys labelled with their username
-- Cannot create or delete anything
+### `user`
+Read-only. Sees own profile and API keys labelled with their name.
 
-### `users-mapping.json` Structure
+### `users-mapping.json` structure
 
 ```json
 {
@@ -86,70 +88,57 @@ Roles are defined in `/etc/headscale/users-mapping.json` (inside the container, 
 }
 ```
 
-> **Note:** Headscale v0.28 does not support setting emails on users via the API. The `users-mapping.json` file is the source of truth for emails, roles, and domain assignments.
+> **Note:** Headscale v0.28 does not support setting emails via the API. `users-mapping.json` is the source of truth for emails, roles, and domain assignments.
 
 ---
 
-## Navigation Visibility by Role
+## Navigation by Role
 
 | Page | super_admin | group_admin | user |
 |------|:-----------:|:-----------:|:----:|
-| Home | ✅ | ✅ (no Routes/DNS/Settings cards) | ✅ |
-| Users | ✅ all | ✅ own domain only | ✅ own profile |
-| Nodes | ✅ all | ✅ own domain only | ✅ own nodes |
-| Routes | ✅ | ❌ hidden | ❌ hidden |
-| ACL Editor | ✅ | ✅ own domain users | ❌ |
-| DNS | ✅ | ❌ hidden | ❌ hidden |
-| Settings | ✅ | ❌ hidden | ❌ hidden |
+| Home | ✅ | ✅ (limited) | ✅ |
+| Users | ✅ all | ✅ own domain | ✅ own profile |
+| Nodes | ✅ all | ✅ own domain | ✅ own nodes |
+| Routes | ✅ | ❌ | ❌ |
+| ACL Editor | ✅ | ✅ own domain | ❌ |
+| DNS | ✅ | ❌ | ❌ |
+| Settings | ✅ | ❌ | ❌ |
 
 ---
 
-## API Key Workflow
+## Deploy Wizard
 
-### Super Admin
-1. Expand any user → full API keys section with create/expire/delete/label
-2. Add a label to identify which key belongs to whom (e.g. "GroupAdmin Login Key")
-3. Labels persist in `users-mapping.json`
+The **+ Deploy** button on the Nodes page opens a full wizard:
 
-### Group Admin (e.g. GroupAdminUser)
-1. Expand a user in their domain → sees **➕ Create API Key for [user]** button
-2. Key is created and shown once — copy and send securely to the user
-3. Key is auto-labelled with the user's name
-4. Cannot create keys for users outside their domain
-
-### User (e.g. ViewerUser)
-1. Expands their own profile → sees API keys labelled with their name (read-only)
-2. Shows prefix and expiry date only
+- **Sticky command bar** — live `tailscale up` command, always visible when scrolling
+- **General** — Shields Up, Generate QR, Reset, Operator, Force Reauth, SSH Server
+- **Pre-Auth Key** — user dropdown (role-filtered), expiry days, Reusable/Ephemeral toggles; generates key via server and injects `--auth-key=` into command automatically
+- **Advertise** — Exit Node, Tags (chip input), Routes (chip input)
+- **Accept** — Accept DNS, Accept Routes, Exit Node LAN
 
 ---
 
-## Infrastructure
+## Headscale v0.28 Notes
 
-| Component | Details |
-|-----------|---------|
-| VPS | VPS — `YOUR_VPS_IP` |
-| Domain | `your-headscale-domain.com` |
-| Path | `/admin/` |
-| Container | `headscale-admin-react:vX.Y.Z` |
-| Port | `3000` (internal), proxied by Traefik |
-| Config file | `/your-path/configs/headscale/users-mapping.json` |
-| Deploy script | `/your-path/deploy-headscale-admin.sh` |
+- Pre-auth key REST API requires `user` as a **uint64 numeric ID** — not a username string
+- Keys are fetched once and deduplicated by ID client-side (v0.28 ignores `?user=` filter)
+- Expire uses key ID via `headscale preauthkeys expire --id <N>` CLI
+- No node move API — changing owner deletes the node and creates a new pre-auth key
+- Pre-auth keys do **not** disconnect active nodes — only needed at initial registration
 
 ---
 
 ## Installation
 
-See [INSTALL.md](INSTALL.md) for full Docker installation instructions.
-
-## Local Development Setup
-
 ### Prerequisites
 - Node.js 20+
-- Git
+- Docker + Docker Compose
+- Headscale v0.28+ in Docker
+- Traefik or nginx reverse proxy
 
 ### Clone and install
 ```bash
-git clone https://github.com/YourGitHubUser/headscale-admin-react.git
+git clone https://github.com/HybridRCG/headscale-admin-react.git
 cd headscale-admin-react
 npm install
 ```
@@ -159,67 +148,22 @@ npm install
 REACT_APP_API_URL=/admin/api PUBLIC_URL=/admin npm start
 ```
 
----
-
-## Deployment
-
-### One-command deploy (from Mac)
+### Build and deploy
 ```bash
-~/headscale-admin-react/deploy.sh
-```
-
-This script automatically:
-1. Detects the current running version from the VPS
-2. Auto-increments the patch version
-3. Updates `src/constants/version.ts` with the new version
-4. Builds the React app locally (`npm run build`)
-5. Commits and pushes to GitHub
-6. SSHs to the VPS, pulls latest, rebuilds, and deploys Docker container
-7. Cleans up old Docker images
-
-### Manual VPS deploy
-```bash
-cd /your-path/headscale-admin-react
-git pull
 npm run build
-/your-path/deploy-headscale-admin.sh <current_version> <next_version>
-```
-
-### Requirements for deploy script
-- SSH key auth set up for `hybrid@your-headscale-domain.com`
-- `hybrid` user has passwordless sudo
-- GitHub push access (personal access token configured)
-
----
-
-## Docker
-
-The Docker image packages:
-- Pre-built React app (`build/` folder)
-- Express backend (`server.js`)
-- Node.js 20 Alpine base
-
-```dockerfile
-# Build locally first
-npm run build
-
-# Build image
-docker build -t headscale-admin-react:vX.Y.Z .
-
-# Run
-docker compose up -d headscale-admin
+docker build -t hs-react:v1.0.0 .
+docker compose up -d hs-react
 ```
 
 ---
 
 ## Authentication Flow
 
-1. User enters **username** and **Headscale API key** on login page
-2. Server validates the API key against Headscale (`GET /api/v1/user`)
-3. Server looks up the username in `users-mapping.json` to get email, role, and `manageable_domains`
-4. JWT session token is issued (24h expiry) containing email, username, role, and manageable_domains
-5. On each page load, `/auth/me` refreshes role and domains from the mapping file (so changes take effect without re-login)
-6. Logout clears the session
+1. User enters username + Headscale API key
+2. Server validates key against Headscale `GET /api/v1/user`
+3. Server looks up username in `users-mapping.json` → gets email, role, domains
+4. JWT issued (24h) with role and domain claims
+5. `/auth/me` refreshes role/domains on each page load (no re-login after permission changes)
 
 ---
 
@@ -229,55 +173,56 @@ docker compose up -d headscale-admin
 headscale-admin-react/
 ├── src/
 │   ├── components/
-│   │   ├── Navigation.tsx       # Role-aware navigation
+│   │   ├── Navigation.tsx         # Role-aware nav
+│   │   ├── DeployModal.tsx        # Deploy wizard
 │   │   └── Footer.tsx
 │   ├── pages/
 │   │   ├── LoginPage.tsx
-│   │   ├── HomePage.tsx         # Dashboard cards
-│   │   ├── NodesPage.tsx        # Node management + domain filter
-│   │   ├── UsersPage.tsx        # User management + API key management
-│   │   ├── RoutesPage.tsx       # Route approval (super_admin only)
-│   │   ├── ACLPage.tsx          # ACL editor with domain filtering
-│   │   ├── DNSPage.tsx          # DNS config (super_admin only)
-│   │   └── SettingsPage.tsx     # users-mapping.json editor
+│   │   ├── HomePage.tsx
+│   │   ├── NodesPage.tsx
+│   │   ├── UsersPage.tsx
+│   │   ├── RoutesPage.tsx
+│   │   ├── AclPage.tsx            # 7-tab ACL editor
+│   │   ├── DnsPage.tsx
+│   │   ├── SettingsPage.tsx
+│   │   ├── PreAuthKeysPage.tsx
+│   │   └── AuditLogPage.tsx
 │   ├── store/
-│   │   ├── authStore.ts         # JWT session management
-│   │   └── headscaleStore.ts    # Headscale API state
+│   │   ├── authStore.ts
+│   │   └── headscaleStore.ts
 │   └── constants/
-│       └── version.ts           # Auto-updated by deploy.sh
-├── server.js                    # Express backend + API proxy
-├── deploy.sh                    # One-command deploy script
+│       └── version.ts             # Auto-updated by deploy script
+├── server.js                      # Express backend + API proxy + auth
 ├── Dockerfile
-└── docker-compose.yml           # Part of /headscale/docker-compose.yml
+└── docker-compose.yml
 ```
 
 ---
 
-## Changelog Highlights
+## Changelog
 
 | Version | Changes |
 |---------|---------|
+| v0.7.69 | Renamed app to **HS React** throughout |
+| v0.7.68 | ACL Policies visual builder: protocol/type buttons, src/dst type selectors (Custom/User/Host/Group), port fields, edit policies in-place, consistent button heights |
+| v0.7.67 | ACL tabs sticky below navbar; Groups bold large names; Hosts node dropdown with 🟢/🔴 + auto IP; Config tab syntax validator; Manage Permissions clean table |
+| v0.7.65 | Routes page table view (no-route nodes excluded); DNS sticky toolbar, compact dark theme |
+| v0.7.63 | ACL tab bar matches main navbar style; h2 headings removed from tabs |
+| v0.7.62 | Pre-auth key create fixed for Headscale v0.28 (uint64 user ID); default expiry 90 days |
+| v0.7.60 | Pre-auth keys page rebuilt: per-user fetch, deduplication, user column, expire via key ID CLI |
+| v0.7.58 | Deploy modal: sticky command header, single-row pre-auth controls, right-aligned generate |
+| v0.7.55 | Deploy modal: full wizard with General/Pre-Auth/Advertise/Accept, live command, user dropdown |
+| v0.7.53 | Nodes: Routes button disabled when no routes; move owner warning + pre-auth key shown |
+| v0.7.50 | Pre-auth keys page: create form layout, expire endpoint via server |
 | v0.7.44 | Group admin API key creation for domain users |
-| v0.7.43 | Role-aware API key visibility |
 | v0.7.40 | API key labels stored in users-mapping.json |
-| v0.7.36 | Auto-versioning in deploy.sh |
+| v0.7.36 | Auto-versioning in deploy script |
 | v0.7.26 | Domain filtering for Nodes, Users, Routes |
-| v0.7.22 | SSH-based deploy pipeline, local build workflow |
-| v0.7.17 | Navigation role guards (DNS/Settings/Routes hidden) |
-| v0.7.8  | Admin-only route guards |
-| v0.1    | Initial MVP |
-
----
-
-## Author
-
-**Admin** — [admin@yourdomain.com](mailto:admin@yourdomain.com)  
-GitHub: [@YourGitHubUser](https://github.com/YourGitHubUser)
-
-Built for the Headscale community with ❤️
+| v0.7.17 | Navigation role guards (DNS/Settings/Routes hidden by role) |
+| v0.1    | Initial React rewrite from Svelte fork |
 
 ---
 
 ## License
 
-MIT License
+MIT License — see [LICENSE](LICENSE)

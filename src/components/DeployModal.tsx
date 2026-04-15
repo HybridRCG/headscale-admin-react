@@ -8,7 +8,7 @@ interface Props {
 }
 
 const API = '/admin/api/headscale';
-const SERVER = 'https://hs.groblers.co.uk';
+const SERVER = window.location.origin;
 
 const InfoTip: React.FC<{ text: string }> = ({ text }) => (
   <span title={text} style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', width: '16px', height: '16px', borderRadius: '50%', backgroundColor: '#3b82f6', color: 'white', fontSize: '10px', fontWeight: 'bold', cursor: 'help', flexShrink: 0 }}>i</span>
