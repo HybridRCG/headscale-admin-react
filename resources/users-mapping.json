@@ -1,0 +1,20 @@
+{
+  "users": {
+    "AdminUser": {
+      "email": "admin@yourdomain.com",
+      "role": "super_admin",
+      "manageable_domains": ["*"]
+    },
+    "GroupAdminUser": {
+      "email": "groupadmin@company.com",
+      "role": "group_admin",
+      "manageable_domains": ["@company.com"]
+    },
+    "ViewerUser": {
+      "email": "viewer@company.com",
+      "role": "user",
+      "manageable_domains": []
+    }
+  },
+  "api_key_labels": {}
+}
