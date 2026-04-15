@@ -407,6 +407,7 @@ const HostsTab: React.FC<{ acl: ACL; setAcl: (a: ACL) => void }> = ({ acl, setAc
 const PoliciesTab: React.FC<{ acl: ACL; setAcl: (a: ACL) => void }> = ({ acl, setAcl }) => {
   const [expandedPolicy, setExpandedPolicy] = useState<number | null>(null);
   const [creating, setCreating] = useState(false);
+  const [editingPolicy, setEditingPolicy] = useState<number | null>(null);
 
   // New policy state
   const [proto, setProto] = useState('');
@@ -456,18 +457,49 @@ const PoliciesTab: React.FC<{ acl: ACL; setAcl: (a: ACL) => void }> = ({ acl, se
   const handleCreate = () => {
     if (srcItems.length === 0 || dstItems.length === 0) return;
     const newAcl = { ...acl };
-    newAcl.acls.push({
+    const entry = {
       action,
       src: srcItems,
       dst: dstItems.map(d => d.ports && d.ports !== '*' ? `${d.obj}:${d.ports}` : d.obj),
       ...(proto ? { proto } : {})
-    });
+    };
+    if (editingPolicy !== null) {
+      newAcl.acls[editingPolicy] = entry;
+    } else {
+      newAcl.acls.push(entry);
+    }
     setAcl(newAcl);
     // Reset
     setProto(''); setSrcItems([]); setDstItems([]);
     setSrcInput(''); setDstInput(''); setDstPort('');
     setSrcType('custom'); setDstType('custom');
-    setAction('accept'); setCreating(false);
+    setAction('accept'); setCreating(false); setEditingPolicy(null);
+  };
+
+  const handleEdit = (idx: number) => {
+    const p = acl.acls[idx];
+    setEditingPolicy(idx);
+    setCreating(true);
+    setAction(p.action);
+    setProto(p.proto || '');
+    // Parse src items
+    setSrcItems(p.src);
+    setSrcType('custom');
+    // Parse dst items - format is "host:ports" or just "host"
+    const parsed = p.dst.map(d => {
+      const lastColon = d.lastIndexOf(':');
+      if (lastColon > 0 && lastColon < d.length - 1) {
+        const maybePort = d.substring(lastColon + 1);
+        if (/^[0-9,*]+$/.test(maybePort)) {
+          return { obj: d.substring(0, lastColon), ports: maybePort };
+        }
+      }
+      return { obj: d, ports: '*' };
+    });
+    setDstItems(parsed);
+    setDstType('custom');
+    setSrcInput(''); setDstInput(''); setDstPort('');
+    setExpandedPolicy(null);
   };
 
   const handleDelete = (idx: number) => {
@@ -501,9 +533,10 @@ const PoliciesTab: React.FC<{ acl: ACL; setAcl: (a: ACL) => void }> = ({ acl, se
     <div>
       {/* Toolbar */}
       <div style={{ display: 'flex', gap: '0.5rem', marginBottom: '1rem', alignItems: 'center' }}>
-        <button className="btn-create" onClick={() => setCreating(!creating)}>
+        <button className="btn-create" onClick={() => { setCreating(!creating); if (creating) setEditingPolicy(null); }}>
           {creating ? '✕ Cancel' : '➕ Create Policy'}
         </button>
+        {creating && editingPolicy !== null && <span style={{ color: '#f59e0b', fontWeight: '700', fontSize: '0.875rem' }}>✏️ Editing Policy #{editingPolicy + 1}</span>}
         {acl.acls.length > 0 && <span style={{ color: '#6b7280', fontSize: '0.8rem' }}>{acl.acls.length} polic{acl.acls.length === 1 ? 'y' : 'ies'}</span>}
       </div>
 
@@ -620,7 +653,7 @@ const PoliciesTab: React.FC<{ acl: ACL; setAcl: (a: ACL) => void }> = ({ acl, se
           <div style={{ marginTop: '1rem', display: 'flex', justifyContent: 'flex-end' }}>
             <button onClick={handleCreate} disabled={srcItems.length === 0 || dstItems.length === 0}
               style={{ padding: '0.5rem 1.5rem', backgroundColor: srcItems.length > 0 && dstItems.length > 0 ? '#10b981' : '#374151', color: 'white', border: 'none', borderRadius: '0.375rem', fontWeight: '700', cursor: srcItems.length > 0 && dstItems.length > 0 ? 'pointer' : 'not-allowed', fontSize: '0.875rem' }}>
-              ➕ Add Policy
+              {editingPolicy !== null ? '✏️ Update Policy' : '➕ Add Policy'}
             </button>
           </div>
         </div>
@@ -647,6 +680,7 @@ const PoliciesTab: React.FC<{ acl: ACL; setAcl: (a: ACL) => void }> = ({ acl, se
                 <div style={{ display: 'flex', gap: '0.25rem', alignItems: 'center' }}>
                   <button onClick={e => { e.stopPropagation(); handleMove(idx, 'up'); }} disabled={idx === 0} style={{ background: 'none', border: 'none', color: idx === 0 ? '#374151' : '#9ca3af', cursor: idx === 0 ? 'default' : 'pointer', fontSize: '0.8rem' }}>⬆</button>
                   <button onClick={e => { e.stopPropagation(); handleMove(idx, 'down'); }} disabled={idx === acl.acls.length - 1} style={{ background: 'none', border: 'none', color: idx === acl.acls.length - 1 ? '#374151' : '#9ca3af', cursor: idx === acl.acls.length - 1 ? 'default' : 'pointer', fontSize: '0.8rem' }}>⬇</button>
+                  <button onClick={e => { e.stopPropagation(); handleEdit(idx); }} style={{ background: 'none', border: '1px solid #92400e', color: '#f59e0b', cursor: 'pointer', fontSize: '0.8rem', fontWeight: '700', padding: '0.1rem 0.4rem', borderRadius: '0.25rem' }}>✏️</button>
                   <button onClick={e => { e.stopPropagation(); handleDelete(idx); }} style={{ background: 'none', border: 'none', color: '#ef4444', cursor: 'pointer', fontSize: '0.9rem' }}>🗑</button>
                   <span className={`accordion-icon ${expandedPolicy === idx ? 'open' : ''}`} style={{ fontSize: '0.75rem', color: '#6b7280' }}>▼</span>
                 </div>
