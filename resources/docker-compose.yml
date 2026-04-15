@@ -19,7 +19,8 @@ services:
     volumes:
       # Docker socket needed to run headscale CLI commands (expire nodes, pre-auth keys etc.)
       - /var/run/docker.sock:/var/run/docker.sock
-      # Headscale config dir - needs write access for DNS config saves
+      # Headscale config dir - users-mapping.json auto-created here on first run
+      # Also reads config.yaml for DNS settings
       - /etc/headscale:/etc/headscale
     ports:
       # Uncomment if NOT using Traefik - direct port access

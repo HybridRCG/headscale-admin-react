@@ -27,9 +27,7 @@ curl -O https://raw.githubusercontent.com/HybridRCG/headscale-admin-react/main/.
 cp .env.example .env
 # Edit .env — set JWT_SECRET and HEADSCALE_DOMAIN
 
-# 3. Create /etc/headscale/users-mapping.json (see below)
-
-# 4. Run
+# 3. Run  (users-mapping.json is auto-created on first start)
 docker compose up -d
 ```
 

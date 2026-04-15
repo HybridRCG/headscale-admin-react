@@ -13,6 +13,33 @@ const PORT = process.env.PORT || 3000;
 const JWT_SECRET = process.env.JWT_SECRET || 'dev-secret-change-in-prod';
 const HEADSCALE_URL = process.env.HEADSCALE_URL || 'http://headscale:8080';
 
+
+// ── Auto-create users-mapping.json if it doesn't exist ──────────────────
+const USERS_MAPPING_PATH = '/etc/headscale/users-mapping.json';
+const defaultUsersMapping = {
+  users: {
+    "admin": {
+      email: "admin@yourdomain.com",
+      role: "super_admin",
+      manageable_domains: ["*"]
+    }
+  },
+  api_key_labels: {}
+};
+
+if (!fs.existsSync(USERS_MAPPING_PATH)) {
+  try {
+    fs.mkdirSync('/etc/headscale', { recursive: true });
+    fs.writeFileSync(USERS_MAPPING_PATH, JSON.stringify(defaultUsersMapping, null, 2));
+    console.log('[INIT] Created default users-mapping.json at', USERS_MAPPING_PATH);
+    console.log('[INIT] Default admin user created - update email and username to match your Headscale user');
+  } catch (err) {
+    console.error('[INIT] Could not create users-mapping.json:', err.message);
+  }
+} else {
+  console.log('[INIT] users-mapping.json found at', USERS_MAPPING_PATH);
+}
+
 app.use(express.json());
 
 // Rate limit login to 20 attempts per 15 minutes per IP
