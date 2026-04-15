@@ -114,9 +114,12 @@ export const PreAuthKeysPage: React.FC = () => {
   const handleExpire = async (key: PreAuthKey) => {
     try {
       const uname = getUserName(key.user);
-      await axios.post('/admin/api/headscale/preauthkey/expire', { user: uname, key: key.key });
+      console.log('[EXPIRE] user:', uname, 'key:', key.key.substring(0, 20));
+      const resp = await axios.post('/admin/api/headscale/preauthkey/expire', { user: uname, key: key.key });
+      console.log('[EXPIRE] response:', resp.data);
       fetchAll();
     } catch (e: any) {
+      console.error('[EXPIRE] error:', e.response?.data || e.message);
       alert('Failed: ' + (e.response?.data?.message || e.message));
     }
   };
@@ -226,7 +229,7 @@ export const PreAuthKeysPage: React.FC = () => {
                     <td style={{ padding: '0.75rem', fontSize: '0.75rem' }}>{new Date(key.expiration).toLocaleDateString()}</td>
                     <td style={{ padding: '0.75rem', fontSize: '0.75rem' }}>{new Date(key.createdAt).toLocaleDateString()}</td>
                     <td style={{ padding: '0.75rem' }}>
-                      {isActive && canManageUser(uname) && (
+                      {isActive && (
                         <button className="btn btn-sm btn-error" onClick={() => handleExpire(key)}>Expire</button>
                       )}
                     </td>
