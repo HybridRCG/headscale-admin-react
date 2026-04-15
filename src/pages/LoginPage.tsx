@@ -35,7 +35,6 @@ export const LoginPage: React.FC = () => {
       <div className="login-box">
         <div className="login-header">
           <h1>Headscale Admin</h1>
-          <p>Secure Authentication Required</p>
         </div>
 
         <form onSubmit={handleSubmit} className="login-form">
@@ -92,12 +91,7 @@ export const LoginPage: React.FC = () => {
           </button>
         </form>
 
-        <div className="login-footer">
-          <p className="footer-version">v{APP_VERSION}</p>
-          <p className="footer-text">
-            Your API key is sent securely to the backend and never stored in your browser.
-          </p>
-        </div>
+        <p className="footer-version">v{APP_VERSION}</p>
       </div>
     </div>
   );

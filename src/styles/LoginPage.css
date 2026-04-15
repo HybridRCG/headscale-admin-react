@@ -10,10 +10,12 @@
 .login-box {
   background: white;
   padding: 3rem;
+  padding-bottom: 2rem;
   border-radius: 1rem;
   box-shadow: 0 20px 25px rgba(0, 0, 0, 0.15);
   width: 100%;
   max-width: 400px;
+  position: relative;
 }
 
 .login-header {
@@ -143,15 +145,20 @@
 }
 
 .login-footer {
-  text-align: center;
-  margin-top: 2rem;
-  padding-top: 1rem;
-  border-top: 1px solid #e5e7eb;
+  position: relative;
+  margin-top: 1.5rem;
 }
 
 .footer-text {
+  display: none;
+}
+
+.footer-version {
+  position: absolute;
+  bottom: 0.75rem;
+  right: 1rem;
   color: #374151;
-  font-size: 0.8rem;
+  font-size: 0.75rem;
   margin: 0;
 }
 
