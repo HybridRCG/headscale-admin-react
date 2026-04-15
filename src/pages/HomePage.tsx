@@ -79,7 +79,6 @@ export const HomePage: React.FC = () => {
           { label: 'Users', value: stats.totalUsers, color: '#3b82f6' },
           { label: 'Nodes Online', value: stats.onlineNodes, color: '#10b981' },
           { label: 'Nodes Offline', value: stats.offlineNodes, color: '#ef4444' },
-          ...(isSuperAdmin ? [{ label: 'Active API Keys', value: stats.activeKeys, color: '#f59e0b' }] : []),
         ].map(s => (
           <div key={s.label} style={{ flex: 1, minWidth: '120px', padding: '1rem', backgroundColor: '#1f2937', borderRadius: '0.5rem', border: `1px solid #374151`, textAlign: 'center' }}>
             <div style={{ fontSize: '2rem', fontWeight: '800', color: s.color }}>{loading ? '...' : s.value}</div>
