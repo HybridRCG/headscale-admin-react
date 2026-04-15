@@ -1,2 +1,2 @@
-export const APP_VERSION = '0.7.51';
+export const APP_VERSION = '0.7.52';
 export const APP_NAME = 'Headscale Admin';

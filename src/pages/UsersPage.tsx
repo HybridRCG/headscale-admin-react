@@ -537,7 +537,7 @@ export const UsersPage: React.FC = () => {
                     // Super admin: full controls
                     <div style={{ marginBottom: '1.5rem', paddingBottom: '1.5rem', borderBottom: '1px solid #374151' }}>
                       <label style={{ display: 'block', fontSize: '0.875rem', fontWeight: '600', marginBottom: '0.75rem', color: '#d1d5db' }}>
-                        API Keys:
+                        Login Keys:
                       </label>
                       {loadingApiKeys.has(user.id) ? (
                         <div style={{ color: '#9ca3af', fontSize: '0.875rem' }}>Loading...</div>
@@ -578,7 +578,7 @@ export const UsersPage: React.FC = () => {
                         <div style={{ color: '#9ca3af', fontSize: '0.875rem', marginBottom: '0.75rem' }}>No API keys</div>
                       )}
                       <button className="btn btn-sm btn-success" onClick={() => { setExpandedUserId(user.id); fetchApiKeysForUser(user.id); handleCreateApiKey(user.id); }}>
-                        ➕ Create API Key
+                        ➕ Create Login Key
                       </button>
                     </div>
                   ) : (
@@ -594,7 +594,7 @@ export const UsersPage: React.FC = () => {
                       return (myKeys.length > 0 || canCreateKey) ? (
                         <div style={{ marginBottom: '1.5rem', paddingBottom: '1.5rem', borderBottom: '1px solid #374151' }}>
                           <label style={{ display: 'block', fontSize: '0.875rem', fontWeight: '600', marginBottom: '0.75rem', color: '#d1d5db' }}>
-                            API Keys:
+                            Login Keys:
                           </label>
                           {myKeys.length > 0 && (
                             <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem', marginBottom: '0.75rem' }}>
@@ -611,7 +611,7 @@ export const UsersPage: React.FC = () => {
                           )}
                           {canCreateKey && (
                             <button className='btn btn-sm btn-success' onClick={() => handleCreateKeyForUser(user.name)}>
-                              ➕ Create API Key for {user.name}
+                              ➕ Create Login Key for {user.name}
                             </button>
                           )}
                         </div>
