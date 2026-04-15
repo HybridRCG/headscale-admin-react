@@ -38,6 +38,26 @@ export const Navigation: React.FC<NavigationProps> = ({ isDarkMode, setIsDarkMod
           {isSuperAdmin && <li><NavLink to="/settings" className={({ isActive }) => `navbar-link ${isActive ? "active" : ""}`} onClick={() => setMenuOpen(false)}>Settings</NavLink></li>}
         </ul>
 
+        {/* Buy Me a Coffee */}
+        <a
+          href="https://buymeacoffee.com/hybridrcg"
+          target="_blank"
+          rel="noopener noreferrer"
+          style={{
+            display: 'flex', alignItems: 'center', gap: '0.4rem',
+            backgroundColor: '#FFDD00', color: '#000',
+            padding: '0.35rem 0.75rem', borderRadius: '0.5rem',
+            fontWeight: '700', fontSize: '0.85rem',
+            textDecoration: 'none', whiteSpace: 'nowrap',
+            boxShadow: '0 2px 6px rgba(0,0,0,0.3)',
+            transition: 'transform 0.1s, box-shadow 0.1s',
+          }}
+          onMouseEnter={e => { (e.currentTarget as HTMLAnchorElement).style.transform = 'scale(1.05)'; }}
+          onMouseLeave={e => { (e.currentTarget as HTMLAnchorElement).style.transform = 'scale(1)'; }}
+        >
+          ☕ Buy me a coffee
+        </a>
+
         {/* Theme toggle */}
         <div className="theme-toggle-wrapper">
           <span className="toggle-label">☀️</span>
