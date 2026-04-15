@@ -14,6 +14,31 @@ If you like this project, consider buying me a coffee!
 
 ---
 
+## Quick Start
+
+No build required — pull the pre-built image directly:
+
+```bash
+# 1. Download the files
+curl -O https://raw.githubusercontent.com/HybridRCG/headscale-admin-react/main/docker-compose.yml
+curl -O https://raw.githubusercontent.com/HybridRCG/headscale-admin-react/main/.env.example
+
+# 2. Configure
+cp .env.example .env
+# Edit .env — set JWT_SECRET and HEADSCALE_DOMAIN
+
+# 3. Create /etc/headscale/users-mapping.json (see below)
+
+# 4. Run
+docker compose up -d
+```
+
+Open `https://your-domain.com/admin` — login with your Headscale username and API key.
+
+> Full install instructions, nginx/Caddy setup, and role configuration: see [INSTALL.md](INSTALL.md)
+
+---
+
 ## Features
 
 - **Login** — username + Headscale API key, JWT session (24h)
