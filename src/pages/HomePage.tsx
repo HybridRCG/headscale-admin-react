@@ -72,7 +72,6 @@ export const HomePage: React.FC = () => {
 
   return (
     <div className="page-container">
-      <h1 className="page-title">Home</h1>
 
       {/* Stats bar */}
       <div style={{ display: 'flex', gap: '1rem', marginBottom: '2rem', flexWrap: 'wrap' }}>

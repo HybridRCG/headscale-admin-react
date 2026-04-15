@@ -61,7 +61,6 @@ export const DnsPage: React.FC = () => {
   if (loading) {
     return (
       <div className="page-container">
-        <h1 className="page-title">DNS Configuration</h1>
         <div className="loading">Loading DNS config...</div>
       </div>
     );
@@ -70,7 +69,6 @@ export const DnsPage: React.FC = () => {
   if (!config) {
     return (
       <div className="page-container">
-        <h1 className="page-title">DNS Configuration</h1>
         <div style={{ color: '#ef5350' }}>Failed to load DNS configuration</div>
       </div>
     );
@@ -78,7 +76,6 @@ export const DnsPage: React.FC = () => {
 
   return (
     <div className="page-container">
-      <h1 className="page-title">DNS Configuration</h1>
 
       {error && (
         <div style={{ backgroundColor: '#7f1d1d', color: '#fecaca', padding: '1rem', borderRadius: '0.375rem', marginBottom: '1rem' }}>

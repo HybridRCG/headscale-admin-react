@@ -54,7 +54,6 @@ export const AuditLogPage: React.FC = () => {
 
   return (
     <div className="page-container">
-      <h1 className="page-title">Audit Log</h1>
 
       <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap', marginBottom: '1.5rem' }}>
         <input type="text" placeholder="🔍 Search..." value={search} onChange={e => setSearch(e.target.value)}

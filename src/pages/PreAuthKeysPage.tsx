@@ -111,7 +111,6 @@ export const PreAuthKeysPage: React.FC = () => {
 
   return (
     <div className="page-container">
-      <h1 className="page-title">Pre-Auth Keys</h1>
 
       {/* New key modal */}
       {newKey && (

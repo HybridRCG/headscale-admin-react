@@ -66,7 +66,6 @@ export const RoutesPage: React.FC = () => {
 
   return (
     <div className="page-container">
-      <h1 className="page-title">Routes</h1>
 
       <div style={{ marginBottom: '1rem' }}>
         <button className="btn btn-primary" onClick={fetchRoutes} disabled={loading}>

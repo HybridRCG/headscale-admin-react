@@ -225,7 +225,6 @@ export const NodesPage: React.FC = () => {
 
   return (
     <div className="page-container">
-      <h1 className="page-title">Nodes</h1>
       
       <div style={{ marginBottom: '1.5rem' }}>
         <input

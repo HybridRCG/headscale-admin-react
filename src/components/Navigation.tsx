@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Link } from 'react-router-dom';
+import { NavLink } from 'react-router-dom';
 import { useAuthStore } from '../store/authStore';
 import './Navigation.css';
 
@@ -29,15 +29,15 @@ export const Navigation: React.FC<NavigationProps> = ({ isDarkMode, setIsDarkMod
 
         {/* Menu */}
         <ul className={`navbar-menu ${menuOpen ? 'open' : ''}`}>
-          <li><Link to="/dashboard" className="navbar-link" onClick={() => setMenuOpen(false)}>Home</Link></li>
-          <li><Link to="/users" className="navbar-link" onClick={() => setMenuOpen(false)}>Users</Link></li>
-          <li><Link to="/nodes" className="navbar-link" onClick={() => setMenuOpen(false)}>Nodes</Link></li>
-          {isSuperAdmin && <li><Link to="/routes" className="navbar-link" onClick={() => setMenuOpen(false)}>Routes</Link></li>}
-          <li><Link to="/acl" className="navbar-link" onClick={() => setMenuOpen(false)}>ACL Editor</Link></li>
-          <li><Link to="/preauthkeys" className="navbar-link" onClick={() => setMenuOpen(false)}>Pre-Auth Keys</Link></li>
-          {isSuperAdmin && <li><Link to="/dns" className="navbar-link" onClick={() => setMenuOpen(false)}>DNS</Link></li>}
-          {isSuperAdmin && <li><Link to="/auditlog" className="navbar-link" onClick={() => setMenuOpen(false)}>Audit Log</Link></li>}
-          {isSuperAdmin && <li><Link to="/settings" className="navbar-link" onClick={() => setMenuOpen(false)}>Settings</Link></li>}
+          <li><NavLink to="/dashboard" className={({ isActive }) => `navbar-link ${isActive ? "active" : ""}`} onClick={() => setMenuOpen(false)}>Home</NavLink></li>
+          <li><NavLink to="/users" className={({ isActive }) => `navbar-link ${isActive ? "active" : ""}`} onClick={() => setMenuOpen(false)}>Users</NavLink></li>
+          <li><NavLink to="/nodes" className={({ isActive }) => `navbar-link ${isActive ? "active" : ""}`} onClick={() => setMenuOpen(false)}>Nodes</NavLink></li>
+          {isSuperAdmin && <li><NavLink to="/routes" className={({ isActive }) => `navbar-link ${isActive ? "active" : ""}`} onClick={() => setMenuOpen(false)}>Routes</NavLink></li>}
+          <li><NavLink to="/acl" className={({ isActive }) => `navbar-link ${isActive ? "active" : ""}`} onClick={() => setMenuOpen(false)}>ACL Editor</NavLink></li>
+          <li><NavLink to="/preauthkeys" className={({ isActive }) => `navbar-link ${isActive ? "active" : ""}`} onClick={() => setMenuOpen(false)}>Pre-Auth Keys</NavLink></li>
+          {isSuperAdmin && <li><NavLink to="/dns" className={({ isActive }) => `navbar-link ${isActive ? "active" : ""}`} onClick={() => setMenuOpen(false)}>DNS</NavLink></li>}
+          {isSuperAdmin && <li><NavLink to="/auditlog" className={({ isActive }) => `navbar-link ${isActive ? "active" : ""}`} onClick={() => setMenuOpen(false)}>Audit Log</NavLink></li>}
+          {isSuperAdmin && <li><NavLink to="/settings" className={({ isActive }) => `navbar-link ${isActive ? "active" : ""}`} onClick={() => setMenuOpen(false)}>Settings</NavLink></li>}
         </ul>
 
         {/* Theme toggle */}
