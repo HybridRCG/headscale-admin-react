@@ -114,8 +114,8 @@ export const PreAuthKeysPage: React.FC = () => {
   const handleExpire = async (key: PreAuthKey) => {
     try {
       const uname = getUserName(key.user);
-      console.log('[EXPIRE] user:', uname, 'key:', key.key.substring(0, 20));
-      const resp = await axios.post('/admin/api/headscale/preauthkey/expire', { user: uname, key: key.key });
+      console.log('[EXPIRE] id:', key.id, 'user:', uname);
+      const resp = await axios.post('/admin/api/headscale/preauthkey/expire', { id: key.id, user: uname, key: key.key });
       console.log('[EXPIRE] response:', resp.data);
       fetchAll();
     } catch (e: any) {

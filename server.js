@@ -591,20 +591,31 @@ app.post('/api/headscale/preauthkey/create', authenticateToken, async (req, res)
 });
 
 
-// Expire a pre-auth key
+// Expire a pre-auth key - uses key ID via headscale CLI
 app.post('/api/headscale/preauthkey/expire', authenticateToken, async (req, res) => {
-  const { user, key } = req.body;
-  if (!user || !key) return res.status(400).json({ message: 'user and key required' });
+  const { user, key, id } = req.body;
+  if (!id && !key) return res.status(400).json({ message: 'id or key required' });
   try {
     const userEmail = req.user.email;
     const tokenData = userTokenMap.get(userEmail);
     if (!tokenData) return res.status(401).json({ message: 'Session expired' });
-    await axios.post(
-      `${tokenData.headscaleUrl}/api/v1/preauthkey/expire`,
-      { user, key },
-      { headers: { Authorization: `Bearer ${tokenData.apiKey}` }, timeout: 10000 }
-    );
-    logAudit(req.user.username, 'expire-preauthkey', `user: ${user}`, `key: ${key.substring(0,15)}...`);
+
+    // If we have an ID use it, otherwise find it via the API
+    let keyId = id;
+    if (!keyId && user && key) {
+      const keysResp = await axios.get(
+        `${tokenData.headscaleUrl}/api/v1/preauthkey?user=${encodeURIComponent(user)}`,
+        { headers: { Authorization: `Bearer ${tokenData.apiKey}` }, timeout: 10000 }
+      );
+      const found = (keysResp.data.preAuthKeys || []).find(k => k.key === key);
+      if (!found) return res.status(404).json({ message: 'Key not found' });
+      keyId = found.id;
+    }
+
+    // Use headscale CLI to expire by ID
+    const { execSync } = require('child_process');
+    execSync(`docker exec headscale /ko-app/headscale preauthkeys expire --id ${keyId}`, { timeout: 10000 });
+    logAudit(req.user.username, 'expire-preauthkey', `user: ${user}`, `id: ${keyId}`);
     res.json({ success: true });
   } catch (e) {
     console.error('[PREAUTHKEY-EXPIRE]', e.response?.data || e.message);
