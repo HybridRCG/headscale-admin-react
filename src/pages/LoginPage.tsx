@@ -92,6 +92,10 @@ export const LoginPage: React.FC = () => {
           </button>
         </form>
 
+        <div style={{ textAlign: 'right', marginTop: '1rem' }}>
+          <span style={{ fontSize: '0.8rem', color: '#374151', fontWeight: '600' }}>v{APP_VERSION}</span>
+        </div>
+
       </div>
     </div>
   );
