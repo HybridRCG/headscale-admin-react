@@ -8,105 +8,64 @@
 
 ---
 
-## Option A — Pre-built Image (Recommended)
+## Install — Docker Only
 
-No build required. Pull directly from GitHub Container Registry.
+No Node.js, no cloning, no building required.
 
-### 1. Create your environment file
+### 1. Download the files
 
 ```bash
-cp .env.example .env
+curl -O https://raw.githubusercontent.com/HybridRCG/headscale-admin-react/main/resources/docker-compose.yml
+curl -O https://raw.githubusercontent.com/HybridRCG/headscale-admin-react/main/resources/env.example
+cp env.example .env
 ```
 
-Edit `.env`:
+### 2. Edit `.env`
+
 ```env
-JWT_SECRET=        # Generate: openssl rand -base64 32
+JWT_SECRET=        # Generate with: openssl rand -base64 32
 HEADSCALE_DOMAIN=  # e.g. headscale.yourdomain.com
-HEADSCALE_URL=     # e.g. http://headscale:8080 (internal Docker URL)
+HEADSCALE_URL=     # e.g. http://headscale:8080
 ```
 
-### 2. Create the users mapping file
-
-Create `/etc/headscale/users-mapping.json`:
-
-```json
-{
-  "users": {
-    "YourAdminUsername": {
-      "email": "admin@yourdomain.com",
-      "role": "super_admin",
-      "manageable_domains": ["*"]
-    }
-  },
-  "api_key_labels": {}
-}
-```
-
-> **Important:** Usernames must match your Headscale usernames exactly (case-sensitive).
-
-### 3. Run
+### 3. Start
 
 ```bash
 docker compose up -d
 ```
 
-That's it. Open `https://your-domain.com/admin`.
+> **`users-mapping.json` is created automatically** on first start at `/etc/headscale/users-mapping.json` with a default `admin` user.
+> Edit it to match your actual Headscale username and email, then restart:
+> ```bash
+> docker compose restart hs-react
+> ```
+
+### 4. First login
+
+Create a Headscale API key:
+```bash
+docker exec headscale /ko-app/headscale apikey create --expiration 90d
+```
+
+Open `https://your-domain.com/admin` — log in with your Headscale **username** and the **API key**.
 
 ---
 
-## Option B — Build from Source
-
-If you want to customise the code:
-
-### 1. Clone
+## Updating
 
 ```bash
-git clone https://github.com/HybridRCG/headscale-admin-react.git
-cd headscale-admin-react
-```
-
-### 2. Install and build
-
-```bash
-npm install
-npm run build
-```
-
-### 3. Build Docker image
-
-```bash
-docker build -t hs-react:latest .
-```
-
-### 4. Update docker-compose.yml
-
-Change `image: ghcr.io/hybridrcg/hs-react:latest` to `image: hs-react:latest` in `docker-compose.yml`.
-
-### 5. Run
-
-```bash
-docker compose up -d
+docker compose pull && docker compose up -d
 ```
 
 ---
 
-## First Login
+## Reverse Proxy
 
-1. Create a Headscale API key for your admin user:
-   ```bash
-   docker exec headscale /ko-app/headscale apikey create --expiration 90d
-   ```
-2. Open `https://your-domain.com/admin`
-3. Enter your Headscale **username** and the **API key** you just created
-4. You're in as `super_admin`
+### Traefik (default)
+Labels are pre-configured in `docker-compose.yml`. Set `HEADSCALE_DOMAIN` in `.env`.
 
----
-
-## Nginx / Caddy (no Traefik)
-
-Remove the `labels:` section from `docker-compose.yml` and uncomment the `ports:` line, then proxy to port 3000.
-
-**Nginx example:**
+### Nginx
+Remove the `labels:` section, uncomment `ports: - "3000:3000"`, then:
 ```nginx
 location /admin {
     proxy_pass http://localhost:3000;
@@ -115,7 +74,7 @@ location /admin {
 }
 ```
 
-**Caddyfile example:**
+### Caddy
 ```
 your-domain.com {
     handle_path /admin* {
@@ -126,12 +85,14 @@ your-domain.com {
 
 ---
 
-## Updating
+## Volumes Explained
 
-```bash
-docker compose pull
-docker compose up -d
-```
+| Volume | Purpose |
+|--------|---------|
+| `/var/run/docker.sock` | Runs `headscale` CLI commands (expire nodes, pre-auth keys) |
+| `/etc/headscale` | Auto-creates `users-mapping.json`; reads `config.yaml` for DNS |
+
+> **Security note:** Mounting the Docker socket gives elevated access. Only deploy on trusted infrastructure.
 
 ---
 
@@ -143,15 +104,30 @@ docker compose up -d
 | `group_admin` | Own domain only — users/nodes/ACL for their `@domain.com` |
 | `user` | Read-only — own profile and labelled API keys only |
 
-See [README.md](README.md) for full role and permission documentation.
+See [README.md](README.md) for full role documentation.
 
 ---
 
-## Volumes Explained
+## users-mapping.json structure
 
-| Volume | Purpose |
-|--------|---------|
-| `/var/run/docker.sock` | Allows hs-react to run `headscale` CLI commands (expire nodes, pre-auth keys, etc.) |
-| `/etc/headscale` | Reads `config.yaml` for DNS settings; reads/writes `users-mapping.json` for roles |
+After first start, edit `/etc/headscale/users-mapping.json`:
 
-> **Security note:** Mounting the Docker socket gives the container elevated access. Only deploy on trusted infrastructure.
+```json
+{
+  "users": {
+    "YourHeadscaleUsername": {
+      "email": "you@yourdomain.com",
+      "role": "super_admin",
+      "manageable_domains": ["*"]
+    },
+    "GroupAdminUser": {
+      "email": "admin@company.com",
+      "role": "group_admin",
+      "manageable_domains": ["@company.com"]
+    }
+  },
+  "api_key_labels": {}
+}
+```
+
+> Usernames must match your Headscale usernames exactly (case-sensitive).
