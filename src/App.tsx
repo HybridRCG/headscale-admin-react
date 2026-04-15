@@ -73,6 +73,7 @@ function App() {
   return (
     <BrowserRouter basename="/admin">
       {isAuthenticated && <Navigation isDarkMode={isDarkMode} setIsDarkMode={setIsDarkMode} />}
+      <div style={{ marginTop: isAuthenticated ? '1.5rem' : '0' }}>
       <Routes>
         <Route path="/login" element={<LoginPage />} />
         <Route path="/dashboard" element={<PrivateRoute><HomePage /></PrivateRoute>} />
@@ -86,6 +87,7 @@ function App() {
         <Route path="/auditlog" element={<AdminRoute><AuditLogPage /></AdminRoute>} />
         <Route path="/" element={<Navigate to={isAuthenticated ? "/dashboard" : "/login"} />} />
       </Routes>
+      </div>
       {isAuthenticated && <Footer />}
     </BrowserRouter>
   );
