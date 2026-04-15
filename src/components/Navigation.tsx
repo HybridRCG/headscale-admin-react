@@ -34,7 +34,9 @@ export const Navigation: React.FC<NavigationProps> = ({ isDarkMode, setIsDarkMod
           <li><Link to="/nodes" className="navbar-link" onClick={() => setMenuOpen(false)}>Nodes</Link></li>
           {isSuperAdmin && <li><Link to="/routes" className="navbar-link" onClick={() => setMenuOpen(false)}>Routes</Link></li>}
           <li><Link to="/acl" className="navbar-link" onClick={() => setMenuOpen(false)}>ACL Editor</Link></li>
+          <li><Link to="/preauthkeys" className="navbar-link" onClick={() => setMenuOpen(false)}>Pre-Auth Keys</Link></li>
           {isSuperAdmin && <li><Link to="/dns" className="navbar-link" onClick={() => setMenuOpen(false)}>DNS</Link></li>}
+          {isSuperAdmin && <li><Link to="/auditlog" className="navbar-link" onClick={() => setMenuOpen(false)}>Audit Log</Link></li>}
           {isSuperAdmin && <li><Link to="/settings" className="navbar-link" onClick={() => setMenuOpen(false)}>Settings</Link></li>}
         </ul>
 

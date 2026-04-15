@@ -9,6 +9,8 @@ import { RoutesPage } from './pages/RoutesPage';
 import { AclPage } from './pages/AclPage';
 import { DnsPage } from './pages/DnsPage';
 import { SettingsPage } from './pages/SettingsPage';
+import { PreAuthKeysPage } from './pages/PreAuthKeysPage';
+import { AuditLogPage } from './pages/AuditLogPage';
 import { Navigation } from './components/Navigation';
 import { Footer } from './components/Footer';
 import './App.css';
@@ -80,6 +82,8 @@ function App() {
         <Route path="/acl" element={<PrivateRoute><AclPage /></PrivateRoute>} />
         <Route path="/dns" element={<AdminRoute><DnsPage /></AdminRoute>} />
         <Route path="/settings" element={<AdminRoute><SettingsPage /></AdminRoute>} />
+        <Route path="/preauthkeys" element={<PrivateRoute><PreAuthKeysPage /></PrivateRoute>} />
+        <Route path="/auditlog" element={<AdminRoute><AuditLogPage /></AdminRoute>} />
         <Route path="/" element={<Navigate to={isAuthenticated ? "/dashboard" : "/login"} />} />
       </Routes>
       {isAuthenticated && <Footer />}

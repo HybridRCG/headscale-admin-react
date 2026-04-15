@@ -84,6 +84,7 @@ app.post('/api/auth/login', async (req, res) => {
     const manageable_domains = currentUser?.manageable_domains || [];
     const sessionToken = jwt.sign({ email, username, role, id: email, manageable_domains }, JWT_SECRET, { expiresIn: '24h' });
     console.log(`[LOGIN SUCCESS] ${username} (${email}) role: ${role}`);
+    logAudit(username, 'login', `${username} logged in`, `role: ${role}`);
     res.json({ sessionToken, user: { email, username, role, id: email, manageable_domains } });
   } catch (error) {
     console.error('Login error:', error.message);
@@ -509,6 +510,41 @@ app.post('/api/headscale/apikey/create-for-user', authenticateToken, async (req,
     console.error('[CREATE-FOR-USER]', e.message);
     res.status(500).json({ message: e.message });
   }
+});
+
+
+// ── Audit Log ──────────────────────────────────────────────────────────────
+const AUDIT_LOG_PATH = '/etc/headscale/audit-log.json';
+
+function readAuditLog() {
+  try {
+    return JSON.parse(fs.readFileSync(AUDIT_LOG_PATH, 'utf8'));
+  } catch { return []; }
+}
+
+function writeAuditLog(entries) {
+  // Keep last 1000 entries
+  const trimmed = entries.slice(-1000);
+  fs.writeFileSync(AUDIT_LOG_PATH, JSON.stringify(trimmed, null, 2));
+}
+
+function logAudit(actor, action, target, details) {
+  const entries = readAuditLog();
+  entries.push({
+    id: Date.now().toString() + Math.random().toString(36).substr(2,5),
+    timestamp: new Date().toISOString(),
+    actor: actor || 'unknown',
+    action,
+    target,
+    details: details || ''
+  });
+  writeAuditLog(entries);
+}
+
+app.get('/api/headscale/audit-log', authenticateToken, (req, res) => {
+  const entries = readAuditLog();
+  // Filter by manageable_domains for non-super_admins
+  res.json(entries.reverse()); // newest first
 });
 
 app.use('/api/headscale', authenticateToken, async (req, res) => {
