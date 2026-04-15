@@ -65,7 +65,6 @@ export const HomePage: React.FC = () => {
     { title: 'Routes', icon: '🛣️', path: '/routes', border: 'border-green-700', show: isSuperAdmin },
     { title: 'ACL Editor', icon: '📋', path: '/acl', border: 'border-orange-700', show: true },
     { title: 'DNS', icon: '🌐', path: '/dns', border: 'border-red-700', show: isSuperAdmin },
-    { title: 'Audit Log', icon: '📜', path: '/auditlog', border: 'border-indigo-700', show: isSuperAdmin },
     { title: 'Settings', icon: '⚙️', path: '/settings', border: 'border-gray-700', show: isSuperAdmin },
   ].filter(c => c.show);
 

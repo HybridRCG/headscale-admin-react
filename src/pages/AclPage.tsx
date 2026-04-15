@@ -73,12 +73,8 @@ export const AclPage: React.FC = () => {
 
   return (
     <div className="acl-container">
-      <div className="acl-header">
-        <h1>ACL Editor</h1>
-        <button onClick={saveAcl} disabled={loading} className="btn-save">💾 Save ACL</button>
-      </div>
       {error && <div className="error-box">{error}</div>}
-      <div className="acl-tabs">
+      <div className="acl-tabs" style={{ display: 'flex', alignItems: 'center', gap: '0.25rem', flexWrap: 'wrap' }}>
         {visibleTabs.map((tab, idx) => (
           <button
             key={idx}
@@ -90,6 +86,7 @@ export const AclPage: React.FC = () => {
             <span>{tab.label}</span>
           </button>
         ))}
+        <button onClick={saveAcl} disabled={loading} className="btn-save" style={{ marginLeft: 'auto' }}>💾 Save ACL</button>
       </div>
       {acl && (
         <div className="acl-content">
