@@ -114,7 +114,7 @@ export const PreAuthKeysPage: React.FC = () => {
   const handleExpire = async (key: PreAuthKey) => {
     try {
       const uname = getUserName(key.user);
-      await axios.post(`${API}/api/v1/preauthkey/expire`, { user: uname, key: key.key });
+      await axios.post('/admin/api/headscale/preauthkey/expire', { user: uname, key: key.key });
       fetchAll();
     } catch (e: any) {
       alert('Failed: ' + (e.response?.data?.message || e.message));
@@ -162,27 +162,33 @@ export const PreAuthKeysPage: React.FC = () => {
       {/* Create form */}
       {showCreate && (
         <div style={{ marginBottom: '1.5rem', padding: '1rem', backgroundColor: '#1f2937', border: '1px solid #374151', borderRadius: '0.5rem' }}>
-          <div style={{ display: 'flex', gap: '0.75rem', flexWrap: 'wrap', alignItems: 'flex-end' }}>
-            <div style={{ width: '180px' }}>
-              <label style={{ color: '#9ca3af', fontSize: '0.75rem', display: 'block', marginBottom: '0.25rem' }}>User:</label>
-              <select value={newUser} onChange={e => setNewUser(e.target.value)} style={{ width: '100%', padding: '0.6rem', backgroundColor: '#374151', border: '1px solid #4b5563', borderRadius: '0.25rem', color: '#f3f4f6' }}>
-                <option value="">Select...</option>
-                {visibleUsers.map(u => <option key={u.id} value={u.name}>{u.name}</option>)}
-              </select>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', gap: '1rem', flexWrap: 'wrap' }}>
+            {/* Left: User + Expiry */}
+            <div style={{ display: 'flex', gap: '0.75rem', alignItems: 'flex-end' }}>
+              <div style={{ width: '180px' }}>
+                <label style={{ color: '#9ca3af', fontSize: '0.75rem', display: 'block', marginBottom: '0.25rem' }}>User:</label>
+                <select value={newUser} onChange={e => setNewUser(e.target.value)} style={{ width: '100%', padding: '0.6rem', backgroundColor: '#374151', border: '1px solid #4b5563', borderRadius: '0.25rem', color: '#f3f4f6' }}>
+                  <option value="">Select...</option>
+                  {visibleUsers.map(u => <option key={u.id} value={u.name}>{u.name}</option>)}
+                </select>
+              </div>
+              <div style={{ width: '90px' }}>
+                <label style={{ color: '#9ca3af', fontSize: '0.75rem', display: 'block', marginBottom: '0.25rem' }}>Expires (days):</label>
+                <input type="number" value={newExpiry} onChange={e => setNewExpiry(Number(e.target.value))} min={1} max={365}
+                  style={{ width: '100%', padding: '0.6rem', backgroundColor: '#374151', border: '1px solid #4b5563', borderRadius: '0.25rem', color: '#f3f4f6' }} />
+              </div>
             </div>
-            <div style={{ width: '90px' }}>
-              <label style={{ color: '#9ca3af', fontSize: '0.75rem', display: 'block', marginBottom: '0.25rem' }}>Expires (days):</label>
-              <input type="number" value={newExpiry} onChange={e => setNewExpiry(Number(e.target.value))} min={1} max={365}
-                style={{ width: '100%', padding: '0.6rem', backgroundColor: '#374151', border: '1px solid #4b5563', borderRadius: '0.25rem', color: '#f3f4f6' }} />
+            {/* Right: Reusable + Ephemeral + Generate + Cancel */}
+            <div style={{ display: 'flex', gap: '0.75rem', alignItems: 'center' }}>
+              <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', color: '#d1d5db', fontSize: '0.875rem', cursor: 'pointer' }}>
+                <input type="checkbox" checked={newReusable} onChange={e => setNewReusable(e.target.checked)} /> Reusable
+              </label>
+              <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', color: '#d1d5db', fontSize: '0.875rem', cursor: 'pointer' }}>
+                <input type="checkbox" checked={newEphemeral} onChange={e => setNewEphemeral(e.target.checked)} /> Ephemeral
+              </label>
+              <button className="btn btn-success" onClick={handleCreate} disabled={!newUser}>Generate</button>
+              <button className="btn btn-secondary" onClick={() => setShowCreate(false)}>Cancel</button>
             </div>
-            <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', color: '#d1d5db', fontSize: '0.875rem', cursor: 'pointer', paddingBottom: '0.1rem' }}>
-              <input type="checkbox" checked={newReusable} onChange={e => setNewReusable(e.target.checked)} /> Reusable
-            </label>
-            <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', color: '#d1d5db', fontSize: '0.875rem', cursor: 'pointer', paddingBottom: '0.1rem' }}>
-              <input type="checkbox" checked={newEphemeral} onChange={e => setNewEphemeral(e.target.checked)} /> Ephemeral
-            </label>
-            <button className="btn btn-success" onClick={handleCreate} disabled={!newUser}>Generate</button>
-            <button className="btn btn-secondary" onClick={() => setShowCreate(false)}>Cancel</button>
           </div>
         </div>
       )}

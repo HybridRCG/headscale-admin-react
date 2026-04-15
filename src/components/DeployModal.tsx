@@ -189,30 +189,37 @@ export const DeployModal: React.FC<Props> = ({ onClose, visibleUsers }) => {
                 {!generatedKey ? (
                   <>
                     {/* Single row: User + Expiry + Reusable + Ephemeral + Generate */}
-                    <div style={{ display: 'flex', gap: '0.75rem', alignItems: 'flex-end', flexWrap: 'wrap', paddingLeft: '0.25rem' }}>
-                      <div style={{ width: '180px' }}>
-                        <label style={{ display: 'block', fontSize: '0.75rem', color: '#9ca3af', marginBottom: '0.25rem' }}>User:</label>
-                        <select value={selectedUser} onChange={e => setSelectedUser(e.target.value)}
-                          style={{ width: '100%', padding: '0.5rem', backgroundColor: '#374151', border: '1px solid #4b5563', borderRadius: '0.25rem', color: '#f3f4f6', fontSize: '0.875rem' }}>
-                          <option value="">Select user...</option>
-                          {visibleUsers.map(u => <option key={u.id} value={u.id}>{u.name}</option>)}
-                        </select>
+                    {/* Two-row layout: user+expiry left, reusable+ephemeral+generate right */}
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', gap: '1rem', flexWrap: 'wrap' }}>
+                      {/* Left: User + Expiry */}
+                      <div style={{ display: 'flex', gap: '0.75rem', alignItems: 'flex-end' }}>
+                        <div style={{ width: '180px' }}>
+                          <label style={{ display: 'block', fontSize: '0.75rem', color: '#9ca3af', marginBottom: '0.25rem' }}>User:</label>
+                          <select value={selectedUser} onChange={e => setSelectedUser(e.target.value)}
+                            style={{ width: '100%', padding: '0.5rem', backgroundColor: '#374151', border: '1px solid #4b5563', borderRadius: '0.25rem', color: '#f3f4f6', fontSize: '0.875rem' }}>
+                            <option value="">Select user...</option>
+                            {visibleUsers.map(u => <option key={u.id} value={u.id}>{u.name}</option>)}
+                          </select>
+                        </div>
+                        <div style={{ width: '90px' }}>
+                          <label style={{ display: 'block', fontSize: '0.75rem', color: '#9ca3af', marginBottom: '0.25rem' }}>Expires (days):</label>
+                          <input type="number" value={preAuthKeyExpiry} onChange={e => setPreAuthKeyExpiry(Number(e.target.value))} min={1} max={90}
+                            style={{ width: '100%', padding: '0.5rem', backgroundColor: '#374151', border: '1px solid #4b5563', borderRadius: '0.25rem', color: '#f3f4f6', fontSize: '0.875rem' }} />
+                        </div>
                       </div>
-                      <div style={{ width: '90px' }}>
-                        <label style={{ display: 'block', fontSize: '0.75rem', color: '#9ca3af', marginBottom: '0.25rem' }}>Expires (days):</label>
-                        <input type="number" value={preAuthKeyExpiry} onChange={e => setPreAuthKeyExpiry(Number(e.target.value))} min={1} max={90}
-                          style={{ width: '100%', padding: '0.5rem', backgroundColor: '#374151', border: '1px solid #4b5563', borderRadius: '0.25rem', color: '#f3f4f6', fontSize: '0.875rem' }} />
+                      {/* Right: Reusable + Ephemeral + Generate */}
+                      <div style={{ display: 'flex', gap: '0.75rem', alignItems: 'center' }}>
+                        <label style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', color: '#d1d5db', fontSize: '0.875rem', cursor: 'pointer' }}>
+                          <Toggle checked={reusable} onChange={setReusable} /> Reusable
+                        </label>
+                        <label style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', color: '#d1d5db', fontSize: '0.875rem', cursor: 'pointer' }}>
+                          <Toggle checked={ephemeral} onChange={setEphemeral} /> Ephemeral
+                        </label>
+                        <button onClick={handleGeneratePreAuthKey} disabled={!selectedUser || generatingKey}
+                          style={{ padding: '0.5rem 1.25rem', backgroundColor: selectedUser ? '#6366f1' : '#4b5563', color: 'white', border: 'none', borderRadius: '0.375rem', cursor: selectedUser ? 'pointer' : 'not-allowed', fontWeight: '600', fontSize: '0.875rem', whiteSpace: 'nowrap' }}>
+                          {generatingKey ? 'Generating...' : '🔑 Generate'}
+                        </button>
                       </div>
-                      <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', color: '#d1d5db', fontSize: '0.875rem', cursor: 'pointer', padding: '0.25rem 0.5rem', backgroundColor: '#374151', borderRadius: '0.25rem' }}>
-                        <Toggle checked={reusable} onChange={setReusable} /> Reusable
-                      </label>
-                      <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', color: '#d1d5db', fontSize: '0.875rem', cursor: 'pointer', padding: '0.25rem 0.5rem', backgroundColor: '#374151', borderRadius: '0.25rem' }}>
-                        <Toggle checked={ephemeral} onChange={setEphemeral} /> Ephemeral
-                      </label>
-                      <button onClick={handleGeneratePreAuthKey} disabled={!selectedUser || generatingKey}
-                        style={{ padding: '0.5rem 1rem', backgroundColor: selectedUser ? '#6366f1' : '#4b5563', color: 'white', border: 'none', borderRadius: '0.375rem', cursor: selectedUser ? 'pointer' : 'not-allowed', fontWeight: '600', fontSize: '0.875rem', whiteSpace: 'nowrap' }}>
-                        {generatingKey ? 'Generating...' : '🔑 Generate'}
-                      </button>
                     </div>
                   </>
                 ) : (

@@ -590,6 +590,28 @@ app.post('/api/headscale/preauthkey/create', authenticateToken, async (req, res)
   }
 });
 
+
+// Expire a pre-auth key
+app.post('/api/headscale/preauthkey/expire', authenticateToken, async (req, res) => {
+  const { user, key } = req.body;
+  if (!user || !key) return res.status(400).json({ message: 'user and key required' });
+  try {
+    const userEmail = req.user.email;
+    const tokenData = userTokenMap.get(userEmail);
+    if (!tokenData) return res.status(401).json({ message: 'Session expired' });
+    await axios.post(
+      `${tokenData.headscaleUrl}/api/v1/preauthkey/expire`,
+      { user, key },
+      { headers: { Authorization: `Bearer ${tokenData.apiKey}` }, timeout: 10000 }
+    );
+    logAudit(req.user.username, 'expire-preauthkey', `user: ${user}`, `key: ${key.substring(0,15)}...`);
+    res.json({ success: true });
+  } catch (e) {
+    console.error('[PREAUTHKEY-EXPIRE]', e.response?.data || e.message);
+    res.status(500).json({ message: e.response?.data?.message || e.message });
+  }
+});
+
 app.use('/api/headscale', authenticateToken, async (req, res) => {
   const userEmail = req.user?.email;
   if (!userEmail) return res.status(401).json({ message: 'Unauthorized' });
