@@ -365,14 +365,14 @@ export const UsersPage: React.FC = () => {
       {showCreateUser && (
         <div style={{ marginBottom: '1.5rem', padding: '1rem', backgroundColor: '#1f2937', borderRadius: '0.5rem', border: '1px solid #374151' }}>
           <div style={{ display: 'flex', gap: '0.75rem', flexWrap: 'wrap', alignItems: 'flex-end' }}>
-            <div style={{ flex: 1, minWidth: '150px' }}>
-              <label style={{ fontSize: '0.75rem', color: '#9ca3af', display: 'block', marginBottom: '0.25rem' }}>Username (required):</label>
+            <div style={{ width: '160px' }}>
+              <label style={{ fontSize: '0.75rem', color: '#9ca3af', display: 'block', marginBottom: '0.25rem' }}>Username:</label>
               <input type="text" value={newUsername} onChange={(e) => setNewUsername(e.target.value)} placeholder="Username..." autoFocus
                 style={{ width: '100%', padding: '0.6rem', backgroundColor: '#374151', border: '1px solid #4b5563', borderRadius: '0.25rem', color: '#f3f4f6' }} />
             </div>
-            <div style={{ flex: 1, minWidth: '150px' }}>
-              <label style={{ fontSize: '0.75rem', color: '#9ca3af', display: 'block', marginBottom: '0.25rem' }}>Email (optional):</label>
-              <input type="email" value={newUserEmail} onChange={(e) => setNewUserEmail(e.target.value)} placeholder="user@example.com (required to log in)"
+            <div style={{ width: '240px' }}>
+              <label style={{ fontSize: '0.75rem', color: '#9ca3af', display: 'block', marginBottom: '0.25rem' }}>Email (required to log in):</label>
+              <input type="email" value={newUserEmail} onChange={(e) => setNewUserEmail(e.target.value)} placeholder="user@example.com"
                 style={{ width: '100%', padding: '0.6rem', backgroundColor: '#374151', border: '1px solid #4b5563', borderRadius: '0.25rem', color: '#f3f4f6' }} />
             </div>
             <div style={{ display: 'flex', gap: '0.5rem' }}>
