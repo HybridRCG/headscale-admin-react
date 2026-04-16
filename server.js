@@ -535,6 +535,55 @@ app.post('/api/headscale/apikey/create-for-user', authenticateToken, async (req,
 });
 
 
+
+// ── Registration / Licensing ────────────────────────────────────────────────
+const HS_LICENSE_SECRET = process.env.HS_LICENSE_SECRET || 'CHANGE-THIS-TO-YOUR-PRIVATE-SECRET-MIN-32-CHARS';
+const REGISTRATION_FILE = '/etc/headscale/registration.json';
+
+function readRegistration() {
+  try { return JSON.parse(fs.readFileSync(REGISTRATION_FILE, 'utf8')); }
+  catch { return { registered: false }; }
+}
+
+function validateLicenseKey(key) {
+  try {
+    // Format: HSR-{CLIENTNAME}-{YEAR}-{12char HMAC}
+    const parts = key.trim().split('-');
+    if (parts.length < 4 || parts[0] !== 'HSR') return null;
+    const hmacPart = parts[parts.length - 1];
+    const payload = parts.slice(1, parts.length - 1).join('-');
+    const expected = require('crypto')
+      .createHmac('sha256', HS_LICENSE_SECRET)
+      .update(payload)
+      .digest('hex')
+      .substring(0, 12)
+      .toUpperCase();
+    if (hmacPart !== expected) return null;
+    return { valid: true, payload };
+  } catch { return null; }
+}
+
+app.post('/api/headscale/register', authenticateToken, (req, res) => {
+  const { key } = req.body;
+  if (!key) return res.status(400).json({ message: 'License key required' });
+  const result = validateLicenseKey(key);
+  if (!result) return res.status(400).json({ message: 'Invalid license key' });
+  try {
+    const reg = { registered: true, key: key.trim(), payload: result.payload, registeredAt: new Date().toISOString() };
+    fs.writeFileSync(REGISTRATION_FILE, JSON.stringify(reg, null, 2));
+    logAudit(req.user.username, 'register', 'instance registration', result.payload);
+    console.log('[REGISTER] Instance registered:', result.payload);
+    res.json({ success: true, payload: result.payload });
+  } catch (e) {
+    res.status(500).json({ message: 'Failed to save registration: ' + e.message });
+  }
+});
+
+app.get('/api/headscale/registration', authenticateToken, (req, res) => {
+  const reg = readRegistration();
+  res.json(reg);
+});
+
 // ── Audit Log ──────────────────────────────────────────────────────────────
 const AUDIT_LOG_PATH = '/etc/headscale/audit-log.json';
 

@@ -1,11 +1,26 @@
 /* eslint-disable @typescript-eslint/no-unused-vars */
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import { useAuthStore } from '../store/authStore';
+import axios from 'axios';
 import './Footer.css';
 
 export const Footer: React.FC = () => {
   const { user, logout } = useAuthStore();
   const navigate = require('react-router-dom').useNavigate();
+  const [registered, setRegistered] = useState(false);
+
+  const checkRegistration = () => {
+    axios.get('/admin/api/headscale/registration')
+      .then(r => setRegistered(r.data?.registered === true))
+      .catch(() => {});
+  };
+
+  useEffect(() => {
+    checkRegistration();
+    // Re-check when registration changes from Settings page
+    window.addEventListener('registration-changed', checkRegistration);
+    return () => window.removeEventListener('registration-changed', checkRegistration);
+  }, []);
 
   const handleLogout = async () => {
     await logout();
@@ -19,7 +34,7 @@ export const Footer: React.FC = () => {
           <span className="user-name">{user?.email}</span>
           <span className="user-role">{user?.role}</span>
         </div>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+        {!registered && (
           <a
             href="https://buymeacoffee.com/hybridrcg"
             target="_blank"
@@ -28,10 +43,10 @@ export const Footer: React.FC = () => {
           >
             ☕ Buy me a coffee
           </a>
-          <button className="footer-logout" onClick={handleLogout}>
-            Logout
-          </button>
-        </div>
+        )}
+        <button className="footer-logout" onClick={handleLogout}>
+          Logout
+        </button>
       </div>
     </footer>
   );
