@@ -6,7 +6,7 @@ A production-ready, role-based administration dashboard for [Headscale](https://
 
 > Originally forked from [headscale-admin](https://github.com/HybridRCG/headscale-admin) (Svelte). That project became unmaintained so this is a full React rewrite — published independently as **HS React**.
 
-[![Buy Me A Coffee](https://img.buymeacoffee.com/button-api/?text=Buy me a coffee&emoji=☕&slug=hybridrcg&button_colour=FFDD00&font_colour=000000&font_family=Cookie&outline_colour=000000&coffee_colour=ffffff)](https://buymeacoffee.com/hybridrcg)
+[![Buy Me A Coffee](https://www.buymeacoffee.com/assets/img/custom_images/orange_img.png)](https://buymeacoffee.com/hybridrcg)
 
 ---
 
@@ -231,4 +231,4 @@ MIT License — see [LICENSE](LICENSE)
 
 ---
 
-[![Buy Me A Coffee](https://img.buymeacoffee.com/button-api/?text=Buy me a coffee&emoji=☕&slug=hybridrcg&button_colour=FFDD00&font_colour=000000&font_family=Cookie&outline_colour=000000&coffee_colour=ffffff)](https://buymeacoffee.com/hybridrcg)
+[![Buy Me A Coffee](https://www.buymeacoffee.com/assets/img/custom_images/orange_img.png)](https://buymeacoffee.com/hybridrcg)
