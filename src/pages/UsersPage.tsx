@@ -365,27 +365,27 @@ export const UsersPage: React.FC = () => {
       {showCreateUser && (
         <div style={{ marginBottom: '1.5rem', padding: '1rem', backgroundColor: '#1f2937', borderRadius: '0.5rem', border: '1px solid #374151' }}>
           {/* Row 1: Username | Email | Role | Create | Cancel */}
-          <div style={{ display: 'flex', gap: '0', alignItems: 'flex-end', flexWrap: 'wrap', border: '1px solid #4b5563', borderRadius: '0.5rem', overflow: 'hidden' }}>
-            <div style={{ padding: '0.6rem 1rem', borderRight: '1px solid #4b5563' }}>
-              <label style={{ fontSize: '0.7rem', color: '#9ca3af', display: 'block', marginBottom: '0.3rem', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Username</label>
+          <div style={{ display: 'flex', gap: '0.75rem', alignItems: 'center', flexWrap: 'wrap' }}>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.25rem' }}>
+              <label style={{ fontSize: '0.7rem', color: '#9ca3af', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Username</label>
               <input type="text" value={newUsername} onChange={(e) => setNewUsername(e.target.value)} placeholder="Username..." autoFocus
-                style={{ width: '140px', padding: '0.4rem 0', background: 'none', border: 'none', outline: 'none', color: '#f3f4f6', fontSize: '0.875rem' }} />
+                style={{ width: '150px', height: '38px', padding: '0 0.75rem', backgroundColor: '#374151', border: '1px solid #4b5563', borderRadius: '0.375rem', color: '#f3f4f6', fontSize: '0.875rem', boxSizing: 'border-box' }} />
             </div>
-            <div style={{ padding: '0.6rem 1rem', borderRight: '1px solid #4b5563', flex: 1, minWidth: '200px' }}>
-              <label style={{ fontSize: '0.7rem', color: '#9ca3af', display: 'block', marginBottom: '0.3rem', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Email</label>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.25rem' }}>
+              <label style={{ fontSize: '0.7rem', color: '#9ca3af', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Email</label>
               <input type="email" value={newUserEmail} onChange={(e) => setNewUserEmail(e.target.value)} placeholder="user@example.com"
-                style={{ width: '100%', padding: '0.4rem 0', background: 'none', border: 'none', outline: 'none', color: '#f3f4f6', fontSize: '0.875rem' }} />
+                style={{ width: '220px', height: '38px', padding: '0 0.75rem', backgroundColor: '#374151', border: '1px solid #4b5563', borderRadius: '0.375rem', color: '#f3f4f6', fontSize: '0.875rem', boxSizing: 'border-box' }} />
             </div>
-            <div style={{ padding: '0.6rem 1rem', borderRight: '1px solid #4b5563' }}>
-              <label style={{ fontSize: '0.7rem', color: '#9ca3af', display: 'block', marginBottom: '0.3rem', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Role</label>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.25rem' }}>
+              <label style={{ fontSize: '0.7rem', color: '#9ca3af', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Role</label>
               <select value={newUserRole} onChange={e => setNewUserRole(e.target.value)}
-                style={{ padding: '0.4rem 0', background: 'none', border: 'none', outline: 'none', color: '#f3f4f6', fontSize: '0.875rem', cursor: 'pointer' }}>
-                <option value="user" style={{ backgroundColor: '#1f2937' }}>User</option>
-                <option value="group_admin" style={{ backgroundColor: '#1f2937' }}>Group Admin</option>
-                <option value="super_admin" style={{ backgroundColor: '#1f2937' }}>Super Admin</option>
+                style={{ height: '38px', padding: '0 0.75rem', backgroundColor: '#374151', border: '1px solid #4b5563', borderRadius: '0.375rem', color: '#f3f4f6', fontSize: '0.875rem', boxSizing: 'border-box' }}>
+                <option value="user">User</option>
+                <option value="group_admin">Group Admin</option>
+                <option value="super_admin">Super Admin</option>
               </select>
             </div>
-            <div style={{ display: 'flex', gap: '0.5rem', padding: '0.6rem 1rem' }}>
+            <div style={{ display: 'flex', gap: '0.5rem', alignSelf: 'flex-end' }}>
               <button className="btn btn-sm btn-success" onClick={handleCreateUser}>Create</button>
               <button className="btn btn-sm btn-secondary" onClick={() => { setShowCreateUser(false); setNewUsername(''); setNewUserEmail(''); }}>Cancel</button>
             </div>
