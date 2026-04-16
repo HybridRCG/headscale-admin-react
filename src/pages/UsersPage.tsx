@@ -365,7 +365,7 @@ export const UsersPage: React.FC = () => {
       {showCreateUser && (
         <div style={{ marginBottom: '1.5rem', padding: '1rem', backgroundColor: '#1f2937', borderRadius: '0.5rem', border: '1px solid #374151' }}>
           {/* Row 1: Username | Email | Role | Create | Cancel */}
-          <div style={{ display: 'flex', gap: '1rem', alignItems: 'flex-end', flexWrap: 'wrap' }}>
+          <div style={{ display: 'flex', gap: '1.5rem', alignItems: 'flex-end', flexWrap: 'wrap' }}>
             <div style={{ width: '150px' }}>
               <label style={{ fontSize: '0.75rem', color: '#9ca3af', display: 'block', marginBottom: '0.25rem' }}>Username:</label>
               <input type="text" value={newUsername} onChange={(e) => setNewUsername(e.target.value)} placeholder="Username..." autoFocus
