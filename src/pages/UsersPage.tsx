@@ -364,31 +364,36 @@ export const UsersPage: React.FC = () => {
       {/* Create User expand form */}
       {showCreateUser && (
         <div style={{ marginBottom: '1.5rem', padding: '1rem', backgroundColor: '#1f2937', borderRadius: '0.5rem', border: '1px solid #374151' }}>
-          <div style={{ display: 'flex', gap: '0.75rem', flexWrap: 'wrap', alignItems: 'flex-end' }}>
-            <div style={{ width: '160px' }}>
+          {/* Row 1: Username | Email | Role | Create | Cancel */}
+          <div style={{ display: 'flex', gap: '1rem', alignItems: 'flex-end', flexWrap: 'wrap' }}>
+            <div style={{ width: '150px' }}>
               <label style={{ fontSize: '0.75rem', color: '#9ca3af', display: 'block', marginBottom: '0.25rem' }}>Username:</label>
               <input type="text" value={newUsername} onChange={(e) => setNewUsername(e.target.value)} placeholder="Username..." autoFocus
                 style={{ width: '100%', padding: '0.6rem', backgroundColor: '#374151', border: '1px solid #4b5563', borderRadius: '0.25rem', color: '#f3f4f6' }} />
             </div>
-            <div style={{ width: '240px' }}>
-              <label style={{ fontSize: '0.75rem', color: '#9ca3af', display: 'block', marginBottom: '0.25rem' }}>Email (required to log in):</label>
+            <div style={{ width: '220px' }}>
+              <label style={{ fontSize: '0.75rem', color: '#9ca3af', display: 'block', marginBottom: '0.25rem' }}>Email:</label>
               <input type="email" value={newUserEmail} onChange={(e) => setNewUserEmail(e.target.value)} placeholder="user@example.com"
                 style={{ width: '100%', padding: '0.6rem', backgroundColor: '#374151', border: '1px solid #4b5563', borderRadius: '0.25rem', color: '#f3f4f6' }} />
             </div>
-            <div style={{ display: 'flex', gap: '0.5rem' }}>
+            <div style={{ width: '130px' }}>
+              <label style={{ fontSize: '0.75rem', color: '#9ca3af', display: 'block', marginBottom: '0.25rem' }}>Role:</label>
               <select value={newUserRole} onChange={e => setNewUserRole(e.target.value)}
-                style={{ padding: '0.5rem', backgroundColor: '#1f2937', border: '1px solid #374151', borderRadius: '0.375rem', color: '#f3f4f6', fontSize: '0.875rem' }}>
+                style={{ width: '100%', padding: '0.6rem', backgroundColor: '#374151', border: '1px solid #4b5563', borderRadius: '0.25rem', color: '#f3f4f6', fontSize: '0.875rem' }}>
                 <option value="user">User</option>
                 <option value="group_admin">Group Admin</option>
                 <option value="super_admin">Super Admin</option>
               </select>
-              <label style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', color: '#9ca3af', fontSize: '0.8rem', whiteSpace: 'nowrap' }}>
-                <input type="checkbox" checked={addToMapping} onChange={e => setAddToMapping(e.target.checked)} />
-                Add to login mapping
-              </label>
-              <button className="btn btn-sm btn-success" onClick={handleCreateUser}>Create</button>
-              <button className="btn btn-sm btn-secondary" onClick={() => { setShowCreateUser(false); setNewUsername(''); setNewUserEmail(''); }}>Cancel</button>
             </div>
+            <button className="btn btn-sm btn-success" onClick={handleCreateUser} style={{ marginBottom: '0' }}>Create</button>
+            <button className="btn btn-sm btn-secondary" onClick={() => { setShowCreateUser(false); setNewUsername(''); setNewUserEmail(''); }} style={{ marginBottom: '0' }}>Cancel</button>
+          </div>
+          {/* Row 2: Add to login mapping checkbox */}
+          <div style={{ marginTop: '0.6rem' }}>
+            <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', color: '#9ca3af', fontSize: '0.8rem', cursor: 'pointer' }}>
+              <input type="checkbox" checked={addToMapping} onChange={e => setAddToMapping(e.target.checked)} />
+              Add to login mapping — allows this user to log into HS React immediately
+            </label>
           </div>
         </div>
       )}
