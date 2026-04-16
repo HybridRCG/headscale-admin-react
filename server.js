@@ -584,6 +584,17 @@ app.get('/api/headscale/registration', authenticateToken, (req, res) => {
   res.json(reg);
 });
 
+app.post('/api/headscale/unregister', authenticateToken, (req, res) => {
+  try {
+    fs.writeFileSync(REGISTRATION_FILE, JSON.stringify({ registered: false }, null, 2));
+    logAudit(req.user.username, 'unregister', 'instance unregistered', '');
+    console.log('[UNREGISTER] Instance unregistered');
+    res.json({ success: true });
+  } catch (e) {
+    res.status(500).json({ message: 'Failed to unregister: ' + e.message });
+  }
+});
+
 // ── Audit Log ──────────────────────────────────────────────────────────────
 const AUDIT_LOG_PATH = '/etc/headscale/audit-log.json';
 

@@ -40,6 +40,18 @@ export const SettingsPage: React.FC = () => {
     }).catch(() => {});
   }, []);
 
+  const handleUnregister = async () => {
+    if (!window.confirm('Unregister this instance? The Buy Me a Coffee button will reappear.')) return;
+    try {
+      await axios.post(`${API}/unregister`);
+      setRegistered(false);
+      setRegPayload('');
+      window.dispatchEvent(new Event('registration-changed'));
+    } catch (e: any) {
+      alert('Failed to unregister: ' + (e.response?.data?.message || e.message));
+    }
+  };
+
   const handleRegister = async () => {
     if (!regKey.trim()) return;
     setRegLoading(true);
@@ -91,7 +103,12 @@ export const SettingsPage: React.FC = () => {
                 </div>
               </div>
             </div>
-            {!registered && (
+            {registered ? (
+              <button onClick={handleUnregister}
+                style={{ padding: '0.5rem 1rem', backgroundColor: '#374151', color: '#d1d5db', border: '1px solid #4b5563', borderRadius: '0.375rem', fontWeight: '600', fontSize: '0.875rem', cursor: 'pointer' }}>
+                Unregister
+              </button>
+            ) : (
               <button onClick={() => setShowInput(!showInput)}
                 style={{ padding: '0.5rem 1rem', backgroundColor: '#6366f1', color: 'white', border: 'none', borderRadius: '0.375rem', fontWeight: '600', fontSize: '0.875rem', cursor: 'pointer' }}>
                 {showInput ? 'Cancel' : 'Enter Key'}
