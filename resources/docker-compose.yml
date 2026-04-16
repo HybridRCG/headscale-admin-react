@@ -15,6 +15,7 @@ services:
     environment:
       - JWT_SECRET=${JWT_SECRET:?JWT_SECRET is required - run: export JWT_SECRET=$(openssl rand -base64 32)}
       - HEADSCALE_URL=${HEADSCALE_URL:-http://headscale:8080}
+      - HS_LICENSE_SECRET=${HS_LICENSE_SECRET:?HS_LICENSE_SECRET is required}
       - PORT=3000
     volumes:
       # Docker socket needed to run headscale CLI commands (expire nodes, pre-auth keys etc.)
