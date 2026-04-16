@@ -536,6 +536,25 @@ app.post('/api/headscale/apikey/create-for-user', authenticateToken, async (req,
 
 
 
+// ── Update checker ──────────────────────────────────────────────────────────
+app.get('/api/headscale/check-update', authenticateToken, async (req, res) => {
+  try {
+    const currentVersion = require('./build/static/js/main.*.js') || '';
+    // Fetch latest commit from GitHub API
+    const ghResp = await axios.get(
+      'https://api.github.com/repos/HybridRCG/headscale-admin-react/commits/main',
+      { headers: { 'User-Agent': 'hs-react-update-check' }, timeout: 5000 }
+    );
+    // Get version from latest commit message
+    const commitMsg = ghResp.data.commit?.message || '';
+    const match = commitMsg.match(/v(\d+\.\d+\.\d+)/);
+    const latestVersion = match ? match[1] : null;
+    res.json({ latestVersion, currentVersion: process.env.APP_VERSION || null });
+  } catch (e) {
+    res.json({ latestVersion: null, error: e.message });
+  }
+});
+
 // ── Registration / Licensing ────────────────────────────────────────────────
 const HS_LICENSE_SECRET = process.env.HS_LICENSE_SECRET || 'CHANGE-THIS-TO-YOUR-PRIVATE-SECRET-MIN-32-CHARS';
 const REGISTRATION_FILE = '/etc/headscale/registration.json';

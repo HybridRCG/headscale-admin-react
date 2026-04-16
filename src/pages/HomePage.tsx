@@ -15,7 +15,6 @@ export const HomePage: React.FC = () => {
   const manageableDomains: string[] = (authUser as any)?.manageable_domains || [];
 
   const [stats, setStats] = useState({ totalUsers: 0, totalNodes: 0, onlineNodes: 0, offlineNodes: 0, activeKeys: 0 });
-  const [lastSeen, setLastSeen] = useState<string>('');
   const [loading, setLoading] = useState(true);
 
   useEffect(() => { // eslint-disable-line react-hooks/exhaustive-deps
