@@ -94,11 +94,13 @@ export const SettingsPage: React.FC = () => {
               <span style={{ fontSize: '1.75rem' }}>{registered ? '✅' : '🔑'}</span>
               <div>
                 <div style={{ color: '#f3f4f6', fontWeight: '600', fontSize: '0.95rem' }}>
-                  {registered ? 'Registered' : 'Unregistered'}
+                  {registered
+                    ? <span>Registered <span style={{ color: '#10b981', fontSize: '1rem', fontWeight: '800' }}>✓</span></span>
+                    : 'Unregistered'}
                 </div>
                 <div style={{ color: '#9ca3af', fontSize: '0.8rem', marginTop: '0.2rem' }}>
                   {registered
-                    ? <span style={{ color: '#10b981' }}>Licensed: {regPayload}</span>
+                    ? <span>Licensed to: <span style={{ color: '#10b981', fontWeight: '700', fontSize: '0.9rem' }}>{regPayload.replace(/-\d{4}$/, '').replace(/-/g, ' ')}</span></span>
                     : 'Enter your license key to register this instance'}
                 </div>
               </div>

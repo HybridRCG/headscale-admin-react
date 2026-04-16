@@ -15,6 +15,7 @@ export const HomePage: React.FC = () => {
   const manageableDomains: string[] = (authUser as any)?.manageable_domains || [];
 
   const [stats, setStats] = useState({ totalUsers: 0, totalNodes: 0, onlineNodes: 0, offlineNodes: 0, activeKeys: 0 });
+  const [lastSeen, setLastSeen] = useState<string>('');
   const [loading, setLoading] = useState(true);
 
   useEffect(() => { // eslint-disable-line react-hooks/exhaustive-deps
@@ -77,7 +78,7 @@ export const HomePage: React.FC = () => {
       <div style={{ display: 'flex', gap: '1rem', marginBottom: '2rem', flexWrap: 'wrap' }}>
         {[
           { label: 'Users', value: stats.totalUsers, color: '#3b82f6' },
-          { label: 'Nodes Online', value: stats.onlineNodes, color: '#10b981' },
+            { label: 'Nodes Online', value: stats.onlineNodes, color: '#10b981' },
           { label: 'Nodes Offline', value: stats.offlineNodes, color: '#ef4444' },
         ].map(s => (
           <div key={s.label} style={{ flex: 1, minWidth: '120px', padding: '1rem', backgroundColor: '#1f2937', borderRadius: '0.5rem', border: `1px solid #374151`, textAlign: 'center' }}>

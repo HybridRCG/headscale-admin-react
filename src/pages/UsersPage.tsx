@@ -51,6 +51,8 @@ export const UsersPage: React.FC = () => {
   const [showCreateUser, setShowCreateUser] = useState(false);
   const [newUsername, setNewUsername] = useState('');
   const [newUserEmail, setNewUserEmail] = useState('');
+  const [newUserRole, setNewUserRole] = useState('user');
+  const [addToMapping, setAddToMapping] = useState(true);
   const [loadingApiKeys, setLoadingApiKeys] = useState<Set<string>>(new Set());
   const [showApiKeyModal, setShowApiKeyModal] = useState(false);
   const [apiKeyModalContent, setApiKeyModalContent] = useState('');
@@ -142,10 +144,19 @@ export const UsersPage: React.FC = () => {
     if (!newUsername.trim()) return;
     try {
       await axios.post('/admin/api/headscale/user/create', { username: newUsername, email: newUserEmail });
+      // Optionally add to users-mapping.json so they can log in immediately
+      if (addToMapping && newUserEmail.trim()) {
+        const mapping = await axios.get('/admin/api/headscale/user-emails');
+        const current = mapping.data || { users: {}, api_key_labels: {} };
+        current.users[newUsername] = { email: newUserEmail, role: newUserRole, manageable_domains: newUserRole === 'group_admin' ? [] : newUserRole === 'super_admin' ? ['*'] : [] };
+        await axios.post('/admin/api/headscale/user-emails', current);
+      }
       await fetchUsers();
       setShowCreateUser(false);
       setNewUsername('');
       setNewUserEmail('');
+      setNewUserRole('user');
+      setAddToMapping(true);
     } catch (error) {
       console.error('Failed to create user:', error);
       alert('Failed to create user');
@@ -361,10 +372,20 @@ export const UsersPage: React.FC = () => {
             </div>
             <div style={{ flex: 1, minWidth: '150px' }}>
               <label style={{ fontSize: '0.75rem', color: '#9ca3af', display: 'block', marginBottom: '0.25rem' }}>Email (optional):</label>
-              <input type="email" value={newUserEmail} onChange={(e) => setNewUserEmail(e.target.value)} placeholder="user@example.com"
+              <input type="email" value={newUserEmail} onChange={(e) => setNewUserEmail(e.target.value)} placeholder="user@example.com (required to log in)"
                 style={{ width: '100%', padding: '0.6rem', backgroundColor: '#374151', border: '1px solid #4b5563', borderRadius: '0.25rem', color: '#f3f4f6' }} />
             </div>
             <div style={{ display: 'flex', gap: '0.5rem' }}>
+              <select value={newUserRole} onChange={e => setNewUserRole(e.target.value)}
+                style={{ padding: '0.5rem', backgroundColor: '#1f2937', border: '1px solid #374151', borderRadius: '0.375rem', color: '#f3f4f6', fontSize: '0.875rem' }}>
+                <option value="user">User</option>
+                <option value="group_admin">Group Admin</option>
+                <option value="super_admin">Super Admin</option>
+              </select>
+              <label style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', color: '#9ca3af', fontSize: '0.8rem', whiteSpace: 'nowrap' }}>
+                <input type="checkbox" checked={addToMapping} onChange={e => setAddToMapping(e.target.checked)} />
+                Add to login mapping
+              </label>
               <button className="btn btn-sm btn-success" onClick={handleCreateUser}>Create</button>
               <button className="btn btn-sm btn-secondary" onClick={() => { setShowCreateUser(false); setNewUsername(''); setNewUserEmail(''); }}>Cancel</button>
             </div>

@@ -37,6 +37,7 @@ export const NodesPage: React.FC = () => {
   const [editName, setEditName] = useState('');
   const [editUser, setEditUser] = useState('');
   const [routesModal, setRoutesModal] = useState<number | null>(null);
+  const [moveKeyModal, setMoveKeyModal] = useState<{key: string; user: string} | null>(null);
   const [modalNode, setModalNode] = useState<Node | null>(null);
   const [deployModal, setDeployModal] = useState(false);
   const API_BASE = '/admin/api';
@@ -159,7 +160,7 @@ export const NodesPage: React.FC = () => {
     try {
       const result = await axios.post(`${API_BASE}/headscale/node/move-user`, { nodeId, newUser: editUser });
       if (result.data.newKey) {
-        alert(`✅ Node moved to ${editUser}.\n\nRun this on the device:\ntailscale login --auth-key ${result.data.newKey}`);
+        setMoveKeyModal({ key: result.data.newKey, user: editUser });
       }
       setEditingNode(null);
       setEditUser('');
@@ -296,6 +297,26 @@ export const NodesPage: React.FC = () => {
           </tbody>
         </table>
       </div>
+
+      {moveKeyModal && (
+        <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(0,0,0,0.7)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000 }}>
+          <div style={{ backgroundColor: '#111827', border: '2px solid #10b981', borderRadius: '0.75rem', padding: '2rem', maxWidth: '560px', width: '90%', color: '#d1d5db' }}>
+            <h2 style={{ margin: '0 0 0.5rem 0', color: '#f3f4f6', fontSize: '1.1rem' }}>✅ Node moved to {moveKeyModal.user}</h2>
+            <p style={{ margin: '0 0 1rem 0', fontSize: '0.875rem', color: '#9ca3af' }}>Run this command on the device to reconnect:</p>
+            <div style={{ backgroundColor: '#0f172a', border: '1px solid #374151', borderRadius: '0.375rem', padding: '0.75rem', fontFamily: 'monospace', fontSize: '0.8rem', color: '#86efac', wordBreak: 'break-all', marginBottom: '1rem' }}>
+              tailscale login --auth-key {moveKeyModal.key}
+            </div>
+            <div style={{ display: 'flex', gap: '0.5rem' }}>
+              <button onClick={() => { navigator.clipboard.writeText(`tailscale login --auth-key ${moveKeyModal.key}`); }}
+                style={{ flex: 1, padding: '0.6rem', backgroundColor: '#6366f1', color: 'white', border: 'none', borderRadius: '0.375rem', fontWeight: '600', cursor: 'pointer' }}>📋 Copy Command</button>
+              <button onClick={() => { navigator.clipboard.writeText(moveKeyModal.key); }}
+                style={{ flex: 1, padding: '0.6rem', backgroundColor: '#374151', color: '#d1d5db', border: 'none', borderRadius: '0.375rem', fontWeight: '600', cursor: 'pointer' }}>🔑 Copy Key Only</button>
+              <button onClick={() => setMoveKeyModal(null)}
+                style={{ padding: '0.6rem 1rem', backgroundColor: '#10b981', color: 'white', border: 'none', borderRadius: '0.375rem', fontWeight: '600', cursor: 'pointer' }}>Done</button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {routesModal && modalNode && (
         <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(0,0,0,0.5)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000 }}>

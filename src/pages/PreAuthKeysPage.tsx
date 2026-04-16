@@ -3,6 +3,7 @@
 import React, { useEffect, useState } from 'react';
 import axios from 'axios';
 import { useAuthStore } from '../store/authStore';
+import { useLocation } from 'react-router-dom';
 import '../styles/Pages.css';
 
 interface PreAuthKey {
@@ -44,7 +45,8 @@ export const PreAuthKeysPage: React.FC = () => {
   const [filterUser, setFilterUser] = useState('all');
   const [filterStatus, setFilterStatus] = useState<'all' | 'active' | 'used' | 'expired'>('all');
 
-  useEffect(() => { fetchAll(); }, []);
+  const location = useLocation();
+  useEffect(() => { fetchAll(); }, [location.key]); // refresh every time page is navigated to
 
   const fetchAll = async () => {
     setLoading(true);
