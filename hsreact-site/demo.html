@@ -1,0 +1,519 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>HS React — Live Demo</title>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet"/>
+  <style>
+    *,*::before,*::after{box-sizing:border-box;margin:0;padding:0;}
+    :root{
+      --bg:#0f172a;--bg2:#1e293b;--bg3:#1f2937;--bg4:#111827;
+      --border:#374151;--blue:#1e40af;--blue-l:#3b82f6;
+      --green:#10b981;--red:#dc2626;--amber:#f59e0b;--yellow:#FFDD00;
+      --text:#f1f5f9;--text2:#94a3b8;--text3:#64748b;
+    }
+    body{background:var(--bg);color:var(--text);font-family:'Inter',sans-serif;font-size:15px;min-height:100vh;display:flex;flex-direction:column;}
+
+    /* ── DEMO BANNER ── */
+    .demo-banner{background:linear-gradient(90deg,#f59e0b,#d97706);color:#000;text-align:center;padding:0.5rem;font-weight:700;font-size:0.85rem;z-index:2000;position:sticky;top:0;}
+    .demo-banner span{opacity:0.7;font-weight:400;margin-left:0.5rem;}
+
+    /* ── NAV ── */
+    .navbar{background:#1e40af;padding:0;position:sticky;top:34px;z-index:1000;box-shadow:0 2px 4px rgba(0,0,0,0.3);}
+    .navbar-container{max-width:1200px;margin:0 auto;padding:0 1.5rem;height:56px;display:flex;align-items:center;gap:1.5rem;}
+    .navbar-logo{font-weight:700;font-size:1.1rem;color:white;text-decoration:none;}
+    .navbar-menu{display:flex;gap:0.25rem;flex:1;list-style:none;}
+    .nav-btn{background:none;border:none;color:rgba(255,255,255,0.75);padding:0.4rem 0.85rem;border-radius:0.375rem;cursor:pointer;font-size:0.875rem;font-weight:500;transition:all 0.15s;font-family:'Inter',sans-serif;}
+    .nav-btn:hover{color:white;background:rgba(255,255,255,0.15);}
+    .nav-btn.active{color:white;background:rgba(255,255,255,0.2);font-weight:700;box-shadow:0 2px 0 rgba(255,255,255,0.6);}
+    .theme-wrap{display:flex;align-items:center;gap:0.4rem;margin-left:auto;}
+    .toggle-sw{width:44px;height:24px;background:rgba(255,255,255,0.3);border-radius:12px;position:relative;cursor:pointer;}
+    .toggle-sw::after{content:'';position:absolute;width:18px;height:18px;background:white;border-radius:50%;top:3px;left:3px;transition:transform 0.2s;}
+
+    /* ── MAIN ── */
+    .main{flex:1;max-width:1200px;width:100%;margin:0 auto;padding:1.5rem 1.5rem 5rem;}
+
+    /* ── FOOTER ── */
+    .footer{background:#1e40af;position:fixed;bottom:0;left:0;right:0;z-index:999;padding:0.5rem 1.5rem;display:flex;align-items:center;justify-content:space-between;gap:1rem;}
+    .footer-left{display:flex;align-items:center;gap:0.75rem;}
+    .user-email{font-weight:600;font-size:0.85rem;}
+    .role-badge{background:rgba(255,255,255,0.2);padding:0.2rem 0.6rem;border-radius:0.25rem;font-size:0.75rem;color:#dbeafe;}
+    .coffee-btn{display:flex;align-items:center;gap:0.35rem;background:#FFDD00;color:#000;padding:0.35rem 0.85rem;border-radius:0.375rem;font-weight:800;font-size:0.82rem;text-decoration:none;border:none;cursor:pointer;white-space:nowrap;}
+    .logout-btn{background:#dc2626;color:white;border:none;padding:0.4rem 0.85rem;border-radius:0.375rem;cursor:pointer;font-weight:500;font-size:0.82rem;}
+
+    /* ── TOAST ── */
+    .toast-wrap{position:fixed;top:100px;right:1.5rem;z-index:9999;display:flex;flex-direction:column;gap:0.5rem;pointer-events:none;}
+    .toast{background:#1f2937;border:1px solid var(--border);border-radius:0.5rem;padding:0.75rem 1.1rem;font-size:0.85rem;color:var(--text);box-shadow:0 4px 16px rgba(0,0,0,0.4);animation:toastIn 0.3s ease;min-width:260px;pointer-events:none;}
+    .toast.info{border-left:3px solid var(--blue-l);}
+    .toast.success{border-left:3px solid var(--green);}
+    .toast.demo{border-left:3px solid var(--amber);}
+    @keyframes toastIn{from{opacity:0;transform:translateX(20px);}to{opacity:1;transform:translateX(0);}}
+
+    /* ── STATS BAR ── */
+    .stats-bar{display:flex;gap:0.75rem;margin-bottom:1.5rem;flex-wrap:wrap;}
+    .stat-card{flex:1;min-width:100px;background:var(--bg3);border:1px solid var(--border);border-radius:0.5rem;padding:0.85rem 1rem;text-align:center;}
+    .stat-num{font-size:1.75rem;font-weight:800;}
+    .stat-label{font-size:0.7rem;color:var(--text3);margin-top:0.15rem;}
+
+    /* ── CARDS GRID ── */
+    .cards-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:1rem;}
+    .nav-card{background:var(--bg3);border:1px solid var(--border);border-radius:0.5rem;padding:2rem 1rem;text-align:center;cursor:pointer;transition:all 0.15s;border-left:4px solid;}
+    .nav-card:hover{transform:translateY(-2px);filter:brightness(1.1);}
+    .nav-card-icon{font-size:2rem;margin-bottom:0.5rem;}
+    .nav-card-label{font-weight:700;font-size:1rem;}
+
+    /* ── PAGE HEADER ── */
+    .page-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:1.5rem;flex-wrap:wrap;gap:0.75rem;}
+    .page-title{font-size:1.5rem;font-weight:800;}
+
+    /* ── TABLE ── */
+    .table-wrap{overflow-x:auto;}
+    table{width:100%;border-collapse:collapse;font-size:0.875rem;}
+    th{padding:0.75rem;text-align:left;border-bottom:2px solid var(--border);color:var(--text2);font-weight:600;}
+    td{padding:0.75rem;border-bottom:1px solid #1f2937;}
+    tr:hover td{background:rgba(255,255,255,0.02);}
+    .badge{display:inline-flex;align-items:center;padding:0.2rem 0.6rem;border-radius:999px;font-size:0.72rem;font-weight:600;}
+    .badge-green{background:rgba(16,185,129,0.15);color:#6ee7b7;border:1px solid rgba(16,185,129,0.3);}
+    .badge-red{background:rgba(239,68,68,0.15);color:#fca5a5;border:1px solid rgba(239,68,68,0.3);}
+    .badge-blue{background:rgba(59,130,246,0.15);color:#93c5fd;border:1px solid rgba(59,130,246,0.3);}
+    .badge-amber{background:rgba(245,158,11,0.15);color:#fcd34d;border:1px solid rgba(245,158,11,0.3);}
+    .badge-gray{background:rgba(107,114,128,0.15);color:#d1d5db;border:1px solid rgba(107,114,128,0.3);}
+
+    /* ── BUTTONS ── */
+    .btn{display:inline-flex;align-items:center;gap:0.3rem;padding:0.45rem 0.9rem;border-radius:0.375rem;border:none;cursor:pointer;font-size:0.8rem;font-weight:600;font-family:'Inter',sans-serif;transition:all 0.15s;}
+    .btn-sm{padding:0.3rem 0.6rem;font-size:0.75rem;}
+    .btn-primary{background:var(--blue);color:white;}.btn-primary:hover{background:#1d4ed8;}
+    .btn-success{background:#059669;color:white;}.btn-success:hover{background:#047857;}
+    .btn-danger{background:var(--red);color:white;}.btn-danger:hover{background:#b91c1c;}
+    .btn-secondary{background:var(--bg2);color:var(--text2);border:1px solid var(--border);}.btn-secondary:hover{color:var(--text);}
+    .btn-warning{background:#d97706;color:white;}
+
+    /* ── SEARCH ── */
+    .search-input{background:var(--bg3);border:1px solid var(--border);border-radius:0.375rem;padding:0.5rem 0.85rem;color:var(--text);font-size:0.875rem;font-family:'Inter',sans-serif;width:220px;}
+    .search-input:focus{outline:none;border-color:var(--blue-l);}
+
+    /* ── ACL TABS ── */
+    .acl-tabs{display:flex;gap:0.25rem;background:var(--blue);padding:0.5rem 1rem;border-radius:0.5rem;margin-bottom:1.5rem;overflow-x:auto;flex-wrap:nowrap;}
+    .tab-btn{background:none;border:none;color:rgba(255,255,255,0.7);padding:0.45rem 0.9rem;border-radius:0.375rem;cursor:pointer;font-size:0.82rem;font-weight:500;font-family:'Inter',sans-serif;white-space:nowrap;transition:all 0.15s;}
+    .tab-btn:hover{color:white;background:rgba(255,255,255,0.15);}
+    .tab-btn.active{color:white;background:rgba(255,255,255,0.2);font-weight:700;}
+
+    /* ── DNS ── */
+    .dns-field{display:flex;flex-direction:column;gap:0.25rem;margin-bottom:1.25rem;}
+    .dns-label{font-size:0.75rem;color:var(--text3);font-weight:600;text-transform:uppercase;letter-spacing:0.05em;}
+    .dns-input{background:var(--bg3);border:1px solid var(--border);border-radius:0.375rem;padding:0.55rem 0.85rem;color:var(--text);font-size:0.875rem;font-family:'Inter',sans-serif;}
+    .dns-input:focus{outline:none;border-color:var(--blue-l);}
+    .toggle-row{display:flex;align-items:center;justify-content:space-between;padding:0.85rem 1rem;background:var(--bg3);border:1px solid var(--border);border-radius:0.5rem;margin-bottom:0.75rem;}
+    .toggle-pill{width:44px;height:24px;border-radius:12px;cursor:pointer;position:relative;transition:background 0.2s;border:none;}
+    .toggle-pill.on{background:var(--green);}
+    .toggle-pill.off{background:var(--border);}
+    .toggle-pill::after{content:'';position:absolute;width:18px;height:18px;background:white;border-radius:50%;top:3px;transition:transform 0.2s;}
+    .toggle-pill.on::after{transform:translateX(23px);}
+    .toggle-pill.off::after{transform:translateX(3px);}
+
+    /* ── CARD SECTION ── */
+    .section-card{background:var(--bg3);border:1px solid var(--border);border-radius:0.5rem;padding:1.25rem 1.5rem;margin-bottom:1rem;}
+    .section-label{font-size:0.7rem;color:var(--text3);font-weight:600;text-transform:uppercase;letter-spacing:0.05em;margin-bottom:0.75rem;}
+
+    /* ── MODAL ── */
+    .modal-bg{position:fixed;inset:0;background:rgba(0,0,0,0.7);display:flex;align-items:center;justify-content:center;z-index:1500;}
+    .modal{background:#111827;border:1px solid var(--border);border-radius:0.75rem;padding:2rem;max-width:540px;width:90%;max-height:85vh;overflow-y:auto;}
+    .modal h3{font-size:1.15rem;font-weight:700;margin-bottom:1rem;}
+    .modal-actions{display:flex;gap:0.5rem;justify-content:flex-end;margin-top:1.5rem;}
+
+    /* ── SETTINGS ── */
+    .setting-row{display:flex;align-items:center;justify-content:space-between;padding:1.25rem 1.5rem;background:var(--bg3);border:1px solid var(--border);border-radius:0.5rem;margin-bottom:0.75rem;}
+    .setting-icon{font-size:1.5rem;margin-right:1rem;}
+    .setting-title{font-weight:600;font-size:0.95rem;}
+    .setting-desc{font-size:0.8rem;color:var(--text2);margin-top:0.2rem;}
+
+    @media(max-width:768px){
+      .cards-grid{grid-template-columns:repeat(2,1fr);}
+      .stats-bar .stat-card{flex:1 1 45%;}
+      .navbar-menu{display:none;}
+    }
+    @media(max-width:480px){
+      .cards-grid{grid-template-columns:1fr;}
+    }
+  </style>
+</head>
+<body>
+
+<div class="demo-banner">
+  🎭 DEMO MODE — No real data. Actions are simulated. · <a href="/hsreact" style="color:#000;font-weight:700;">Learn More →</a>
+</div>
+
+<nav class="navbar">
+  <div class="navbar-container">
+    <span class="navbar-logo">🔗 HS-React</span>
+    <ul class="navbar-menu" id="navMenu">
+      <li><button class="nav-btn active" onclick="showPage('home')">Home</button></li>
+      <li><button class="nav-btn" onclick="showPage('users')">Users</button></li>
+      <li><button class="nav-btn" onclick="showPage('nodes')">Nodes</button></li>
+      <li><button class="nav-btn" onclick="showPage('routes')">Routes</button></li>
+      <li><button class="nav-btn" onclick="showPage('acl')">ACL Editor</button></li>
+      <li><button class="nav-btn" onclick="showPage('dns')">DNS</button></li>
+      <li><button class="nav-btn" onclick="showPage('settings')">Settings</button></li>
+    </ul>
+    <div class="theme-wrap">
+      <span style="font-size:1rem;">☀️</span>
+      <div class="toggle-sw"></div>
+      <span style="font-size:1rem;">🌙</span>
+    </div>
+  </div>
+</nav>
+
+<div class="toast-wrap" id="toastWrap"></div>
+
+<main class="main" id="mainContent"></main>
+
+<footer class="footer">
+  <div class="footer-left">
+    <span class="user-email">alice@acmecorp.com</span>
+    <span class="role-badge">super_admin</span>
+  </div>
+  <div style="display:flex;gap:0.5rem;align-items:center;">
+    <button class="coffee-btn" onclick="toast('☕ Thanks! In real app this would open buymeacoffee.com','demo')">☕ Buy me a coffee</button>
+    <button class="logout-btn" onclick="toast('Demo mode — logout disabled','demo')">Logout</button>
+  </div>
+</footer>
+
+<script>
+// ── MOCK DATA ──────────────────────────────────────────────────────────────
+const USERS = [
+  {id:1,name:'Alice',email:'alice@acmecorp.com',role:'super_admin',nodes:4},
+  {id:2,name:'Bob',email:'bob@acmecorp.com',role:'group_admin',nodes:2},
+  {id:3,name:'Carol',email:'carol@acmecorp.com',role:'user',nodes:1},
+  {id:4,name:'David',email:'david@homelab.net',role:'user',nodes:3},
+  {id:5,name:'Emma',email:'emma@acmecorp.com',role:'user',nodes:1},
+  {id:6,name:'Frank',email:'frank@techco.io',role:'group_admin',nodes:2},
+];
+
+const NODES = [
+  {id:1,name:'alice-alice-mac',hostname:'alice-mac',user:'Alice',ip:'100.64.0.1',online:true,os:'macOS'},
+  {id:2,name:'bob-desktop',hostname:'bob-win',user:'Bob',ip:'100.64.0.2',online:true,os:'Windows'},
+  {id:3,name:'david-nuc',hostname:'david-nuc',user:'David',ip:'100.64.0.3',online:true,os:'Linux'},
+  {id:4,name:'fileserver01',hostname:'fileserver01',user:'Alice',ip:'100.64.0.4',online:true,os:'Linux'},
+  {id:5,name:'homeassist',hostname:'homeassist',user:'Alice',ip:'100.64.0.5',online:true,os:'Linux'},
+  {id:6,name:'bob-laptop',hostname:'bob-nb',user:'Bob',ip:'100.64.0.6',online:false,os:'Windows'},
+  {id:7,name:'carol-pc',hostname:'carol-pc-pc',user:'Carol',ip:'100.64.0.7',online:false,os:'Windows'},
+  {id:8,name:'emma-mac',hostname:'emma-mac-mac',user:'Emma',ip:'100.64.0.8',online:true,os:'macOS'},
+  {id:9,name:'headscale-vm',hostname:'headscale-vm',user:'Alice',ip:'100.64.0.9',online:true,os:'Linux'},
+  {id:10,name:'dns-server',hostname:'dns-server',user:'Alice',ip:'100.64.0.10',online:true,os:'Linux'},
+  {id:11,name:'david-desktop',hostname:'desktop2',user:'David',ip:'100.64.0.11',online:false,os:'Windows'},
+  {id:12,name:'alice-alice-phone',hostname:'alice-phone',user:'Alice',ip:'100.64.0.12',online:true,os:'iOS'},
+];
+
+const ROUTES = [
+  {id:1,node:'fileserver01',prefix:'192.168.1.0/24',enabled:true,advertised:true},
+  {id:2,node:'homeassist',prefix:'10.0.0.0/8',enabled:false,advertised:true},
+  {id:3,node:'headscale-vm',prefix:'172.16.0.0/12',enabled:true,advertised:true},
+];
+
+const PREAUTH_KEYS = [
+  {id:1,user:'Alice',key:'mkey:abc123...xyz',expiry:'2026-07-01',used:false,expired:false},
+  {id:2,user:'Bob',key:'mkey:def456...uvw',expiry:'2026-05-01',used:true,expired:false},
+  {id:3,user:'David',key:'mkey:ghi789...rst',expiry:'2026-03-01',used:false,expired:true},
+];
+
+// ── STATE ──────────────────────────────────────────────────────────────────
+let currentPage = 'home';
+let aclTab = 0;
+let dnsToggles = {magicDns:true,https:true,splitDns:false};
+
+// ── TOAST ──────────────────────────────────────────────────────────────────
+function toast(msg, type='info') {
+  const wrap = document.getElementById('toastWrap');
+  const el = document.createElement('div');
+  el.className = `toast ${type}`;
+  el.textContent = msg;
+  wrap.appendChild(el);
+  setTimeout(() => el.style.opacity = '0', 2500);
+  setTimeout(() => el.remove(), 3000);
+}
+
+function demoAction(msg) { toast('🎭 Demo: ' + msg, 'demo'); }
+
+// ── NAV ────────────────────────────────────────────────────────────────────
+function showPage(page) {
+  currentPage = page;
+  document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active'));
+  const map = {home:0,users:1,nodes:2,routes:3,acl:4,dns:5,settings:6};
+  document.querySelectorAll('.nav-btn')[map[page]]?.classList.add('active');
+  render();
+}
+
+// ── RENDER ─────────────────────────────────────────────────────────────────
+function render() {
+  const main = document.getElementById('mainContent');
+  const pages = {home:renderHome,users:renderUsers,nodes:renderNodes,routes:renderRoutes,acl:renderAcl,dns:renderDns,settings:renderSettings};
+  main.innerHTML = (pages[currentPage] || renderHome)();
+}
+
+// ── HOME ───────────────────────────────────────────────────────────────────
+function renderHome() {
+  const online = NODES.filter(n=>n.online).length;
+  const offline = NODES.filter(n=>!n.online).length;
+  return `
+    <div class="stats-bar">
+      <div class="stat-card"><div class="stat-num" style="color:#3b82f6;">${USERS.length}</div><div class="stat-label">Users</div></div>
+      <div class="stat-card"><div class="stat-num" style="color:#10b981;">${online}</div><div class="stat-label">Nodes Online</div></div>
+      <div class="stat-card"><div class="stat-num" style="color:#ef4444;">${offline}</div><div class="stat-label">Nodes Offline</div></div>
+    </div>
+    <div class="cards-grid">
+      <div class="nav-card" style="border-left-color:#1d4ed8;" onclick="showPage('users')"><div class="nav-card-icon">👤</div><div class="nav-card-label">Users</div></div>
+      <div class="nav-card" style="border-left-color:#7c3aed;" onclick="showPage('nodes')"><div class="nav-card-icon">🖥️</div><div class="nav-card-label">Nodes</div></div>
+      <div class="nav-card" style="border-left-color:#15803d;" onclick="showPage('routes')"><div class="nav-card-icon">🛣️</div><div class="nav-card-label">Routes</div></div>
+      <div class="nav-card" style="border-left-color:#c2410c;" onclick="showPage('acl')"><div class="nav-card-icon">📋</div><div class="nav-card-label">ACL Editor</div></div>
+      <div class="nav-card" style="border-left-color:#b91c1c;" onclick="showPage('dns')"><div class="nav-card-icon">🌐</div><div class="nav-card-label">DNS</div></div>
+      <div class="nav-card" style="border-left-color:#374151;" onclick="showPage('settings')"><div class="nav-card-icon">⚙️</div><div class="nav-card-label">Settings</div></div>
+    </div>`;
+}
+
+// ── USERS ──────────────────────────────────────────────────────────────────
+function renderUsers() {
+  const rows = USERS.map(u => `
+    <tr>
+      <td><strong>${u.name}</strong></td>
+      <td style="color:var(--text2);">${u.email}</td>
+      <td><span class="badge ${u.role==='super_admin'?'badge-red':u.role==='group_admin'?'badge-amber':'badge-blue'}">${u.role}</span></td>
+      <td>${u.nodes}</td>
+      <td>
+        <button class="btn btn-sm btn-secondary" onclick="demoAction('Edit user ${u.name}')">✏️ Edit</button>
+        <button class="btn btn-sm btn-danger" onclick="demoAction('Delete user ${u.name}')">🗑</button>
+      </td>
+    </tr>`).join('');
+  return `
+    <div class="page-header">
+      <div class="page-title">Users</div>
+      <div style="display:flex;gap:0.5rem;">
+        <input class="search-input" placeholder="🔍 Search users..." oninput="demoAction('Searching...')"/>
+        <button class="btn btn-success" onclick="demoAction('Create User form would open')">➕ New User</button>
+      </div>
+    </div>
+    <div class="table-wrap">
+      <table><thead><tr><th>Name</th><th>Email</th><th>Role</th><th>Nodes</th><th>Actions</th></tr></thead>
+      <tbody>${rows}</tbody></table>
+    </div>`;
+}
+
+// ── NODES ──────────────────────────────────────────────────────────────────
+function renderNodes() {
+  const rows = NODES.map(n => `
+    <tr>
+      <td><strong>${n.name}</strong></td>
+      <td style="color:var(--text2);font-size:0.8rem;">${n.hostname}</td>
+      <td>${n.user}</td>
+      <td style="font-family:monospace;font-size:0.8rem;color:#86efac;">${n.ip}</td>
+      <td><span class="badge ${n.online?'badge-green':'badge-red'}">${n.online?'🟢 Online':'🔴 Offline'}</span></td>
+      <td style="color:var(--text2);font-size:0.8rem;">${n.os}</td>
+      <td>
+        <button class="btn btn-sm btn-secondary" onclick="demoAction('Rename ${n.name}')">✏️</button>
+        <button class="btn btn-sm btn-warning" onclick="demoAction('Expire ${n.name}')">⏱</button>
+        <button class="btn btn-sm btn-danger" onclick="demoAction('Delete ${n.name}')">🗑</button>
+      </td>
+    </tr>`).join('');
+  return `
+    <div class="page-header">
+      <div class="page-title">Nodes</div>
+      <div style="display:flex;gap:0.5rem;">
+        <input class="search-input" placeholder="🔍 Search nodes..."/>
+        <button class="btn btn-success" onclick="demoAction('Deploy Wizard would open')">🚀 Deploy</button>
+      </div>
+    </div>
+    <div class="table-wrap">
+      <table><thead><tr><th>Name</th><th>Hostname</th><th>User</th><th>IP</th><th>Status</th><th>OS</th><th>Actions</th></tr></thead>
+      <tbody>${rows}</tbody></table>
+    </div>`;
+}
+
+// ── ROUTES ─────────────────────────────────────────────────────────────────
+function renderRoutes() {
+  const rows = ROUTES.map(r => `
+    <tr>
+      <td><strong>${r.node}</strong></td>
+      <td style="font-family:monospace;color:#86efac;">${r.prefix}</td>
+      <td><span class="badge ${r.enabled?'badge-green':'badge-red'}">${r.enabled?'Enabled':'Disabled'}</span></td>
+      <td><span class="badge badge-blue">${r.advertised?'Advertised':'Not Advertised'}</span></td>
+      <td>
+        <button class="btn btn-sm ${r.enabled?'btn-danger':'btn-success'}" onclick="demoAction('Toggle route ${r.prefix}')">${r.enabled?'Disable':'Enable'}</button>
+      </td>
+    </tr>`).join('');
+  return `
+    <div class="page-header"><div class="page-title">Routes</div></div>
+    <div class="table-wrap">
+      <table><thead><tr><th>Node</th><th>Prefix</th><th>Status</th><th>Advertised</th><th>Action</th></tr></thead>
+      <tbody>${rows}</tbody></table>
+    </div>`;
+}
+
+// ── ACL ────────────────────────────────────────────────────────────────────
+function renderAcl() {
+  const tabs = ['👤 Users','👥 Groups','🖥️ Hosts','🔒 Policies','🔐 SSH','⚙️ Config'];
+  const tabsHtml = tabs.map((t,i) => `<button class="tab-btn ${aclTab===i?'active':''}" onclick="setAclTab(${i})">${t}</button>`).join('');
+  const content = [renderAclUsers, renderAclGroups, renderAclHosts, renderAclPolicies, renderAclSsh, renderAclConfig][aclTab]();
+  return `
+    <div class="page-header"><div class="page-title">ACL Editor</div>
+      <div style="display:flex;gap:0.5rem;">
+        <button class="btn btn-primary" onclick="demoAction('ACL saved successfully')">💾 Save ACL</button>
+      </div>
+    </div>
+    <div class="acl-tabs">${tabsHtml}</div>
+    ${content}`;
+}
+function setAclTab(i){aclTab=i;render();}
+
+function renderAclUsers(){
+  const rows = USERS.map(u=>`
+    <tr><td><strong style="color:#60a5fa;">${u.name}</strong></td>
+    <td>${u.email}</td>
+    <td><select style="background:var(--bg3);border:1px solid var(--border);border-radius:4px;padding:3px 6px;color:var(--text);font-size:0.8rem;" onchange="demoAction('Role updated')">
+      <option ${u.role==='super_admin'?'selected':''}>super_admin</option>
+      <option ${u.role==='group_admin'?'selected':''}>group_admin</option>
+      <option ${u.role==='user'?'selected':''}>user</option>
+    </select></td>
+    <td><input style="background:var(--bg3);border:1px solid var(--border);border-radius:4px;padding:3px 6px;color:var(--text);font-size:0.8rem;width:150px;" value="${u.role==='super_admin'?'*':u.role==='group_admin'?'@company.com':''}" placeholder="@domain.com" onchange="demoAction('Domains updated')"/></td>
+    <td><button class="btn btn-sm btn-danger" onclick="demoAction('Remove user ${u.name} from mapping')">Remove</button></td></tr>`).join('');
+  return `<div class="table-wrap"><table><thead><tr><th>Username</th><th>Email</th><th>Role</th><th>Manageable Domains</th><th></th></tr></thead><tbody>${rows}</tbody></table></div>`;
+}
+function renderAclGroups(){
+  const groups=[{name:'group:admins',members:['alice@acmecorp.com','david@homelab.net']},{name:'group:company',members:['bob@acmecorp.com','carol@acmecorp.com','emma@acmecorp.com']}];
+  const html=groups.map(g=>`
+    <div class="section-card">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:0.75rem;">
+        <strong style="font-size:1.05rem;">${g.name.replace('group:','')}</strong>
+        <div style="display:flex;gap:0.5rem;">
+          <button class="btn btn-sm btn-secondary" onclick="demoAction('Rename group')">✏️ Rename</button>
+          <button class="btn btn-sm btn-danger" onclick="demoAction('Delete group')">🗑️ Delete</button>
+        </div>
+      </div>
+      <div style="display:flex;flex-wrap:wrap;gap:0.4rem;margin-bottom:0.75rem;">
+        ${g.members.map(m=>`<span class="badge badge-blue">${m} <button style="background:none;border:none;color:#93c5fd;cursor:pointer;padding:0 2px;" onclick="demoAction('Remove member')">✕</button></span>`).join('')}
+      </div>
+      <div style="display:flex;gap:0.5rem;">
+        <select style="flex:1;background:var(--bg3);border:1px solid var(--border);border-radius:0.375rem;padding:0.4rem 0.6rem;color:var(--text);font-size:0.875rem;">
+          <option>Select a user...</option>
+          ${USERS.map(u=>`<option>${u.name} (${u.email})</option>`).join('')}
+        </select>
+        <button class="btn btn-success" onclick="demoAction('Member added to group')">➕ Add</button>
+      </div>
+    </div>`).join('');
+  return `<button class="btn btn-success" style="margin-bottom:1rem;" onclick="demoAction('Create Group form would open')">➕ Create Group</button>${html}`;
+}
+function renderAclHosts(){
+  const hosts=[{name:'fileserver01',ip:'192.168.1.10'},{name:'homeassist',ip:'192.168.1.20'},{name:'dns1',ip:'1.1.1.1'}];
+  const rows=hosts.map(h=>`<tr><td><input style="background:var(--bg3);border:1px solid var(--border);border-radius:4px;padding:4px 8px;color:var(--text);font-size:0.85rem;" value="${h.name}" onchange="demoAction('Host name updated')"/></td>
+    <td><input style="background:var(--bg3);border:1px solid var(--border);border-radius:4px;padding:4px 8px;color:var(--text);font-family:monospace;font-size:0.85rem;" value="${h.ip}" onchange="demoAction('Host IP updated')"/></td>
+    <td><button class="btn btn-sm btn-danger" onclick="demoAction('Host deleted')">🗑</button></td></tr>`).join('');
+  return `<div class="table-wrap"><table><thead><tr><th>Hostname</th><th>IP / CIDR</th><th></th></tr></thead><tbody>${rows}</tbody></table>
+    <button class="btn btn-success" style="margin-top:1rem;" onclick="demoAction('New host row added')">➕ Add Host</button></div>`;
+}
+function renderAclPolicies(){
+  const policies=[
+    {proto:'Any',src:'group:admins',dst:'*',ports:'*'},
+    {proto:'TCP',src:'group:company',dst:'fileserver01',ports:'443, 80'},
+    {proto:'UDP',src:'*',dst:'dns1',ports:'53'},
+  ];
+  const rows=policies.map((p,i)=>`<tr>
+    <td><select style="background:var(--bg3);border:1px solid var(--border);border-radius:4px;padding:4px 6px;color:var(--text);font-size:0.8rem;" onchange="demoAction('Protocol updated')"><option ${p.proto==='Any'?'selected':''}>Any</option><option ${p.proto==='TCP'?'selected':''}>TCP</option><option ${p.proto==='UDP'?'selected':''}>UDP</option><option>ICMP</option></select></td>
+    <td><input style="background:var(--bg3);border:1px solid var(--border);border-radius:4px;padding:4px 8px;color:var(--text);font-size:0.85rem;width:140px;" value="${p.src}"/></td>
+    <td><input style="background:var(--bg3);border:1px solid var(--border);border-radius:4px;padding:4px 8px;color:var(--text);font-size:0.85rem;width:140px;" value="${p.dst}"/></td>
+    <td><input style="background:var(--bg3);border:1px solid var(--border);border-radius:4px;padding:4px 8px;color:var(--text);font-size:0.85rem;width:100px;" value="${p.ports}"/></td>
+    <td><button class="btn btn-sm btn-danger" onclick="demoAction('Policy deleted')">🗑</button></td></tr>`).join('');
+  return `<div class="table-wrap"><table><thead><tr><th>Protocol</th><th>Source</th><th>Destination</th><th>Ports</th><th></th></tr></thead><tbody>${rows}</tbody></table>
+    <button class="btn btn-success" style="margin-top:1rem;" onclick="demoAction('New policy row added')">➕ Add Policy</button></div>`;
+}
+function renderAclSsh(){
+  return `<div class="section-card"><div class="section-label">SSH Rules</div>
+    <div style="display:flex;flex-direction:column;gap:0.75rem;">
+      <div style="display:flex;gap:0.75rem;align-items:center;">
+        <input style="flex:1;background:var(--bg3);border:1px solid var(--border);border-radius:4px;padding:6px 10px;color:var(--text);font-size:0.85rem;" placeholder="Source (e.g. group:admins)" value="group:admins"/>
+        <span style="color:var(--text3);">→</span>
+        <input style="flex:1;background:var(--bg3);border:1px solid var(--border);border-radius:4px;padding:6px 10px;color:var(--text);font-size:0.85rem;" placeholder="Destination" value="*"/>
+        <input style="width:120px;background:var(--bg3);border:1px solid var(--border);border-radius:4px;padding:6px 10px;color:var(--text);font-size:0.85rem;" placeholder="Users" value="*"/>
+        <button class="btn btn-sm btn-danger" onclick="demoAction('SSH rule deleted')">🗑</button>
+      </div>
+    </div>
+    <button class="btn btn-success" style="margin-top:1rem;" onclick="demoAction('New SSH rule added')">➕ Add Rule</button></div>`;
+}
+function renderAclConfig(){
+  const json=JSON.stringify({acls:[{action:"accept",src:["group:admins"],dst:["*:*"]},{action:"accept",src:["group:company"],dst:["fileserver01:443","dns1:53"]}],groups:{"group:admins":["alice@acmecorp.com"],"group:company":["bob@acmecorp.com","carol@acmecorp.com"]},hosts:{fileserver01:"192.168.1.10",dns1:"1.1.1.1"}},null,2);
+  return `<div class="section-card"><div class="section-label">Raw JSON — Edit directly</div>
+    <textarea style="width:100%;min-height:320px;background:var(--bg4);border:1px solid var(--border);border-radius:0.5rem;padding:1rem;color:#86efac;font-family:monospace;font-size:0.8rem;resize:vertical;" onchange="demoAction('Config edited')">${json}</textarea>
+    <div style="margin-top:0.75rem;display:flex;gap:0.5rem;">
+      <button class="btn btn-primary" onclick="demoAction('Config validated — no errors found')">✓ Validate</button>
+      <button class="btn btn-success" onclick="demoAction('Config applied to Headscale')">Apply Config</button>
+    </div></div>`;
+}
+
+// ── DNS ────────────────────────────────────────────────────────────────────
+function renderDns(){
+  return `
+    <div class="page-header"><div class="page-title">DNS</div>
+      <button class="btn btn-success" onclick="demoAction('DNS settings saved')">💾 Save DNS</button>
+    </div>
+    <div class="section-card">
+      <div class="section-label">Tailnet Settings</div>
+      <div class="dns-field"><label class="dns-label">Tailnet Name</label><input class="dns-input" value="acmecorp.ts.net" onchange="demoAction('Tailnet name updated')"/></div>
+      <div class="toggle-row"><div><div style="font-weight:600;">Magic DNS</div><div style="font-size:0.8rem;color:var(--text2);">Resolve node names automatically</div></div>
+        <button class="toggle-pill ${dnsToggles.magicDns?'on':'off'}" onclick="dnsToggles.magicDns=!dnsToggles.magicDns;render();toast('Magic DNS '+(dnsToggles.magicDns?'enabled':'disabled'),'success')"></button></div>
+      <div class="toggle-row"><div><div style="font-weight:600;">HTTPS Certificates</div><div style="font-size:0.8rem;color:var(--text2);">Enable automatic HTTPS for nodes</div></div>
+        <button class="toggle-pill ${dnsToggles.https?'on':'off'}" onclick="dnsToggles.https=!dnsToggles.https;render();toast('HTTPS '+(dnsToggles.https?'enabled':'disabled'),'success')"></button></div>
+    </div>
+    <div class="section-card">
+      <div class="section-label">Nameservers</div>
+      <div class="dns-field"><label class="dns-label">Global Nameservers</label>
+        <input class="dns-input" value="1.1.1.1, 8.8.8.8" onchange="demoAction('Nameservers updated')"/></div>
+    </div>
+    <div class="section-card">
+      <div class="section-label">Split DNS</div>
+      <div class="toggle-row"><div><div style="font-weight:600;">Enable Split DNS</div><div style="font-size:0.8rem;color:var(--text2);">Route specific domains to custom nameservers</div></div>
+        <button class="toggle-pill ${dnsToggles.splitDns?'on':'off'}" onclick="dnsToggles.splitDns=!dnsToggles.splitDns;render()"></button></div>
+    </div>`;
+}
+
+// ── SETTINGS ───────────────────────────────────────────────────────────────
+function renderSettings(){
+  return `
+    <div class="page-header"><div class="page-title">Settings</div></div>
+    <div class="section-label" style="margin-bottom:0.75rem;">Admin Tools</div>
+    <div class="setting-row" style="cursor:pointer;" onclick="showPage('nodes');demoAction('Navigate to Pre-Auth Keys')">
+      <div style="display:flex;align-items:center;">
+        <span class="setting-icon">🔐</span>
+        <div><div class="setting-title">Pre-Auth Keys</div><div class="setting-desc">Create and manage node registration keys</div></div>
+      </div>
+      <button class="btn btn-secondary">Manage →</button>
+    </div>
+    <div class="setting-row" style="cursor:pointer;" onclick="demoAction('Audit log would show')">
+      <div style="display:flex;align-items:center;">
+        <span class="setting-icon">📜</span>
+        <div><div class="setting-title">Audit Log</div><div class="setting-desc">View all admin actions and login history</div></div>
+      </div>
+      <button class="btn btn-secondary">View →</button>
+    </div>
+    <div class="section-label" style="margin:1.25rem 0 0.75rem;">Registration</div>
+    <div class="setting-row" style="border-color:#10b981;">
+      <div style="display:flex;align-items:center;">
+        <span class="setting-icon">✅</span>
+        <div><div class="setting-title">Registered</div><div style="font-size:0.8rem;margin-top:0.2rem;color:#10b981;">Licensed to: <strong>DEMO</strong></div></div>
+      </div>
+      <button class="btn btn-secondary" onclick="demoAction('Unregister would clear registration.json')">Unregister</button>
+    </div>
+    <div class="section-label" style="margin:1.25rem 0 0.75rem;">System</div>
+    <div class="setting-row">
+      <div style="display:flex;align-items:center;">
+        <span class="setting-icon">🖥️</span>
+        <div><div class="setting-title">HS React</div><div class="setting-desc">Version <span style="color:#10b981;font-weight:700;">v0.7.107</span> · <a href="https://github.com/HybridRCG/headscale-admin-react" target="_blank" style="color:#60a5fa;">GitHub ↗</a></div></div>
+      </div>
+      <div style="color:var(--text3);font-size:0.75rem;">© 2026 HybridRCG</div>
+    </div>`;
+}
+
+// ── INIT ───────────────────────────────────────────────────────────────────
+render();
+toast('Welcome to the HS React demo! All actions are simulated.', 'info');
+setTimeout(()=>toast('💡 Click any button to see what would happen in the real app','demo'),1500);
+</script>
+</body>
+</html>

@@ -8,6 +8,10 @@ A production-ready, role-based administration dashboard for [Headscale](https://
 
 [![Buy Me A Coffee](https://www.buymeacoffee.com/assets/img/custom_images/orange_img.png)](https://buymeacoffee.com/hybridrcg)
 
+**[🌐 Website](https://hs.groblers.co.uk/hsreact)** · **[🎭 Live Demo](https://hs.groblers.co.uk/hsreact/demo)** · **[⭐ GitHub](https://github.com/HybridRCG/headscale-admin-react)**
+
+> 🎭 The live demo uses fictional data and runs entirely in the browser — no real Headscale instance, no data saved.
+
 ---
 
 ## Quick Start — Docker Only
