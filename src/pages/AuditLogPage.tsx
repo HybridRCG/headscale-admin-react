@@ -24,6 +24,20 @@ export const AuditLogPage: React.FC = () => {
 
   useEffect(() => { fetchLogs(); }, []);
 
+  const handleClear = async () => {
+    if (!window.confirm('Clear ALL audit log entries? This cannot be undone.')) return;
+    try {
+      await axios.delete('/admin/api/headscale/audit-log');
+      setLogs([]);
+    } catch (e) {
+      alert('Failed to clear audit log');
+    }
+  };
+
+  const handleExport = () => {
+    window.open('/admin/api/headscale/audit-log/export', '_blank');
+  };
+
   const fetchLogs = async () => {
     setLoading(true);
     try {
@@ -69,6 +83,8 @@ export const AuditLogPage: React.FC = () => {
           {actions.map(a => <option key={a} value={a}>{a === 'all' ? 'All Actions' : a}</option>)}
         </select>
         <button className="btn btn-primary" onClick={fetchLogs} disabled={loading}>🔄 Refresh</button>
+        <button className="btn btn-success" onClick={handleExport} disabled={logs.length === 0}>📥 Export CSV</button>
+        <button className="btn btn-danger" onClick={handleClear} disabled={logs.length === 0}>🗑 Clear Log</button>
       </div>
 
       {loading ? <div className="loading">Loading...</div> : filtered.length === 0 ? (

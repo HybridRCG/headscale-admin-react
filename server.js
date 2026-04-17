@@ -663,6 +663,38 @@ function logAudit(actor, action, target, details) {
   writeAuditLog(entries);
 }
 
+
+app.delete('/api/headscale/audit-log', authenticateToken, (req, res) => {
+  if (req.user?.role !== 'super_admin') return res.status(403).json({ message: 'Forbidden' });
+  try {
+    fs.writeFileSync(AUDIT_LOG_PATH, JSON.stringify([], null, 2));
+    logAudit(req.user.username, 'clear', 'audit log', 'all entries cleared');
+    res.json({ success: true });
+  } catch (e) {
+    res.status(500).json({ message: e.message });
+  }
+});
+
+app.get('/api/headscale/audit-log/export', authenticateToken, (req, res) => {
+  if (req.user?.role !== 'super_admin') return res.status(403).json({ message: 'Forbidden' });
+  try {
+    const logs = readAuditLog();
+    const csv = [
+      'Timestamp,Actor,Action,Target,Details',
+      ...logs.map(l => [
+        l.timestamp, l.actor, l.action,
+        `"${(l.target||'').replace(/"/g,'""')}"`,
+        `"${(l.details||'').replace(/"/g,'""')}"`
+      ].join(','))
+    ].join('\n');
+    res.setHeader('Content-Type', 'text/csv');
+    res.setHeader('Content-Disposition', `attachment; filename="audit-log-${new Date().toISOString().split('T')[0]}.csv"`);
+    res.send(csv);
+  } catch (e) {
+    res.status(500).json({ message: e.message });
+  }
+});
+
 app.get('/api/headscale/audit-log', authenticateToken, (req, res) => {
   const entries = readAuditLog();
   // Filter by manageable_domains for non-super_admins
