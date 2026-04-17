@@ -46,22 +46,28 @@
 }
 
 .footer-coffee {
-  display: flex;
+  display: inline-flex;
   align-items: center;
+  gap: 0.4rem;
+  background-color: #FFDD00;
+  color: #000000;
+  padding: 0.45rem 1.1rem;
+  border-radius: 0.5rem;
+  font-weight: 800;
+  font-size: 0.95rem;
   text-decoration: none;
-  transition: opacity 0.15s, transform 0.15s;
+  white-space: nowrap;
   flex-shrink: 0;
-}
-
-.footer-coffee img {
-  height: 38px;
-  border-radius: 6px;
-  display: block;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.25);
+  border: 2px solid #e6c800;
+  transition: opacity 0.15s, transform 0.15s, box-shadow 0.15s;
+  letter-spacing: 0.01em;
 }
 
 .footer-coffee:hover {
-  opacity: 0.88;
+  opacity: 0.92;
   transform: scale(1.04);
+  box-shadow: 0 4px 12px rgba(0,0,0,0.3);
 }
 
 .footer-logout {
