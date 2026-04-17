@@ -74,13 +74,13 @@ export const HomePage: React.FC = () => {
     <div className="page-container">
 
       {/* Stats bar */}
-      <div style={{ display: 'flex', gap: '1rem', marginBottom: '2rem', flexWrap: 'wrap' }}>
+      <div style={{ display: 'flex', gap: '0.75rem', marginBottom: '1.5rem', flexWrap: 'wrap' }}>
         {[
           { label: 'Users', value: stats.totalUsers, color: '#3b82f6' },
             { label: 'Nodes Online', value: stats.onlineNodes, color: '#10b981' },
           { label: 'Nodes Offline', value: stats.offlineNodes, color: '#ef4444' },
         ].map(s => (
-          <div key={s.label} style={{ flex: 1, minWidth: '120px', padding: '1rem', backgroundColor: '#1f2937', borderRadius: '0.5rem', border: `1px solid #374151`, textAlign: 'center' }}>
+          <div key={s.label} style={{ flex: '1 1 120px', minWidth: '100px', padding: '0.75rem 1rem', backgroundColor: '#1f2937', borderRadius: '0.5rem', border: '1px solid #374151', textAlign: 'center' }}>
             <div style={{ fontSize: '2rem', fontWeight: '800', color: s.color }}>{loading ? '...' : s.value}</div>
             <div style={{ fontSize: '0.75rem', color: '#9ca3af', marginTop: '0.25rem' }}>{s.label}</div>
           </div>

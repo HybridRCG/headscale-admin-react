@@ -158,3 +158,17 @@
 .HomePage.css {
   /* See Pages.css for home page styles */
 }
+
+@media (max-width: 480px) {
+  .login-container {
+    padding: 1rem;
+    align-items: flex-start;
+    padding-top: 2rem;
+  }
+  .login-card {
+    width: 100% !important;
+    max-width: 100% !important;
+    padding: 1.5rem 1.25rem !important;
+    border-radius: 0.5rem !important;
+  }
+}

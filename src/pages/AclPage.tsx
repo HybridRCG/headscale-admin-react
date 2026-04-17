@@ -74,7 +74,7 @@ export const AclPage: React.FC = () => {
   return (
     <div className="page-container">
       {error && <div className="error-box">{error}</div>}
-      <div className="acl-tabs" style={{ display: 'flex', alignItems: 'center', gap: '0.25rem', flexWrap: 'wrap', position: 'sticky', top: 0, zIndex: 9 }}>
+      <div className="acl-tabs" style={{ display: 'flex', alignItems: 'center', gap: '0.25rem', flexWrap: 'nowrap', overflowX: 'auto', WebkitOverflowScrolling: 'touch', position: 'sticky', top: 0, zIndex: 9, scrollbarWidth: 'none' }}>
         {visibleTabs.map((tab, idx) => (
           <button
             key={idx}

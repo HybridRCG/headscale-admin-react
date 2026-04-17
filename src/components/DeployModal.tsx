@@ -146,7 +146,7 @@ export const DeployModal: React.FC<Props> = ({ onClose, visibleUsers }) => {
 
   return (
     <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(0,0,0,0.7)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000 }}>
-      <div style={{ backgroundColor: '#111827', border: '1px solid #374151', borderRadius: '0.75rem', width: '95%', maxWidth: '1100px', maxHeight: '90vh', overflowY: 'auto', color: '#d1d5db' }}>
+      <div style={{ backgroundColor: '#111827', border: '1px solid #374151', borderRadius: '0.75rem', width: '95vw', maxWidth: '1100px', maxHeight: '90vh', overflowY: 'auto', color: '#d1d5db' }}>
 
         {/* Header + command - sticky */}
         <div style={{ padding: '1.5rem', borderBottom: '1px solid #374151', position: 'sticky', top: 0, backgroundColor: '#111827', zIndex: 10 }}>
