@@ -30,8 +30,13 @@ export const SettingsPage: React.FC = () => {
   const [regError, setRegError] = useState('');
   const [regLoading, setRegLoading] = useState(false);
   const [showInput, setShowInput] = useState(false);
+  const [instances, setInstances] = useState<{payload: string; registeredAt: string; domain: string}[]>([]);
+  const [showInstances, setShowInstances] = useState(false);
 
   useEffect(() => {
+    axios.get(`${API}/instances`).then(r => {
+      if (Array.isArray(r.data)) setInstances(r.data);
+    }).catch(() => {});
     axios.get(`${API}/registration`).then(r => {
       if (r.data.registered) {
         setRegistered(true);
@@ -133,6 +138,50 @@ export const SettingsPage: React.FC = () => {
                 {regLoading ? 'Validating...' : 'Register'}
               </button>
               {regError && <div style={{ width: '100%', color: '#ef4444', fontSize: '0.8rem', marginTop: '0.25rem' }}>❌ {regError}</div>}
+            </div>
+          )}
+        </div>
+      </div>
+
+      {/* Registered Instances */}
+      <div style={{ marginBottom: '2rem' }}>
+        <div style={{ color: '#6b7280', fontSize: '0.75rem', fontWeight: '600', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '0.75rem' }}>Registered Instances</div>
+        <div style={{ padding: '1.25rem 1.5rem', backgroundColor: '#1f2937', borderRadius: '0.5rem', border: '1px solid #374151' }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: showInstances && instances.length > 0 ? '1rem' : '0' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
+              <span style={{ fontSize: '1.75rem' }}>🌐</span>
+              <div>
+                <div style={{ color: '#f3f4f6', fontWeight: '600', fontSize: '0.95rem' }}>{instances.length} Registered Instance{instances.length !== 1 ? 's' : ''}</div>
+                <div style={{ color: '#9ca3af', fontSize: '0.8rem', marginTop: '0.2rem' }}>Instances that have registered with a license key</div>
+              </div>
+            </div>
+            {instances.length > 0 && (
+              <button onClick={() => setShowInstances(!showInstances)}
+                style={{ padding: '0.5rem 1rem', backgroundColor: '#374151', color: '#d1d5db', border: '1px solid #4b5563', borderRadius: '0.375rem', fontWeight: '600', fontSize: '0.875rem', cursor: 'pointer' }}>
+                {showInstances ? 'Hide' : 'View'}
+              </button>
+            )}
+          </div>
+          {showInstances && instances.length > 0 && (
+            <div style={{ overflowX: 'auto' }}>
+              <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.85rem' }}>
+                <thead>
+                  <tr style={{ borderBottom: '1px solid #374151' }}>
+                    <th style={{ padding: '0.5rem 0.75rem', textAlign: 'left', color: '#9ca3af' }}>Client</th>
+                    <th style={{ padding: '0.5rem 0.75rem', textAlign: 'left', color: '#9ca3af' }}>Domain</th>
+                    <th style={{ padding: '0.5rem 0.75rem', textAlign: 'left', color: '#9ca3af' }}>Registered</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {instances.map((inst, i) => (
+                    <tr key={i} style={{ borderBottom: '1px solid #1f2937' }}>
+                      <td style={{ padding: '0.5rem 0.75rem', color: '#f3f4f6', fontWeight: '600' }}>{inst.payload.replace(/-\d{4}$/, '').replace(/-/g, ' ')}</td>
+                      <td style={{ padding: '0.5rem 0.75rem', color: '#60a5fa' }}>{inst.domain}</td>
+                      <td style={{ padding: '0.5rem 0.75rem', color: '#9ca3af' }}>{new Date(inst.registeredAt).toLocaleDateString()}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
             </div>
           )}
         </div>

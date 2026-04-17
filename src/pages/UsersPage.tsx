@@ -144,12 +144,20 @@ export const UsersPage: React.FC = () => {
     if (!newUsername.trim()) return;
     try {
       await axios.post('/admin/api/headscale/user/create', { username: newUsername, email: newUserEmail });
-      // Optionally add to users-mapping.json so they can log in immediately
-      if (addToMapping && newUserEmail.trim()) {
+      // Add to users-mapping.json so they can log in immediately
+      if (addToMapping) {
         const mapping = await axios.get('/admin/api/headscale/user-emails');
-        const current = mapping.data || { users: {}, api_key_labels: {} };
-        current.users[newUsername] = { email: newUserEmail, role: newUserRole, manageable_domains: newUserRole === 'group_admin' ? [] : newUserRole === 'super_admin' ? ['*'] : [] };
+        const current = mapping.data && mapping.data.users
+          ? mapping.data
+          : { users: {}, api_key_labels: {} };
+        current.users[newUsername] = {
+          email: newUserEmail || '',
+          role: newUserRole,
+          manageable_domains: newUserRole === 'super_admin' ? ['*'] : newUserRole === 'group_admin' ? [] : []
+        };
         await axios.post('/admin/api/headscale/user-emails', current);
+        // Refresh local email map
+        setUserEmailMap(current.users);
       }
       await fetchUsers();
       setShowCreateUser(false);

@@ -108,6 +108,14 @@ const GroupsTab: React.FC<{ acl: ACL; setAcl: (a: ACL) => void }> = ({ acl, setA
   const [newMember, setNewMember] = useState('');
   const [expandedGroup, setExpandedGroup] = useState<string | null>(null);
   const [editingGroup, setEditingGroup] = useState<string | null>(null);
+  const [mappingUsers, setMappingUsers] = useState<{username: string; email: string}[]>([]);
+
+  useEffect(() => {
+    axios.get(`${API_BASE}/headscale/user-emails`).then(r => {
+      const users = r.data?.users || {};
+      setMappingUsers(Object.entries(users).map(([username, u]: any) => ({ username, email: u.email || '' })));
+    }).catch(() => {});
+  }, []);
 
   const handleCreateGroup = () => {
     if (!newGroup.trim()) return;
@@ -195,7 +203,17 @@ const GroupsTab: React.FC<{ acl: ACL; setAcl: (a: ACL) => void }> = ({ acl, setA
                 )}
 
                 <div style={{ display: 'flex', gap: '10px' }}>
-                  <input type="email" placeholder="Add member..." value={newMember} onChange={(e) => setNewMember(e.target.value)} onKeyDown={(e) => e.key === 'Enter' && handleAddMember(groupName)} style={{ flex: 1 }} />
+                  {mappingUsers.length > 0 ? (
+                    <select value={newMember} onChange={e => setNewMember(e.target.value)}
+                      style={{ flex: 1, padding: '0.5rem', backgroundColor: '#374151', border: '1px solid #4b5563', borderRadius: '0.375rem', color: '#f3f4f6', fontSize: '0.875rem' }}>
+                      <option value=''>Select a user...</option>
+                      {mappingUsers.map(u => (
+                        <option key={u.username} value={u.email || u.username}>{u.username}{u.email ? ` (${u.email})` : ''}</option>
+                      ))}
+                    </select>
+                  ) : (
+                    <input type="text" placeholder="Add member email..." value={newMember} onChange={(e) => setNewMember(e.target.value)} onKeyDown={(e) => e.key === 'Enter' && handleAddMember(groupName)} style={{ flex: 1 }} />
+                  )}
                   <button onClick={() => handleAddMember(groupName)} className="btn-create">➕ Add</button>
                 </div>
               </div>

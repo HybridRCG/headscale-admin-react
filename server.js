@@ -590,6 +590,13 @@ app.post('/api/headscale/register', authenticateToken, (req, res) => {
   try {
     const reg = { registered: true, key: key.trim(), payload: result.payload, registeredAt: new Date().toISOString() };
     fs.writeFileSync(REGISTRATION_FILE, JSON.stringify(reg, null, 2));
+    // Log to instances file for tracking
+    const instances = readInstances();
+    const existingIdx = instances.findIndex(i => i.payload === result.payload);
+    const instanceEntry = { payload: result.payload, registeredAt: new Date().toISOString(), domain: req.headers.host || 'unknown' };
+    if (existingIdx >= 0) instances[existingIdx] = instanceEntry;
+    else instances.push(instanceEntry);
+    try { fs.writeFileSync(INSTANCES_FILE, JSON.stringify(instances, null, 2)); } catch(e) {}
     logAudit(req.user.username, 'register', 'instance registration', result.payload);
     console.log('[REGISTER] Instance registered:', result.payload);
     res.json({ success: true, payload: result.payload });
@@ -612,6 +619,20 @@ app.post('/api/headscale/unregister', authenticateToken, (req, res) => {
   } catch (e) {
     res.status(500).json({ message: 'Failed to unregister: ' + e.message });
   }
+});
+
+
+// ── Registered Instances Log ────────────────────────────────────────────────
+const INSTANCES_FILE = '/etc/headscale/registered-instances.json';
+
+function readInstances() {
+  try { return JSON.parse(fs.readFileSync(INSTANCES_FILE, 'utf8')); }
+  catch { return []; }
+}
+
+app.get('/api/headscale/instances', authenticateToken, (req, res) => {
+  if (req.user?.role !== 'super_admin') return res.status(403).json({ message: 'Forbidden' });
+  res.json(readInstances());
 });
 
 // ── Audit Log ──────────────────────────────────────────────────────────────
