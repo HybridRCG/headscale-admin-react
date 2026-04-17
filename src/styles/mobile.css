@@ -1,0 +1,243 @@
+/* ═══════════════════════════════════════════════════════════════
+   HS React — Mobile Responsive Overrides
+   Breakpoints: 768px (tablet), 480px (phone)
+   ═══════════════════════════════════════════════════════════════ */
+
+/* ── Global ────────────────────────────────────────────────────── */
+@media (max-width: 768px) {
+  body { font-size: 15px; }
+
+  .page-container {
+    padding: 1rem 0.75rem 1.5rem 0.75rem;
+  }
+
+  /* Tables — horizontal scroll on small screens */
+  .table-wrapper, table {
+    display: block;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    width: 100%;
+  }
+
+  /* Page headers — stack vertically */
+  .page-header {
+    flex-direction: column;
+    align-items: flex-start !important;
+    gap: 0.75rem !important;
+  }
+
+  /* Toolbar rows — wrap */
+  .toolbar, [style*="display: flex"][style*="gap"] {
+    flex-wrap: wrap;
+  }
+
+  /* Home page grid — 2 columns on tablet */
+  .summary-grid {
+    grid-template-columns: repeat(2, 1fr) !important;
+  }
+
+  /* Stats bar — 2 per row */
+  .stats-bar {
+    flex-wrap: wrap;
+  }
+
+  /* Modals — full width with margin */
+  [style*="maxWidth: '560px'"],
+  [style*="max-width: 560px"],
+  [style*="maxWidth: '600px'"] {
+    width: 95% !important;
+    max-width: 95vw !important;
+    margin: 1rem !important;
+    padding: 1.25rem !important;
+  }
+}
+
+@media (max-width: 480px) {
+  body { font-size: 14px; }
+
+  .page-container {
+    padding: 0.75rem 0.5rem 1rem 0.5rem;
+  }
+
+  /* Home page grid — 1 column on phone */
+  .summary-grid {
+    grid-template-columns: 1fr !important;
+  }
+
+  /* Stats bar — 1 per row */
+  .stats-bar > div {
+    flex: 1 1 45% !important;
+    min-width: 120px !important;
+  }
+
+  /* Buttons — full width in stacked contexts */
+  .btn-full-mobile {
+    width: 100%;
+  }
+
+  /* Modals — nearly full screen */
+  [style*="maxWidth: '560px'"],
+  [style*="max-width: 560px"],
+  [style*="maxWidth: '600px'"] {
+    width: 98% !important;
+    max-width: 98vw !important;
+    margin: 0.5rem !important;
+    padding: 1rem !important;
+  }
+}
+
+/* ── Footer — mobile ────────────────────────────────────────────── */
+@media (max-width: 768px) {
+  .footer-container {
+    padding: 0.5rem 1rem;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+    justify-content: space-between;
+  }
+
+  .footer-user-info {
+    flex: 1;
+    min-width: 0;
+  }
+
+  .user-name {
+    font-size: 0.8rem;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    max-width: 150px;
+  }
+
+  .user-role {
+    font-size: 0.7rem;
+    padding: 0.15rem 0.4rem;
+  }
+
+  .footer-coffee img {
+    height: 28px !important;
+  }
+
+  .footer-logout {
+    padding: 0.4rem 0.75rem;
+    font-size: 0.8rem;
+  }
+
+  body { padding-bottom: 70px; }
+}
+
+@media (max-width: 480px) {
+  .footer-container {
+    padding: 0.5rem 0.75rem;
+  }
+
+  /* Hide coffee button on very small screens to save space */
+  .footer-coffee {
+    display: none !important;
+  }
+
+  .user-name {
+    max-width: 120px;
+    font-size: 0.75rem;
+  }
+
+  body { padding-bottom: 60px; }
+}
+
+/* ── ACL Editor tabs — horizontal scroll ───────────────────────── */
+@media (max-width: 768px) {
+  .acl-tabs {
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    flex-wrap: nowrap !important;
+    gap: 0.25rem !important;
+  }
+
+  .acl-tabs .tab {
+    white-space: nowrap;
+    padding: 0.5rem 0.75rem !important;
+    font-size: 0.8rem !important;
+  }
+
+  /* ACL policy rows — stack */
+  .policy-row {
+    flex-wrap: wrap;
+  }
+}
+
+/* ── Nodes page ─────────────────────────────────────────────────── */
+@media (max-width: 768px) {
+  /* Node action buttons — smaller on mobile */
+  .node-actions {
+    flex-wrap: wrap;
+    gap: 0.25rem;
+  }
+
+  .node-actions .btn {
+    padding: 0.3rem 0.5rem;
+    font-size: 0.75rem;
+  }
+}
+
+/* ── Deploy wizard modal ─────────────────────────────────────────── */
+@media (max-width: 768px) {
+  .deploy-modal {
+    width: 95vw !important;
+    max-width: 95vw !important;
+    max-height: 90vh;
+    overflow-y: auto;
+  }
+
+  .deploy-modal pre,
+  .deploy-modal code {
+    font-size: 0.7rem !important;
+    word-break: break-all;
+  }
+}
+
+/* ── Pre-Auth Keys toolbar ───────────────────────────────────────── */
+@media (max-width: 768px) {
+  .preauthkeys-toolbar {
+    flex-wrap: wrap;
+    gap: 0.5rem;
+  }
+
+  .preauthkeys-toolbar select {
+    flex: 1;
+    min-width: 120px;
+  }
+}
+
+/* ── Users create form ───────────────────────────────────────────── */
+@media (max-width: 768px) {
+  .create-user-row {
+    flex-wrap: wrap;
+    gap: 0.5rem !important;
+  }
+
+  .create-user-row > div {
+    flex: 1 1 150px;
+  }
+
+  .create-user-row input,
+  .create-user-row select {
+    width: 100% !important;
+  }
+}
+
+/* ── Login page ─────────────────────────────────────────────────── */
+@media (max-width: 480px) {
+  .login-card {
+    margin: 1rem;
+    padding: 1.5rem 1.25rem;
+    width: calc(100% - 2rem) !important;
+  }
+}
+
+/* ── Settings cards ─────────────────────────────────────────────── */
+@media (max-width: 480px) {
+  /* Stack settings card content */
+  [style*="justify-content: space-between"][style*="align-items: center"] {
+    flex-wrap: wrap;
+    gap: 0.75rem;
+  }
+}

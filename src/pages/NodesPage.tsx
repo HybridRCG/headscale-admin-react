@@ -242,8 +242,8 @@ export const NodesPage: React.FC = () => {
         <button className="btn btn-success" onClick={() => setDeployModal(true)} style={{ whiteSpace: 'nowrap' }}>+ Deploy</button>
       </div>
 
-      <div style={{ overflowX: 'auto' }}>
-        <table style={{ width: '100%', borderCollapse: 'collapse', color: '#d1d5db', fontSize: '0.875rem' }}>
+      <div style={{ overflowX: 'auto', WebkitOverflowScrolling: 'touch' }}>
+      <table style={{ width: '100%', borderCollapse: 'collapse', color: '#d1d5db', fontSize: '0.875rem' }}>
           <thead>
             <tr style={{ borderBottom: '2px solid #374151' }}>
               <th style={{ padding: '0.75rem', textAlign: 'left' }}>Name</th>
@@ -326,7 +326,8 @@ export const NodesPage: React.FC = () => {
             {!modalNode.availableRoutes || modalNode.availableRoutes.length === 0 ? (
               <p>No routes available</p>
             ) : (
-              <table style={{ width: '100%', borderCollapse: 'collapse', marginBottom: '1rem' }}>
+              <div style={{ overflowX: 'auto', WebkitOverflowScrolling: 'touch' }}>
+      <table style={{ width: '100%', borderCollapse: 'collapse', marginBottom: '1rem' }}>
                 <thead>
                   <tr style={{ borderBottom: '1px solid #374151' }}>
                     <th style={{ padding: '0.5rem', textAlign: 'left' }}>Route</th>
@@ -353,6 +354,7 @@ export const NodesPage: React.FC = () => {
                   })}
                 </tbody>
               </table>
+              </div>
             )}
 
             <button className="btn btn-secondary" onClick={() => { setRoutesModal(null); setModalNode(null); }}>Close</button>
