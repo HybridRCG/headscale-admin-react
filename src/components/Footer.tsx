@@ -67,8 +67,7 @@ export const Footer: React.FC = () => {
             rel="noopener noreferrer"
             className="footer-coffee"
           >
-            <img src="https://img.buymeacoffee.com/button-api/?text=Buy me a coffee&emoji=☕&slug=hybridrcg&button_colour=FFDD00&font_colour=000000&font_family=Cookie&outline_colour=000000&coffee_colour=ffffff" 
-              alt="Buy Me A Coffee" style={{ height: '36px', borderRadius: '6px' }} />
+            ☕ Buy me a coffee
           </a>
         )}
         <button className="footer-logout" onClick={handleLogout}>
