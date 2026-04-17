@@ -54,13 +54,14 @@
 }
 
 .footer-coffee img {
-  height: 34px;
+  height: 38px;
   border-radius: 6px;
+  display: block;
 }
 
 .footer-coffee:hover {
-  opacity: 0.9;
-  transform: scale(1.03);
+  opacity: 0.88;
+  transform: scale(1.04);
 }
 
 .footer-logout {
