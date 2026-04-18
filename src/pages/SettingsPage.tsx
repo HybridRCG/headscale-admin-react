@@ -102,6 +102,26 @@ export const SettingsPage: React.FC = () => {
       {/* Registration */}
       <div style={{ marginBottom: '2rem' }}>
         <div style={{ color: '#6b7280', fontSize: '0.75rem', fontWeight: '600', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '0.75rem' }}>Registration</div>
+        {!registered && (
+          <div style={{ marginBottom: '1rem', padding: '1rem 1.25rem', backgroundColor: '#1c1f2e', border: '1px solid #FFDD00', borderRadius: '0.5rem', display: 'flex', gap: '1rem', alignItems: 'flex-start' }}>
+            <span style={{ fontSize: '1.5rem', flexShrink: 0 }}>☕</span>
+            <div>
+              <div style={{ color: '#FFDD00', fontWeight: '700', fontSize: '0.9rem', marginBottom: '0.35rem' }}>Support HS React — Get a License Key</div>
+              <div style={{ color: '#d1d5db', fontSize: '0.8rem', lineHeight: '1.6' }}>
+                Buy Me a Coffee to receive a license key. Registering your instance:
+              </div>
+              <ul style={{ color: '#9ca3af', fontSize: '0.8rem', marginTop: '0.4rem', paddingLeft: '1.25rem', lineHeight: '1.8' }}>
+                <li>Removes the ☕ Buy Me a Coffee button from the footer</li>
+                <li>Entitles you to request updates and new features</li>
+                <li>Supports continued development of HS React</li>
+              </ul>
+              <a href="https://buymeacoffee.com/hybridrcg" target="_blank" rel="noopener noreferrer"
+                style={{ display: 'inline-flex', alignItems: 'center', gap: '0.4rem', marginTop: '0.75rem', backgroundColor: '#FFDD00', color: '#000', padding: '0.45rem 1.1rem', borderRadius: '0.5rem', fontWeight: '800', fontSize: '0.85rem', textDecoration: 'none' }}>
+                ☕ Buy Me a Coffee → Get License Key
+              </a>
+            </div>
+          </div>
+        )}
         <div style={{ padding: '1.25rem 1.5rem', backgroundColor: '#1f2937', borderRadius: '0.5rem', border: `1px solid ${registered ? '#10b981' : '#374151'}` }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '1rem' }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
@@ -115,7 +135,7 @@ export const SettingsPage: React.FC = () => {
                 <div style={{ color: '#9ca3af', fontSize: '0.8rem', marginTop: '0.2rem' }}>
                   {registered
                     ? <span>Licensed to: <span style={{ color: '#10b981', fontWeight: '700', fontSize: '0.9rem' }}>{regPayload.replace(/-\d{4}$/, '').replace(/-/g, ' ')}</span></span>
-                    : 'Enter your license key to register this instance'}
+                    : <span>Enter your license key to register this instance. <a href="https://buymeacoffee.com/hybridrcg" target="_blank" rel="noopener noreferrer" style={{ color: '#FFDD00', fontWeight: '700' }}>☕ Buy Me a Coffee</a> to get a key.</span>}
                 </div>
               </div>
             </div>
