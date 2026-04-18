@@ -33,7 +33,7 @@ export const SettingsPage: React.FC = () => {
   const [instances, setInstances] = useState<{payload: string; registeredAt: string; domain: string}[]>([]);
   const [showInstances, setShowInstances] = useState(false);
 
-  useEffect(() => {
+  const fetchData = () => {
     axios.get(`${API}/instances`).then(r => {
       if (Array.isArray(r.data)) setInstances(r.data);
     }).catch(() => {});
@@ -41,8 +41,15 @@ export const SettingsPage: React.FC = () => {
       if (r.data.registered) {
         setRegistered(true);
         setRegPayload(r.data.payload || '');
+      } else {
+        setRegistered(false);
+        setRegPayload('');
       }
     }).catch(() => {});
+  };
+
+  useEffect(() => {
+    fetchData();
   }, []);
 
   const handleUnregister = async () => {
@@ -52,6 +59,7 @@ export const SettingsPage: React.FC = () => {
       setRegistered(false);
       setRegPayload('');
       window.dispatchEvent(new Event('registration-changed'));
+      fetchData();
     } catch (e: any) {
       alert('Failed to unregister: ' + (e.response?.data?.message || e.message));
     }
@@ -70,6 +78,7 @@ export const SettingsPage: React.FC = () => {
         setRegKey('');
         // Tell footer to re-check
         window.dispatchEvent(new Event('registration-changed'));
+      fetchData();
       }
     } catch (e: any) {
       setRegError(e.response?.data?.message || 'Invalid key');
