@@ -777,6 +777,26 @@ app.post('/api/headscale/preauthkey/expire', authenticateToken, async (req, res)
   }
 });
 
+app.post('/api/headscale/user-emails', authenticateToken, async (req, res) => {
+  const userEmail = req.user?.email;
+  if (!userEmail) return res.status(401).json({ message: 'Unauthorized' });
+
+  try {
+    const currentData = JSON.parse(fs.readFileSync('/etc/headscale/users-mapping.json', 'utf8'));
+    const currentUser = Object.values(currentData.users).find(u => u.email === userEmail);
+    
+    if (!currentUser || currentUser.role !== 'super_admin') {
+      return res.status(403).json({ message: 'Only super admins can modify users' });
+    }
+
+    const newData = req.body;
+    fs.writeFileSync('/etc/headscale/users-mapping.json', JSON.stringify(newData, null, 2));
+    res.json({ message: 'Users updated successfully' });
+  } catch (err) {
+    res.status(500).json({ message: 'Failed to update users: ' + err.message });
+  }
+});
+
 app.use('/api/headscale', authenticateToken, async (req, res) => {
   const userEmail = req.user?.email;
   if (!userEmail) return res.status(401).json({ message: 'Unauthorized' });
