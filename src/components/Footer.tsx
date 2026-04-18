@@ -53,9 +53,10 @@ export const Footer: React.FC = () => {
           <a
             href="https://github.com/HybridRCG/headscale-admin-react/releases"
             target="_blank" rel="noopener noreferrer"
-            style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', backgroundColor: '#f59e0b', color: '#000',
-              padding: '0.35rem 0.85rem', borderRadius: '0.375rem', fontWeight: '700', fontSize: '0.8rem',
-              textDecoration: 'none', whiteSpace: 'nowrap', boxShadow: '0 2px 6px rgba(0,0,0,0.3)', animation: 'pulse 2s infinite' }}
+            style={{ display: 'inline-flex', alignItems: 'center', gap: '0.4rem', backgroundColor: '#f59e0b', color: '#000',
+              padding: '0 0.85rem', borderRadius: '0.375rem', fontWeight: '700', fontSize: '0.875rem',
+              textDecoration: 'none', whiteSpace: 'nowrap', boxShadow: '0 2px 6px rgba(0,0,0,0.3)', animation: 'pulse 2s infinite',
+              height: '2.25rem', flexShrink: 0 }}
           >
             🆕 v{updateAvailable} available
           </a>
