@@ -231,7 +231,7 @@ export const UsersPage: React.FC = () => {
   const handleRenameUser = async (userId: string) => {
     if (!newName.trim()) return;
     try {
-      await axios.post(`/api/headscale/api/v1/user/${userId}/rename/${newName}`);
+      await axios.post(`/admin/api/headscale/api/v1/user/${userId}/rename/${newName}`);
       await fetchUsers();
       setRenamingUserId(null);
       setNewName('');
@@ -243,7 +243,7 @@ export const UsersPage: React.FC = () => {
 
   const handleDeleteUser = async (userId: string) => {
     try {
-      await axios.delete(`/api/headscale/api/v1/user/${userId}`);
+      await axios.delete(`/admin/api/headscale/api/v1/user/${userId}`);
       await fetchUsers();
       setDeletingUserId(null);
     } catch (error) {
@@ -382,7 +382,7 @@ export const UsersPage: React.FC = () => {
             <div style={{ display: 'flex', flexDirection: 'column', gap: '0.25rem' }}>
               <label style={{ fontSize: '0.7rem', color: '#9ca3af', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Email</label>
               <input type="email" value={newUserEmail} onChange={(e) => setNewUserEmail(e.target.value)} placeholder="user@example.com"
-                style={{ width: '220px', height: '38px', padding: '0 0.75rem', backgroundColor: '#374151', border: '1px solid #4b5563', borderRadius: '0.375rem', color: '#f3f4f6', fontSize: '0.875rem', boxSizing: 'border-box' }} />
+                style={{ width: '280px', height: '38px', padding: '0 0.75rem', backgroundColor: '#374151', border: '1px solid #4b5563', borderRadius: '0.375rem', color: '#f3f4f6', fontSize: '0.875rem', boxSizing: 'border-box' }} />
             </div>
             <div style={{ display: 'flex', flexDirection: 'column', gap: '0.25rem' }}>
               <label style={{ fontSize: '0.7rem', color: '#9ca3af', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Role</label>

@@ -240,36 +240,37 @@ export const NodesPage: React.FC = () => {
           {groups.map(g => <option key={g} value={g}>{g}</option>)}
         </select>
         <button className="btn btn-success" onClick={() => setDeployModal(true)} style={{ whiteSpace: 'nowrap' }}>+ Deploy</button>
+        <button className="btn btn-secondary" onClick={fetchNodes} disabled={loading} style={{ whiteSpace: 'nowrap' }}>🔄</button>
       </div>
 
       <div style={{ overflowX: 'auto', WebkitOverflowScrolling: 'touch' }}>
-      <table style={{ width: '100%', borderCollapse: 'collapse', color: '#d1d5db', fontSize: '0.875rem' }}>
+      <table style={{ width: '100%', borderCollapse: 'collapse', color: '#d1d5db', fontSize: '0.8rem', tableLayout: 'fixed' }}>
           <thead>
             <tr style={{ borderBottom: '2px solid #374151' }}>
-              <th style={{ padding: '0.75rem', textAlign: 'left' }}>Name</th>
-              <th style={{ padding: '0.75rem', textAlign: 'left' }}>Hostname</th>
-              <th style={{ padding: '0.75rem', textAlign: 'left' }}>User</th>
-              <th style={{ padding: '0.75rem', textAlign: 'left' }}>IPs</th>
-              <th style={{ padding: '0.75rem', textAlign: 'left' }}>Status</th>
-              <th style={{ padding: '0.75rem', textAlign: 'left' }}>Actions</th>
+              <th style={{ padding: '0.75rem', textAlign: 'left', width: '22%' }}>Name</th>
+
+              <th style={{ padding: '0.75rem', textAlign: 'left', width: '15%' }}>User</th>
+              <th style={{ padding: '0.75rem', textAlign: 'left', width: '28%' }}>IPs</th>
+              <th style={{ padding: '0.75rem', textAlign: 'left', width: '8%' }}>Status</th>
+              <th style={{ padding: '0.75rem', textAlign: 'left', width: '27%' }}>Actions</th>
             </tr>
           </thead>
           <tbody>
             {filteredNodes.map(node => (
               <tr key={node.id} style={{ borderBottom: '1px solid #374151' }}>
-                <td style={{ padding: '0.75rem' }}>
-                  {editingNode === node.id ? <input type="text" value={editName} onChange={(e) => setEditName(e.target.value)} style={{ backgroundColor: '#1f2937', border: '1px solid #374151', color: '#f3f4f6', width: '100%', padding: '0.5rem' }} /> : <span>{node.name}</span>}
+                <td style={{ padding: '0.75rem', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', maxWidth: 0 }}>
+                  {editingNode === node.id ? <input type="text" value={editName} onChange={(e) => setEditName(e.target.value)} style={{ backgroundColor: '#1f2937', border: '1px solid #374151', color: '#f3f4f6', width: '100%', padding: '0.5rem' }} /> : <span title={node.name}>{node.name}</span>}
                 </td>
-                <td style={{ padding: '0.75rem' }}>{node.hostname}</td>
+
                 <td style={{ padding: '0.75rem' }}>
                   {editingNode === node.id ? (
                     <select value={editUser} onChange={(e) => setEditUser(e.target.value)} style={{ backgroundColor: '#1f2937', border: '1px solid #374151', color: '#f3f4f6', width: '100%', padding: '0.5rem' }}>
                       <option value="">Select...</option>
                       {users.map(u => <option key={u} value={u}>{u}</option>)}
                     </select>
-                  ) : <span>{node.user?.name || 'N/A'}</span>}
+                  ) : <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', display: 'block' }}>{node.user?.name || 'N/A'}</span>}
                 </td>
-                <td style={{ padding: '0.75rem', fontSize: '0.75rem' }}>{node.ipAddresses?.join(', ') || 'N/A'}</td>
+                <td style={{ padding: '0.75rem', fontSize: '0.72rem', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', maxWidth: 0 }} title={node.ipAddresses?.join(', ')}>{node.ipAddresses?.[0] || 'N/A'}</td>
                 <td style={{ padding: '0.75rem' }}><span style={{ color: node.online ? '#86efac' : '#fca5a5' }}>{node.online ? '🟢' : '🔴'}</span></td>
                 <td style={{ padding: '0.75rem' }}>
                   {editingNode === node.id ? (
@@ -364,7 +365,6 @@ export const NodesPage: React.FC = () => {
 
       {deployModal && <DeployModal onClose={() => setDeployModal(false)} visibleUsers={userObjects} />}
 
-      <button className="btn btn-secondary" onClick={fetchNodes} style={{ marginTop: '1rem' }}>🔄 Refresh</button>
     </div>
   );
 };
