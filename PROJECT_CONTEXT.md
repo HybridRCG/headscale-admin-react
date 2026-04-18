@@ -1,7 +1,7 @@
 # HS React — Project Context
 
 ## Current State
-- **Version:** v0.9.0 (live)
+- **Version:** v1.0.0 (live)
 - **Live URL:** https://hs.groblers.co.uk/admin
 - **Website:** https://hs.groblers.co.uk/hsreact
 - **Demo:** https://hs.groblers.co.uk/hsreact/demo
@@ -71,7 +71,7 @@
 ## ACL Editor Tabs (6 — Tag Owners removed)
 0:Users 1:Groups 2:Hosts 3:Policies 4:SSH 5:Config
 
-## Features Completed (v0.9.0)
+## Features Completed (v1.0.0)
 - Role-based access + domain filtering throughout
 - Deploy wizard — live tailscale up command, pre-auth key generation per user
 - Pre-Auth Keys — create/expire/clear expired, auto-refresh on navigate
@@ -115,5 +115,5 @@
 - Font: Plus Jakarta Sans (clean, modern, readable)
 
 ## Versioning
-- Changed to v0.9.0 as of this session (was v0.7.x)
-- Going forward: v0.9.1, v0.9.2 etc.
+- Changed to v1.0.0 as of this session (was v0.7.x)
+- Going forward: v1.0.0, v1.0.0 etc.

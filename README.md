@@ -6,6 +6,14 @@ A production-ready, role-based administration dashboard for [Headscale](https://
 
 [![Buy Me A Coffee](https://www.buymeacoffee.com/assets/img/custom_images/orange_img.png)](https://buymeacoffee.com/hybridrcg)
 
+## 🎉 v1.0.0 — First Stable Release
+
+HS React has reached **v1.0.0** — a fully production-ready, self-hosted Headscale admin dashboard.
+
+**[🌐 Website](https://hs.groblers.co.uk/hsreact)** · **[🎭 Live Demo](https://hs.groblers.co.uk/hsreact/demo)** · **[⭐ GitHub](https://github.com/HybridRCG/headscale-admin-react)**
+
+> 🎭 The live demo uses fictional data — no real Headscale instance, no data saved.
+
 **[🌐 Website](https://hs.groblers.co.uk/hsreact)** · **[🎭 Live Demo](https://hs.groblers.co.uk/hsreact/demo)** · **[⭐ GitHub](https://github.com/HybridRCG/headscale-admin-react)**
 
 > 🎭 The live demo uses fictional data and runs entirely in the browser — no real Headscale instance, no data saved.
@@ -204,25 +212,25 @@ All install files in [`resources/`](resources/):
 
 | Version | Changes |
 |---------|---------|
-| v0.7.97 | Update checker in footer — amber button when newer version available on GitHub |
-| v0.7.96 | Create user form — fixed heights, clear spacing between fields |
-| v0.7.95 | Create user — role selector + add to login mapping checkbox in one step |
-| v0.7.94 | Home page 3x2 grid; Users/Nodes cards name-only |
-| v0.7.92 | Registration/licensing system — license key hides Buy Me a Coffee |
-| v0.7.91 | Nodes move-owner modal with Copy Command/Copy Key; Pre-Auth Keys auto-refresh |
-| v0.7.88 | Unregister button in Settings |
-| v0.7.84 | Buy Me a Coffee in footer; version on login page links to GitHub |
-| v0.7.81 | ACL Tag Owners tab removed; tab indices fixed |
-| v0.7.80 | Pre-Auth Keys: Clear Expired button; Tag type removed from policy builder |
-| v0.7.77 | Version number bottom-right of login card |
-| v0.7.75 | Deploy modal sticky header; pre-auth key generation fixed for v0.28 |
-| v0.7.72 | GitHub Actions auto-build to ghcr.io; Docker-only install; resources folder |
-| v0.7.71 | Security: rate limiting, shell injection validation, dead code removed |
-| v0.7.70 | Renamed to HS React throughout |
-| v0.7.68 | ACL Policies visual builder with protocol/type buttons, edit in-place |
-| v0.7.67 | ACL tabs sticky; Hosts node dropdown + auto IP; Config syntax validator |
-| v0.7.65 | Routes page table; DNS sticky toolbar, compact dark theme |
-| v0.7.26 | Domain filtering for Nodes, Users, Routes |
+| v1.0.0 | Update checker in footer — amber button when newer version available on GitHub |
+| v1.0.0 | Create user form — fixed heights, clear spacing between fields |
+| v1.0.0 | Create user — role selector + add to login mapping checkbox in one step |
+| v1.0.0 | Home page 3x2 grid; Users/Nodes cards name-only |
+| v1.0.0 | Registration/licensing system — license key hides Buy Me a Coffee |
+| v1.0.0 | Nodes move-owner modal with Copy Command/Copy Key; Pre-Auth Keys auto-refresh |
+| v1.0.0 | Unregister button in Settings |
+| v1.0.0 | Buy Me a Coffee in footer; version on login page links to GitHub |
+| v1.0.0 | ACL Tag Owners tab removed; tab indices fixed |
+| v1.0.0 | Pre-Auth Keys: Clear Expired button; Tag type removed from policy builder |
+| v1.0.0 | Version number bottom-right of login card |
+| v1.0.0 | Deploy modal sticky header; pre-auth key generation fixed for v0.28 |
+| v1.0.0 | GitHub Actions auto-build to ghcr.io; Docker-only install; resources folder |
+| v1.0.0 | Security: rate limiting, shell injection validation, dead code removed |
+| v1.0.0 | Renamed to HS React throughout |
+| v1.0.0 | ACL Policies visual builder with protocol/type buttons, edit in-place |
+| v1.0.0 | ACL tabs sticky; Hosts node dropdown + auto IP; Config syntax validator |
+| v1.0.0 | Routes page table; DNS sticky toolbar, compact dark theme |
+| v1.0.0 | Domain filtering for Nodes, Users, Routes |
 | v0.1 | Initial React rewrite from Svelte fork |
 
 ---
