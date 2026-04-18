@@ -797,6 +797,105 @@ app.post('/api/headscale/user-emails', authenticateToken, async (req, res) => {
   }
 });
 
+
+// ── Delete user — intercept before proxy to also clean up users-mapping.json ──
+app.delete('/api/headscale/api/v1/user/:id', authenticateToken, async (req, res) => {
+  const userEmail = req.user?.email;
+  if (!userEmail) return res.status(401).json({ message: 'Unauthorized' });
+  const tokenData = userTokenMap.get(userEmail);
+  if (!tokenData) return res.status(401).json({ message: 'Session expired' });
+
+  const userId = req.params.id;
+  try {
+    // Step 1: Get username from Headscale before deleting (so we know what to remove from mapping)
+    let username = null;
+    try {
+      const usersResp = await axios.get(`${tokenData.headscaleUrl}/api/v1/user`, {
+        headers: { Authorization: `Bearer ${tokenData.apiKey}` }, timeout: 10000
+      });
+      const user = (usersResp.data.users || []).find(u => String(u.id) === String(userId));
+      if (user) username = user.name;
+    } catch (e) {
+      console.error('[DELETE-USER] Failed to fetch users list:', e.message);
+    }
+
+    // Step 2: Delete from Headscale
+    const deleteResp = await axios.delete(`${tokenData.headscaleUrl}/api/v1/user/${userId}`, {
+      headers: { Authorization: `Bearer ${tokenData.apiKey}` }, timeout: 10000
+    });
+
+    // Step 3: Remove from users-mapping.json
+    if (username) {
+      try {
+        const mapping = JSON.parse(fs.readFileSync(USERS_MAPPING_PATH, 'utf8'));
+        if (mapping.users && mapping.users[username]) {
+          delete mapping.users[username];
+          fs.writeFileSync(USERS_MAPPING_PATH, JSON.stringify(mapping, null, 2));
+          console.log(`[DELETE-USER] Removed ${username} from users-mapping.json`);
+          logAudit(req.user.username || userEmail, 'delete', `user:${username}`, `removed from Headscale and users-mapping.json`);
+        } else {
+          console.log(`[DELETE-USER] ${username} not found in users-mapping.json — skipping`);
+        }
+      } catch (e) {
+        console.error('[DELETE-USER] Failed to update users-mapping.json:', e.message);
+        // Don't fail the request — user was deleted from Headscale successfully
+      }
+    }
+
+    res.status(deleteResp.status).json(deleteResp.data);
+  } catch (error) {
+    console.error('[DELETE-USER] Error:', error.message);
+    if (error.response) res.status(error.response.status || 500).json({ message: error.response.data?.message || error.message });
+    else res.status(500).json({ message: error.message });
+  }
+});
+
+
+// ── Rename user — intercept to also update key in users-mapping.json ──────────
+app.post('/api/headscale/api/v1/user/:id/rename/:newName', authenticateToken, async (req, res) => {
+  const userEmail = req.user?.email;
+  if (!userEmail) return res.status(401).json({ message: 'Unauthorized' });
+  const tokenData = userTokenMap.get(userEmail);
+  if (!tokenData) return res.status(401).json({ message: 'Session expired' });
+
+  const { id: userId, newName } = req.params;
+  try {
+    // Step 1: Get old username before renaming
+    let oldName = null;
+    try {
+      const usersResp = await axios.get(`${tokenData.headscaleUrl}/api/v1/user`, {
+        headers: { Authorization: `Bearer ${tokenData.apiKey}` }, timeout: 10000
+      });
+      const user = (usersResp.data.users || []).find(u => String(u.id) === String(userId));
+      if (user) oldName = user.name;
+    } catch (e) { console.error('[RENAME-USER] Failed to fetch users:', e.message); }
+
+    // Step 2: Rename in Headscale
+    const renameResp = await axios.post(`${tokenData.headscaleUrl}/api/v1/user/${userId}/rename/${newName}`, {}, {
+      headers: { Authorization: `Bearer ${tokenData.apiKey}` }, timeout: 10000
+    });
+
+    // Step 3: Update key in users-mapping.json
+    if (oldName && oldName !== newName) {
+      try {
+        const mapping = JSON.parse(fs.readFileSync(USERS_MAPPING_PATH, 'utf8'));
+        if (mapping.users && mapping.users[oldName]) {
+          mapping.users[newName] = mapping.users[oldName];
+          delete mapping.users[oldName];
+          fs.writeFileSync(USERS_MAPPING_PATH, JSON.stringify(mapping, null, 2));
+          console.log(`[RENAME-USER] Renamed ${oldName} → ${newName} in users-mapping.json`);
+          logAudit(req.user.username || userEmail, 'rename', `user:${oldName}`, `renamed to ${newName} in Headscale and users-mapping.json`);
+        }
+      } catch (e) { console.error('[RENAME-USER] Failed to update mapping:', e.message); }
+    }
+
+    res.status(renameResp.status).json(renameResp.data);
+  } catch (error) {
+    if (error.response) res.status(error.response.status || 500).json({ message: error.response.data?.message || error.message });
+    else res.status(500).json({ message: error.message });
+  }
+});
+
 app.use('/api/headscale', authenticateToken, async (req, res) => {
   const userEmail = req.user?.email;
   if (!userEmail) return res.status(401).json({ message: 'Unauthorized' });
