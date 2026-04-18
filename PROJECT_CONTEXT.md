@@ -8,7 +8,7 @@
 - **GitHub:** https://github.com/HybridRCG/headscale-admin-react
 - **Docker Image:** ghcr.io/hybridrcg/hs-react:latest (auto-built on push)
 - **Deploy:** ~/headscale-private/deploy.sh
-- **VPS:** hybrid@hs.groblers.co.uk
+- **VPS:** hybrid@hs.groblers.co.uk (Contabo 37.60.251.184)
 - **VPS compose:** /headscale/docker-compose.yml
 - **VPS deploy script:** /headscale/deploy-headscale-admin.sh
 - **Local:** /Users/riaangrobler/headscale-admin-react
