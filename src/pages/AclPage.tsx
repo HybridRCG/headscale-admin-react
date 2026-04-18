@@ -111,6 +111,7 @@ const GroupsTab: React.FC<{ acl: ACL; setAcl: (a: ACL) => void }> = ({ acl, setA
   const [mappingUsers, setMappingUsers] = useState<{username: string; email: string}[]>([]);
 
   useEffect(() => {
+    // Refresh on mount
     axios.get(`${API_BASE}/headscale/user-emails`).then(r => {
       const users = r.data?.users || {};
       setMappingUsers(Object.entries(users).map(([username, u]: any) => ({ username, email: u.email || '' })));
@@ -851,6 +852,7 @@ const UsersTab: React.FC<{ userEmail: string }> = ({ userEmail }) => {
   const [loadingApiKeys, setLoadingApiKeys] = useState(false);
   const [newUsername, setNewUsername] = useState('');
   const [newEmail, setNewEmail] = useState('');
+  const [searchQuery, setSearchQuery] = useState('');
 
   useEffect(() => {
     fetchUsers();
@@ -1020,6 +1022,18 @@ const UsersTab: React.FC<{ userEmail: string }> = ({ userEmail }) => {
 
   return (
     <div>
+      {/* Refresh + Search row */}
+      <div style={{ display: 'flex', gap: '0.5rem', marginBottom: '1rem', alignItems: 'center' }}>
+        <button className="btn btn-secondary" onClick={fetchUsers} disabled={loading} style={{ whiteSpace: 'nowrap' }}>🔄</button>
+        <input
+          type="text"
+          placeholder="🔍 Search users..."
+          value={searchQuery}
+          onChange={(e) => setSearchQuery(e.target.value)}
+          style={{ flex: 1, padding: '0.5rem 0.75rem', backgroundColor: '#1f2937', border: '1px solid #374151', borderRadius: '0.375rem', color: '#f3f4f6', fontSize: '0.875rem' }}
+        />
+      </div>
+
       {error && <div className="error-box">{error}</div>}
 
       {canAddUser() && (
@@ -1038,7 +1052,7 @@ const UsersTab: React.FC<{ userEmail: string }> = ({ userEmail }) => {
         </div>
       )}
 
-      {getEditableUsers().length > 0 ? (
+      {getEditableUsers().filter(([username, user]: any) => !searchQuery || username.toLowerCase().includes(searchQuery.toLowerCase()) || (user.email || '').toLowerCase().includes(searchQuery.toLowerCase())).length > 0 ? (
         <div className="table-container">
           <table>
             <thead>
@@ -1051,7 +1065,7 @@ const UsersTab: React.FC<{ userEmail: string }> = ({ userEmail }) => {
               </tr>
             </thead>
             <tbody>
-              {getEditableUsers().map(([username, user]: any) => (
+              {getEditableUsers().filter(([username, user]: any) => !searchQuery || username.toLowerCase().includes(searchQuery.toLowerCase()) || (user.email || '').toLowerCase().includes(searchQuery.toLowerCase())).map(([username, user]: any) => (
                 <tr key={username}>
                   <td>{username}</td>
                   <td>{user.email}</td>
