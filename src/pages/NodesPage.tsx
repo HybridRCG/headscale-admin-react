@@ -18,6 +18,7 @@ interface Node {
   forcedTags?: string[];
   validTags?: string[];
   lastSeen?: { seconds: number; nanos: number };
+  last_seen?: { seconds: number; nanos: number };
 }
 
 interface SimNode extends Node {
@@ -153,7 +154,7 @@ export const NodesPage: React.FC = () => {
 
 
   const getNodeDuration = (node: Node): string => {
-    const ls = node.lastSeen;
+    const ls = node.lastSeen || (node as any).last_seen;
     if (!ls || !ls.seconds) return '';
     const nowSec = Math.floor(Date.now() / 1000);
     const diffSec = Math.max(0, nowSec - ls.seconds);
