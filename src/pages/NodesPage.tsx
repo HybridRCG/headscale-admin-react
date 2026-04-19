@@ -96,7 +96,13 @@ export const NodesPage: React.FC = () => {
     setLoading(true);
     try {
       const r = await axios.get(`${API_BASE}/headscale/api/v1/node`);
-      setAllNodes(r.data.nodes || []);
+      const nodes = r.data.nodes || [];
+      if (nodes.length > 0) {
+        const n = nodes[0];
+        console.log('[NODES] First node keys:', Object.keys(n));
+        console.log('[NODES] lastSeen:', n.lastSeen, 'last_seen:', n.last_seen, 'online:', n.online);
+      }
+      setAllNodes(nodes);
     } catch { } finally { setLoading(false); }
   };
 
@@ -154,7 +160,8 @@ export const NodesPage: React.FC = () => {
 
 
   const getNodeDuration = (node: Node): string => {
-    const ls = node.lastSeen || (node as any).last_seen;
+    // Headscale REST API returns camelCase "lastSeen"
+    const ls = (node as any).lastSeen || (node as any).last_seen;
     if (!ls || !ls.seconds) return '';
     const nowSec = Math.floor(Date.now() / 1000);
     const diffSec = Math.max(0, nowSec - ls.seconds);
