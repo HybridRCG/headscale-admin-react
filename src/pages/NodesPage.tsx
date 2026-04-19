@@ -47,6 +47,8 @@ export const NodesPage: React.FC = () => {
   const [tagOwners, setTagOwners] = useState<Record<string, string>>({});
   const [availableTags, setAvailableTags] = useState<string[]>([]);
   const [tagSaving, setTagSaving] = useState(false);
+  const [sshModal, setSshModal] = useState<Node | null>(null);
+  const [liveConnected, setLiveConnected] = useState(false);
   const API_BASE = '/admin/api';
 
   useEffect(() => {
@@ -60,6 +62,37 @@ export const NodesPage: React.FC = () => {
   useEffect(() => { // eslint-disable-line react-hooks/exhaustive-deps
     applyFilters();
   }, [allNodes, searchTerm, filterStatus, selectedUser, selectedGroup, groupUsers, userEmailMap]);
+
+  // SSE real-time updates
+  useEffect(() => {
+    let es: EventSource | null = null;
+    let retryTimeout: ReturnType<typeof setTimeout>;
+
+    const connect = () => {
+      es = new EventSource('/admin/api/headscale/events');
+
+      es.addEventListener('ping', () => setLiveConnected(true));
+
+      es.addEventListener('nodes', (e: MessageEvent) => {
+        try {
+          const updates: {id: number; online: boolean}[] = JSON.parse(e.data);
+          setAllNodes(prev => prev.map(node => {
+            const update = updates.find(u => u.id === node.id);
+            return update ? { ...node, online: update.online } : node;
+          }));
+        } catch {}
+      });
+
+      es.onerror = () => {
+        setLiveConnected(false);
+        es?.close();
+        retryTimeout = setTimeout(connect, 10000); // retry in 10s
+      };
+    };
+
+    connect();
+    return () => { es?.close(); clearTimeout(retryTimeout); setLiveConnected(false); };
+  }, []);
 
   const fetchNodes = async () => {
     setLoading(true);
@@ -299,6 +332,10 @@ export const NodesPage: React.FC = () => {
         </select>
         <button className="btn btn-success" onClick={() => setDeployModal(true)} style={{ whiteSpace: 'nowrap' }}>+ Deploy</button>
         <button className="btn btn-secondary" onClick={fetchNodes} disabled={loading} style={{ whiteSpace: 'nowrap' }}>🔄</button>
+        <span title={liveConnected ? 'Live updates active' : 'Connecting to live updates...'} style={{ display: 'inline-flex', alignItems: 'center', gap: '0.3rem', fontSize: '0.72rem', color: liveConnected ? '#10b981' : '#6b7280', whiteSpace: 'nowrap' }}>
+          <span style={{ width: '8px', height: '8px', borderRadius: '50%', backgroundColor: liveConnected ? '#10b981' : '#6b7280', display: 'inline-block', animation: liveConnected ? 'pulse 2s infinite' : 'none' }}></span>
+          {liveConnected ? 'Live' : 'Offline'}
+        </span>
       </div>
 
       <div style={{ overflowX: 'auto', WebkitOverflowScrolling: 'touch' }}>
@@ -362,6 +399,7 @@ export const NodesPage: React.FC = () => {
                         style={{ opacity: (!node.availableRoutes || node.availableRoutes.length === 0) ? 0.35 : 1, cursor: (!node.availableRoutes || node.availableRoutes.length === 0) ? 'not-allowed' : 'pointer' }}
                       >Routes</button>
                       <button className="btn btn-sm btn-secondary" onClick={() => { setTagModal(node); setTagInput(''); }} style={{ fontSize: '0.7rem' }}>🏷 Tags</button>
+                      <button className="btn btn-sm btn-secondary" onClick={() => setSshModal(node)} style={{ fontSize: '0.7rem' }}>🔗 SSH</button>
                       <button className="btn btn-sm btn-error" onClick={() => handleDelete(node.id)}>Delete</button>
                       <button className="btn btn-sm btn-error" onClick={() => handleExpire(node.id)}>Expire</button>
                     </div>
@@ -526,6 +564,60 @@ export const NodesPage: React.FC = () => {
                 {tagSaving ? 'Saving...' : '✓ Apply Tags'}
               </button>
             </div>
+          </div>
+        </div>
+      )}
+
+
+      {sshModal && (
+        <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(0,0,0,0.7)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000 }}>
+          <div style={{ backgroundColor: '#111827', border: '1px solid #374151', borderRadius: '0.75rem', padding: '2rem', maxWidth: '540px', width: '90%', color: '#d1d5db' }}>
+            <h2 style={{ margin: '0 0 0.25rem', color: '#f3f4f6', fontSize: '1.1rem' }}>🔗 Connect — {sshModal.name}</h2>
+            <div style={{ color: '#9ca3af', fontSize: '0.8rem', marginBottom: '1.5rem' }}>
+              👤 {getNodeOwner(sshModal)} &nbsp;•&nbsp; {sshModal.ipAddresses?.[0] || 'No IP'}
+            </div>
+
+            {[
+              {
+                label: 'Tailscale SSH',
+                desc: 'Connect via Tailscale SSH (requires SSH enabled in ACL)',
+                cmd: `tailscale ssh ${sshModal.ipAddresses?.[0] || sshModal.name}`
+              },
+              {
+                label: 'Standard SSH (Tailscale IP)',
+                desc: 'Regular SSH using Tailscale IP address',
+                cmd: `ssh ${sshModal.ipAddresses?.[0] || sshModal.name}`
+              },
+              {
+                label: 'Standard SSH (Node Name)',
+                desc: 'Regular SSH using node hostname (requires MagicDNS)',
+                cmd: `ssh ${sshModal.name}`
+              },
+              {
+                label: 'Tailscale Status',
+                desc: 'Check this node in tailscale status',
+                cmd: `tailscale status | grep ${sshModal.name}`
+              }
+            ].map(({ label, desc, cmd }) => (
+              <div key={label} style={{ marginBottom: '1rem', padding: '0.75rem 1rem', backgroundColor: '#1f2937', borderRadius: '0.5rem', border: '1px solid #374151' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '0.35rem' }}>
+                  <div>
+                    <span style={{ color: '#f3f4f6', fontWeight: '600', fontSize: '0.85rem' }}>{label}</span>
+                    <div style={{ color: '#6b7280', fontSize: '0.72rem', marginTop: '0.1rem' }}>{desc}</div>
+                  </div>
+                  <button
+                    onClick={() => { navigator.clipboard.writeText(cmd); }}
+                    style={{ padding: '0.25rem 0.6rem', backgroundColor: '#374151', color: '#9ca3af', border: 'none', borderRadius: '0.25rem', cursor: 'pointer', fontSize: '0.72rem', flexShrink: 0, marginLeft: '0.5rem' }}>
+                    📋 Copy
+                  </button>
+                </div>
+                <div style={{ fontFamily: 'monospace', fontSize: '0.8rem', color: '#86efac', backgroundColor: '#0f172a', padding: '0.4rem 0.6rem', borderRadius: '0.25rem', wordBreak: 'break-all' }}>
+                  {cmd}
+                </div>
+              </div>
+            ))}
+
+            <button onClick={() => setSshModal(null)} className="btn btn-secondary" style={{ width: '100%', marginTop: '0.5rem' }}>Close</button>
           </div>
         </div>
       )}

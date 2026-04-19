@@ -15,6 +15,278 @@ interface ACL {
   ssh: Array<{ action: string; src: string[]; dst: string[] }>;
 }
 
+
+// HISTORY TAB ─────────────────────────────────────────────────────────────────
+const HistoryTab: React.FC<{ acl: ACL | null; setAcl: (a: ACL) => void }> = ({ setAcl }) => {
+  const [versions, setVersions] = useState<{filename: string; timestamp: string; savedBy: string}[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [restoring, setRestoring] = useState<string | null>(null);
+  const [preview, setPreview] = useState<{filename: string; data: any} | null>(null);
+
+  const fetchHistory = async () => {
+    setLoading(true);
+    try {
+      const r = await axios.get(`${API_BASE}/headscale/acl/history`);
+      setVersions(r.data || []);
+    } catch {
+      setVersions([]);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => { fetchHistory(); }, []);
+
+  const handlePreview = async (filename: string) => {
+    try {
+      const r = await axios.get(`${API_BASE}/headscale/acl/history/${filename}`);
+      setPreview({ filename, data: r.data });
+    } catch { alert('Failed to load version'); }
+  };
+
+  const handleRestore = async (filename: string) => {
+    if (!window.confirm(`Restore ACL policy from ${filename.replace('.json','')}? This will overwrite the current policy.`)) return;
+    setRestoring(filename);
+    try {
+      const r = await axios.get(`${API_BASE}/headscale/acl/history/${filename}`);
+      const policy = r.data;
+      await axios.post(`${API_BASE}/headscale/acl`, policy);
+      setAcl(policy);
+      alert('✅ Policy restored successfully');
+      fetchHistory();
+      setPreview(null);
+    } catch (e: any) {
+      alert('Failed to restore: ' + (e.response?.data?.message || e.message));
+    } finally { setRestoring(null); }
+  };
+
+  const formatTs = (ts: string) => {
+    try {
+      const clean = ts.replace('T','-').replace(/-/g, (m, i) => i > 9 ? ':' : '-').slice(0,19);
+      return new Date(ts.slice(0,10) + 'T' + ts.slice(11,19).replace(/-/g,':') + 'Z').toLocaleString();
+    } catch { return ts; }
+  };
+
+  return (
+    <div>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.25rem' }}>
+        <div>
+          <h3 style={{ color: '#f3f4f6', fontWeight: '700', fontSize: '1rem', margin: '0 0 0.2rem' }}>📜 ACL Version History</h3>
+          <p style={{ color: '#9ca3af', fontSize: '0.85rem', margin: 0 }}>Last 20 versions. Saved automatically on each Apply.</p>
+        </div>
+        <button onClick={fetchHistory} className="btn btn-secondary" style={{ fontSize: '0.8rem' }}>🔄 Refresh</button>
+      </div>
+
+      {loading ? <div style={{ color: '#9ca3af' }}>Loading...</div> : versions.length === 0 ? (
+        <div style={{ color: '#6b7280', textAlign: 'center', padding: '2rem', fontSize: '0.875rem' }}>
+          No history yet. Apply an ACL policy to start tracking versions.
+        </div>
+      ) : (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+          {versions.map((v, i) => (
+            <div key={v.filename} style={{ padding: '0.75rem 1rem', backgroundColor: '#1f2937', borderRadius: '0.5rem', border: '1px solid #374151', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '0.5rem' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+                <span style={{ backgroundColor: i === 0 ? '#1e3a5f' : '#374151', color: i === 0 ? '#60a5fa' : '#9ca3af', padding: '0.1rem 0.5rem', borderRadius: '0.25rem', fontSize: '0.7rem', fontWeight: '700' }}>
+                  {i === 0 ? 'LATEST' : `v-${versions.length - i}`}
+                </span>
+                <div>
+                  <div style={{ color: '#f3f4f6', fontSize: '0.85rem', fontWeight: '600' }}>{v.timestamp.slice(0,10)} {v.timestamp.slice(11,19).replace(/-/g,':')}</div>
+                  <div style={{ color: '#9ca3af', fontSize: '0.72rem' }}>Saved by: {v.savedBy.replace(/_/g,' ')}</div>
+                </div>
+              </div>
+              <div style={{ display: 'flex', gap: '0.4rem' }}>
+                <button onClick={() => handlePreview(v.filename)} className="btn btn-sm btn-secondary" style={{ fontSize: '0.75rem' }}>👁 View</button>
+                <button onClick={() => handleRestore(v.filename)} disabled={restoring === v.filename || i === 0} className="btn btn-sm btn-primary" style={{ fontSize: '0.75rem', opacity: i === 0 ? 0.4 : 1 }} title={i === 0 ? 'This is the current version' : 'Restore this version'}>
+                  {restoring === v.filename ? '...' : '↩ Restore'}
+                </button>
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+
+      {preview && (
+        <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(0,0,0,0.7)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000 }}>
+          <div style={{ backgroundColor: '#111827', border: '1px solid #374151', borderRadius: '0.75rem', padding: '2rem', maxWidth: '700px', width: '90%', maxHeight: '80vh', overflow: 'auto' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
+              <h3 style={{ color: '#f3f4f6', margin: 0, fontSize: '0.95rem' }}>📜 {preview.filename.replace('.json','')}</h3>
+              <div style={{ display: 'flex', gap: '0.5rem' }}>
+                <button onClick={() => handleRestore(preview.filename)} className="btn btn-sm btn-primary">↩ Restore This</button>
+                <button onClick={() => setPreview(null)} className="btn btn-sm btn-secondary">✕ Close</button>
+              </div>
+            </div>
+            <pre style={{ backgroundColor: '#0f172a', padding: '1rem', borderRadius: '0.375rem', fontSize: '0.75rem', color: '#86efac', overflow: 'auto', maxHeight: '55vh' }}>
+              {JSON.stringify(preview.data, null, 2)}
+            </pre>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+};
+
+
+// ACCESS CHECK TAB ────────────────────────────────────────────────────────────
+const AccessCheckTab: React.FC<{ acl: ACL | null }> = ({ acl }) => {
+  const [nodes, setNodes] = useState<{id: number; name: string; ipAddresses: string[]; user?: {name: string}}[]>([]);
+  const [src, setSrc] = useState('');
+  const [dst, setDst] = useState('');
+  const [dstPort, setDstPort] = useState('*');
+  const [result, setResult] = useState<{allowed: boolean; reason: string; matchedRule?: string} | null>(null);
+  const [loading, setLoading] = useState(false);
+
+  useEffect(() => {
+    axios.get(`${API_BASE}/headscale/api/v1/node`)
+      .then(r => setNodes(r.data.nodes || []))
+      .catch(() => {});
+  }, []);
+
+  const checkAccess = () => {
+    if (!acl || !src || !dst) return;
+    setLoading(true);
+    setResult(null);
+
+    try {
+      const policies = acl.acls || [];
+      const hosts = acl.hosts || {};
+
+      // Resolve IP/node name to actual value
+      const resolveTarget = (target: string) => {
+        if (target === '*') return ['*'];
+        // If it's a node selection - get its IPs
+        const node = nodes.find(n => n.name === target || n.ipAddresses?.includes(target));
+        if (node) return node.ipAddresses || [];
+        // If it's a host alias
+        if (hosts[target]) return [hosts[target]];
+        return [target];
+      };
+
+      const srcIPs = resolveTarget(src);
+      const dstIPs = resolveTarget(dst);
+
+      // Check each ACL rule
+      for (const policy of policies) {
+        const srcList = Array.isArray(policy.src) ? policy.src : [policy.src];
+        const dstList = Array.isArray(policy.dst) ? policy.dst : [policy.dst];
+
+        const srcMatch = srcList.some((s: string) =>
+          s === '*' || srcIPs.some(ip => s === ip || s === src) ||
+          s.startsWith('tag:') || s.startsWith('group:')
+        );
+
+        const dstMatch = dstList.some((d: string) => {
+          const [dstAddr, dstPorts] = d.split(':');
+          const addrMatch = dstAddr === '*' || dstIPs.some(ip => dstAddr === ip || dstAddr === dst);
+          const portMatch = !dstPorts || dstPorts === '*' || dstPort === '*' || dstPorts === dstPort;
+          return addrMatch && portMatch;
+        });
+
+        if (srcMatch && dstMatch) {
+          const action = policy.action || 'accept';
+          setResult({
+            allowed: action === 'accept',
+            reason: `Matched rule: src=[${srcList.join(', ')}] → dst=[${dstList.join(', ')}]`,
+            matchedRule: JSON.stringify(policy, null, 2)
+          });
+          setLoading(false);
+          return;
+        }
+      }
+
+      setResult({
+        allowed: false,
+        reason: 'No matching ACL rule found — traffic is denied by default'
+      });
+    } catch (e: any) {
+      setResult({ allowed: false, reason: 'Error checking ACL: ' + e.message });
+    }
+    setLoading(false);
+  };
+
+  const nodeOptions = nodes.map(n => ({
+    value: n.ipAddresses?.[0] || n.name,
+    label: `${n.name} (${n.ipAddresses?.[0] || 'no IP'}) — ${n.user?.name || 'unowned'}`
+  }));
+
+  return (
+    <div>
+      <div style={{ marginBottom: '1.5rem' }}>
+        <h3 style={{ color: '#f3f4f6', fontWeight: '700', fontSize: '1rem', marginBottom: '0.25rem' }}>🔍 ACL Access Check</h3>
+        <p style={{ color: '#9ca3af', fontSize: '0.85rem', margin: 0 }}>
+          Verify whether your ACL policy allows traffic between two nodes.
+        </p>
+      </div>
+
+      <div style={{ display: 'grid', gridTemplateColumns: '1fr auto 1fr', gap: '1rem', alignItems: 'end', marginBottom: '1rem' }}>
+        <div>
+          <label style={{ display: 'block', color: '#9ca3af', fontSize: '0.75rem', fontWeight: '600', textTransform: 'uppercase', marginBottom: '0.4rem' }}>Source</label>
+          <select value={src} onChange={e => setSrc(e.target.value)}
+            style={{ width: '100%', padding: '0.6rem 0.75rem', backgroundColor: '#1f2937', border: '1px solid #374151', borderRadius: '0.375rem', color: '#f3f4f6', fontSize: '0.875rem' }}>
+            <option value="">Select source node...</option>
+            <option value="*">* (Any)</option>
+            {nodeOptions.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
+          </select>
+        </div>
+
+        <div style={{ textAlign: 'center', color: '#6b7280', fontSize: '1.2rem', paddingBottom: '0.5rem' }}>→</div>
+
+        <div>
+          <label style={{ display: 'block', color: '#9ca3af', fontSize: '0.75rem', fontWeight: '600', textTransform: 'uppercase', marginBottom: '0.4rem' }}>Destination</label>
+          <select value={dst} onChange={e => setDst(e.target.value)}
+            style={{ width: '100%', padding: '0.6rem 0.75rem', backgroundColor: '#1f2937', border: '1px solid #374151', borderRadius: '0.375rem', color: '#f3f4f6', fontSize: '0.875rem' }}>
+            <option value="">Select destination node...</option>
+            <option value="*">* (Any)</option>
+            {nodeOptions.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
+          </select>
+        </div>
+      </div>
+
+      <div style={{ display: 'flex', gap: '1rem', alignItems: 'flex-end', marginBottom: '1.5rem' }}>
+        <div>
+          <label style={{ display: 'block', color: '#9ca3af', fontSize: '0.75rem', fontWeight: '600', textTransform: 'uppercase', marginBottom: '0.4rem' }}>Port (optional)</label>
+          <input
+            type="text" value={dstPort} onChange={e => setDstPort(e.target.value)}
+            placeholder="* or 22, 80, 443..."
+            style={{ padding: '0.6rem 0.75rem', backgroundColor: '#1f2937', border: '1px solid #374151', borderRadius: '0.375rem', color: '#f3f4f6', fontSize: '0.875rem', width: '160px' }}
+          />
+        </div>
+        <button onClick={checkAccess} disabled={!src || !dst || loading} className="btn btn-primary" style={{ height: '38px' }}>
+          {loading ? 'Checking...' : '🔍 Check Access'}
+        </button>
+      </div>
+
+      {result && (
+        <div style={{ padding: '1.25rem 1.5rem', borderRadius: '0.5rem', border: `2px solid ${result.allowed ? '#10b981' : '#ef4444'}`, backgroundColor: result.allowed ? 'rgba(16,185,129,0.08)' : 'rgba(239,68,68,0.08)' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', marginBottom: '0.5rem' }}>
+            <span style={{ fontSize: '1.75rem' }}>{result.allowed ? '✅' : '🚫'}</span>
+            <div>
+              <div style={{ color: result.allowed ? '#10b981' : '#ef4444', fontWeight: '800', fontSize: '1rem' }}>
+                {result.allowed ? 'ACCESS ALLOWED' : 'ACCESS DENIED'}
+              </div>
+              <div style={{ color: '#9ca3af', fontSize: '0.8rem', marginTop: '0.1rem' }}>{result.reason}</div>
+            </div>
+          </div>
+          {result.matchedRule && (
+            <details style={{ marginTop: '0.75rem' }}>
+              <summary style={{ color: '#6b7280', fontSize: '0.75rem', cursor: 'pointer' }}>View matched rule</summary>
+              <pre style={{ marginTop: '0.5rem', padding: '0.75rem', backgroundColor: '#0f172a', borderRadius: '0.375rem', fontSize: '0.75rem', color: '#86efac', overflow: 'auto' }}>
+                {result.matchedRule}
+              </pre>
+            </details>
+          )}
+        </div>
+      )}
+
+      {!acl && (
+        <div style={{ color: '#9ca3af', fontSize: '0.875rem', textAlign: 'center', padding: '2rem' }}>
+          Loading ACL policy...
+        </div>
+      )}
+    </div>
+  );
+};
+
+
 export const AclPage: React.FC = () => {
   const userEmail = useAuthStore((state) => state.user?.email || '');
   const tabs = [
@@ -23,11 +295,13 @@ export const AclPage: React.FC = () => {
     { icon: '🖥️', label: 'Hosts' },
     { icon: '🔒', label: 'Policies' },
     { icon: '🔐', label: 'SSH' },
-    { icon: '⚙️', label: 'Config' }
+    { icon: '⚙️', label: 'Config' },
+    { icon: '🔍', label: 'Access Check' },
+    { icon: '📜', label: 'History' }
   ];
 
   const userRole = useAuthStore((state) => state.user?.role || 'user');
-  const visibleTabs = userRole === 'super_admin' ? tabs : [tabs[0]];
+  const visibleTabs = userRole === 'super_admin' ? tabs : [tabs[0], tabs[6]].filter(Boolean);
   const [acl, setAcl] = useState<ACL | null>(null);
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState(0);
@@ -96,6 +370,8 @@ export const AclPage: React.FC = () => {
           {activeTab === 3 && <PoliciesTab acl={acl} setAcl={setAcl} />}
           {activeTab === 4 && <SshTab acl={acl} setAcl={setAcl} />}
           {activeTab === 5 && <ConfigTab acl={acl} setAcl={setAcl} />}
+          {activeTab === 6 && <AccessCheckTab acl={acl} />}
+          {activeTab === 7 && <HistoryTab acl={acl} setAcl={setAcl} />}
         </div>
       )}
     </div>

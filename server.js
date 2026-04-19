@@ -436,6 +436,15 @@ app.post('/api/headscale/acl', authenticateToken, async (req, res) => {
     const policy = { groups, tagOwners, hosts, acls, ssh };
     const updateResp = await axios.post(`${tokenData.headscaleUrl}/api/v1/policy`, { policy: JSON.stringify(policy) }, { headers: { Authorization: `Bearer ${tokenData.apiKey}` }, timeout: 10000 });
     console.log('[ACL] Policy updated');
+    // Save to history
+    try {
+      ensureAclHistoryDir();
+      const ts = new Date().toISOString().replace(/[:.]/g, '-').slice(0, 19);
+      const uname = (req.user?.username || req.user?.email || 'unknown').replace(/[^a-zA-Z0-9]/g, '_');
+      fs.writeFileSync(`${ACL_HISTORY_DIR}/${ts}_${uname}.json`, JSON.stringify(policy, null, 2));
+      const allFiles = fs.readdirSync(ACL_HISTORY_DIR).filter(f => f.endsWith('.json')).sort();
+      if (allFiles.length > 20) allFiles.slice(0, allFiles.length - 20).forEach(f => { try { fs.unlinkSync(`${ACL_HISTORY_DIR}/${f}`); } catch {} });
+    } catch (he) { console.error('[ACL-HISTORY] Save failed:', he.message); }
     res.json({ message: 'ACL updated', policy });
   } catch (error) {
     console.error('Failed to update ACL:', error.message);
@@ -943,6 +952,52 @@ app.post('/api/headscale/node/tags', authenticateToken, async (req, res) => {
     if (error.response) res.status(error.response.status || 500).json({ message: error.response.data?.message || error.message });
     else res.status(500).json({ message: error.message });
   }
+});
+
+
+// ── SSE — Real-time node status updates ──────────────────────────────────────
+const sseClients = new Set();
+
+app.get('/api/headscale/events', authenticateToken, (req, res) => {
+  const userEmail = req.user?.email;
+  const tokenData = userTokenMap.get(userEmail);
+  if (!tokenData) return res.status(401).json({ message: 'Session expired' });
+
+  res.setHeader('Content-Type', 'text/event-stream');
+  res.setHeader('Cache-Control', 'no-cache');
+  res.setHeader('Connection', 'keep-alive');
+  res.setHeader('Access-Control-Allow-Origin', '*');
+  res.flushHeaders();
+
+  // Send initial ping
+  res.write('event: ping\ndata: connected\n\n');
+
+  const client = { res, tokenData, email: userEmail };
+  sseClients.add(client);
+
+  // Poll Headscale every 15 seconds and push updates
+  const poll = async () => {
+    try {
+      const nodesResp = await axios.get(`${tokenData.headscaleUrl}/api/v1/node`, {
+        headers: { Authorization: `Bearer ${tokenData.apiKey}` }, timeout: 8000
+      });
+      const nodes = nodesResp.data.nodes || [];
+      // Send node status snapshot
+      res.write(`event: nodes\ndata: ${JSON.stringify(nodes.map(n => ({ id: n.id, online: n.online, lastSeen: n.last_seen })))}\n\n`);
+    } catch (e) {
+      res.write(`event: error\ndata: poll_failed\n\n`);
+    }
+  };
+
+  // Poll immediately then every 15s
+  poll();
+  const interval = setInterval(poll, 15000);
+
+  // Cleanup on disconnect
+  req.on('close', () => {
+    clearInterval(interval);
+    sseClients.delete(client);
+  });
 });
 
 app.use('/api/headscale', authenticateToken, async (req, res) => {
