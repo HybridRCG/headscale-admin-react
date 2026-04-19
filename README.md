@@ -6,9 +6,34 @@ A production-ready, role-based administration dashboard for [Headscale](https://
 
 [![Buy Me A Coffee](https://www.buymeacoffee.com/assets/img/custom_images/orange_img.png)](https://buymeacoffee.com/hybridrcg)
 
-## 🎉 v1.0.0 — First Stable Release
+## 📋 Changelog
 
-HS React has reached **v1.0.0** — a fully production-ready, self-hosted Headscale admin dashboard.
+### v1.0.12 — Latest
+- ✅ **Node Tags UI** — manage tags per node, owner preserved via `node_owners` map
+- ✅ **SSH Command Generator** — 4 ready-to-copy commands per node
+- ✅ **ACL Access Check** — verify source→destination with full host alias resolution
+- ✅ **ACL Version History** — auto-saved on every Apply, restore any version
+- ✅ **Real-time SSE** — live node online/offline updates, 🟢 Live indicator
+- ✅ **Network Topology** — canvas force-directed graph, drag/zoom/pan, ACL rule arrows
+- ✅ **Node Cards** — redesigned card layout, click to expand actions, 3×2 button grid
+- ✅ **Online/Offline duration** — `⬆ 2h 14m` / `⬇ 8h 32m` per node card
+- ✅ **Mobile navigation** — fixed hamburger dropdown positioning
+- ✅ **History tab crash** — tab rendering by label identity, bulletproof date parsing
+- ✅ **ACL restore 500** — strips `#ha-meta` comment fields before POSTing to Headscale
+- ✅ **Delete/Rename user** — syncs `users-mapping.json` automatically
+- ✅ **Registration callout** — explains Buy Me a Coffee → license key benefits
+- ✅ **Server migration** — moved from RackNerd to Contabo, backup script added
+
+### v1.0.0 — First Stable Release
+- Role-based access (super_admin, group_admin, user)
+- Deploy wizard, Pre-Auth Keys, Nodes, Routes, ACL Editor, DNS
+- Audit Log — view, filter, search, export CSV
+- Registration/licensing system
+
+
+## 🎉 v1.0.12 — First Stable Release
+
+HS React has reached **v1.0.12** — a fully production-ready, self-hosted Headscale admin dashboard.
 
 **[🌐 Website](https://hs.groblers.co.uk/hsreact)** · **[🎭 Live Demo](https://hs.groblers.co.uk/hsreact/demo)** · **[⭐ GitHub](https://github.com/HybridRCG/headscale-admin-react)**
 
@@ -208,25 +233,25 @@ All install files in [`resources/`](resources/):
 
 | Version | Changes |
 |---------|---------|
-| v1.0.0 | Update checker in footer — amber button when newer version available on GitHub |
-| v1.0.0 | Create user form — fixed heights, clear spacing between fields |
-| v1.0.0 | Create user — role selector + add to login mapping checkbox in one step |
-| v1.0.0 | Home page 3x2 grid; Users/Nodes cards name-only |
-| v1.0.0 | Registration/licensing system — license key hides Buy Me a Coffee |
-| v1.0.0 | Nodes move-owner modal with Copy Command/Copy Key; Pre-Auth Keys auto-refresh |
-| v1.0.0 | Unregister button in Settings |
-| v1.0.0 | Buy Me a Coffee in footer; version on login page links to GitHub |
-| v1.0.0 | ACL Tag Owners tab removed; tab indices fixed |
-| v1.0.0 | Pre-Auth Keys: Clear Expired button; Tag type removed from policy builder |
-| v1.0.0 | Version number bottom-right of login card |
-| v1.0.0 | Deploy modal sticky header; pre-auth key generation fixed for v0.28 |
-| v1.0.0 | GitHub Actions auto-build to ghcr.io; Docker-only install; resources folder |
-| v1.0.0 | Security: rate limiting, shell injection validation, dead code removed |
-| v1.0.0 | Renamed to HS React throughout |
-| v1.0.0 | ACL Policies visual builder with protocol/type buttons, edit in-place |
-| v1.0.0 | ACL tabs sticky; Hosts node dropdown + auto IP; Config syntax validator |
-| v1.0.0 | Routes page table; DNS sticky toolbar, compact dark theme |
-| v1.0.0 | Domain filtering for Nodes, Users, Routes |
+| v1.0.12 | Update checker in footer — amber button when newer version available on GitHub |
+| v1.0.12 | Create user form — fixed heights, clear spacing between fields |
+| v1.0.12 | Create user — role selector + add to login mapping checkbox in one step |
+| v1.0.12 | Home page 3x2 grid; Users/Nodes cards name-only |
+| v1.0.12 | Registration/licensing system — license key hides Buy Me a Coffee |
+| v1.0.12 | Nodes move-owner modal with Copy Command/Copy Key; Pre-Auth Keys auto-refresh |
+| v1.0.12 | Unregister button in Settings |
+| v1.0.12 | Buy Me a Coffee in footer; version on login page links to GitHub |
+| v1.0.12 | ACL Tag Owners tab removed; tab indices fixed |
+| v1.0.12 | Pre-Auth Keys: Clear Expired button; Tag type removed from policy builder |
+| v1.0.12 | Version number bottom-right of login card |
+| v1.0.12 | Deploy modal sticky header; pre-auth key generation fixed for v0.28 |
+| v1.0.12 | GitHub Actions auto-build to ghcr.io; Docker-only install; resources folder |
+| v1.0.12 | Security: rate limiting, shell injection validation, dead code removed |
+| v1.0.12 | Renamed to HS React throughout |
+| v1.0.12 | ACL Policies visual builder with protocol/type buttons, edit in-place |
+| v1.0.12 | ACL tabs sticky; Hosts node dropdown + auto IP; Config syntax validator |
+| v1.0.12 | Routes page table; DNS sticky toolbar, compact dark theme |
+| v1.0.12 | Domain filtering for Nodes, Users, Routes |
 | v0.1 | Initial React rewrite from Svelte fork |
 
 ---
