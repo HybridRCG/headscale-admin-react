@@ -440,7 +440,7 @@ app.post('/api/headscale/acl', authenticateToken, async (req, res) => {
       return clean;
     });
     const policy = { groups, tagOwners, hosts, acls: cleanAcls, ssh };
-    const updateResp = await axios.post(`${tokenData.headscaleUrl}/api/v1/policy`, { policy: JSON.stringify(policy) }, { headers: { Authorization: `Bearer ${tokenData.apiKey}` }, timeout: 10000 });
+    const updateResp = await axios.put(`${tokenData.headscaleUrl}/api/v1/policy`, { policy: JSON.stringify(policy) }, { headers: { Authorization: `Bearer ${tokenData.apiKey}` }, timeout: 10000 });
     console.log('[ACL] Policy updated');
     // Save to history
     try {
