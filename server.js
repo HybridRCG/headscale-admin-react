@@ -896,6 +896,55 @@ app.post('/api/headscale/api/v1/user/:id/rename/:newName', authenticateToken, as
   }
 });
 
+
+// ── Node Tags — set tags and preserve original owner ─────────────────────────
+app.post('/api/headscale/node/tags', authenticateToken, async (req, res) => {
+  const userEmail = req.user?.email;
+  if (!userEmail) return res.status(401).json({ message: 'Unauthorized' });
+  const tokenData = userTokenMap.get(userEmail);
+  if (!tokenData) return res.status(401).json({ message: 'Session expired' });
+
+  const { nodeId, tags, originalOwner } = req.body;
+  if (!nodeId) return res.status(400).json({ message: 'nodeId required' });
+
+  try {
+    // Step 1: Set tags via Headscale API
+    const tagResp = await axios.post(
+      `${tokenData.headscaleUrl}/api/v1/node/${nodeId}/tags`,
+      { tags: tags || [] },
+      { headers: { Authorization: `Bearer ${tokenData.apiKey}` }, timeout: 10000 }
+    );
+
+    // Step 2: Preserve or clear owner in users-mapping.json node_owners
+    try {
+      const mapping = JSON.parse(fs.readFileSync(USERS_MAPPING_PATH, 'utf8'));
+      if (!mapping.node_owners) mapping.node_owners = {};
+
+      if (tags && tags.length > 0) {
+        // Save original owner before tagging overwrites it
+        if (originalOwner) {
+          mapping.node_owners[String(nodeId)] = originalOwner;
+        }
+      } else {
+        // Tags cleared — remove from preserved owners
+        delete mapping.node_owners[String(nodeId)];
+      }
+
+      fs.writeFileSync(USERS_MAPPING_PATH, JSON.stringify(mapping, null, 2));
+      logAudit(req.user.username || userEmail, 'tag', `node:${nodeId}`,
+        tags?.length > 0 ? `tags: ${tags.join(', ')} (owner: ${originalOwner})` : 'tags cleared');
+    } catch (e) {
+      console.error('[NODE-TAGS] Failed to update node_owners:', e.message);
+    }
+
+    res.json(tagResp.data);
+  } catch (error) {
+    console.error('[NODE-TAGS] Error:', error.message);
+    if (error.response) res.status(error.response.status || 500).json({ message: error.response.data?.message || error.message });
+    else res.status(500).json({ message: error.message });
+  }
+});
+
 app.use('/api/headscale', authenticateToken, async (req, res) => {
   const userEmail = req.user?.email;
   if (!userEmail) return res.status(401).json({ message: 'Unauthorized' });

@@ -15,6 +15,8 @@ interface Node {
   online?: boolean;
   approvedRoutes?: string[];
   availableRoutes?: string[];
+  forcedTags?: string[];
+  validTags?: string[];
 }
 
 export const NodesPage: React.FC = () => {
@@ -40,12 +42,19 @@ export const NodesPage: React.FC = () => {
   const [moveKeyModal, setMoveKeyModal] = useState<{key: string; user: string} | null>(null);
   const [modalNode, setModalNode] = useState<Node | null>(null);
   const [deployModal, setDeployModal] = useState(false);
+  const [tagModal, setTagModal] = useState<Node | null>(null);
+  const [tagInput, setTagInput] = useState('');
+  const [tagOwners, setTagOwners] = useState<Record<string, string>>({});
+  const [availableTags, setAvailableTags] = useState<string[]>([]);
+  const [tagSaving, setTagSaving] = useState(false);
   const API_BASE = '/admin/api';
 
   useEffect(() => {
     fetchNodes();
     fetchUsers();
     fetchGroups();
+    fetchTagOwners();
+    fetchAvailableTags();
   }, []);
 
   useEffect(() => { // eslint-disable-line react-hooks/exhaustive-deps
@@ -100,6 +109,55 @@ export const NodesPage: React.FC = () => {
       setGroupUsers(userMap);
     } catch (err) {
       console.error('Failed to fetch groups:', err);
+    }
+  };
+
+  const fetchTagOwners = async () => {
+    try {
+      const r = await axios.get(`${API_BASE}/headscale/user-emails`);
+      setTagOwners(r.data?.node_owners || {});
+    } catch {}
+  };
+
+  const fetchAvailableTags = async () => {
+    try {
+      const r = await axios.get(`${API_BASE}/headscale/acl`);
+      let policy = r.data;
+      if (typeof policy === 'string') policy = JSON.parse(policy);
+      const tagOwnerKeys = Object.keys(policy.tagOwners || {});
+      setAvailableTags(tagOwnerKeys.map((t: string) => t.startsWith('tag:') ? t : `tag:${t}`));
+    } catch {}
+  };
+
+  const getNodeOwner = (node: Node): string => {
+    const tags = [...(node.forcedTags || []), ...(node.validTags || [])];
+    if (tags.length > 0) {
+      // Tagged node — look up preserved owner
+      return tagOwners[String(node.id)] || node.user?.name || '—';
+    }
+    return node.user?.name || '—';
+  };
+
+  const getNodeTags = (node: Node): string[] => {
+    return [...new Set([...(node.forcedTags || []), ...(node.validTags || [])])];
+  };
+
+  const handleSaveTags = async (node: Node, tags: string[]) => {
+    setTagSaving(true);
+    try {
+      await axios.post(`${API_BASE}/headscale/node/tags`, {
+        nodeId: node.id,
+        tags,
+        originalOwner: node.user?.name || tagOwners[String(node.id)] || ''
+      });
+      await fetchNodes();
+      await fetchTagOwners();
+      setTagModal(null);
+      setTagInput('');
+    } catch (err: any) {
+      alert('Failed to update tags: ' + (err.response?.data?.message || err.message));
+    } finally {
+      setTagSaving(false);
     }
   };
 
@@ -247,12 +305,12 @@ export const NodesPage: React.FC = () => {
       <table style={{ width: '100%', borderCollapse: 'collapse', color: '#d1d5db', fontSize: '0.8rem', tableLayout: 'fixed' }}>
           <thead>
             <tr style={{ borderBottom: '2px solid #374151' }}>
-              <th style={{ padding: '0.75rem', textAlign: 'left', width: '22%' }}>Name</th>
-
-              <th style={{ padding: '0.75rem', textAlign: 'left', width: '15%' }}>User</th>
-              <th style={{ padding: '0.75rem', textAlign: 'left', width: '28%' }}>IPs</th>
-              <th style={{ padding: '0.75rem', textAlign: 'left', width: '8%' }}>Status</th>
-              <th style={{ padding: '0.75rem', textAlign: 'left', width: '27%' }}>Actions</th>
+              <th style={{ padding: '0.75rem', textAlign: 'left', width: '18%' }}>Name</th>
+              <th style={{ padding: '0.75rem', textAlign: 'left', width: '12%' }}>Owner</th>
+              <th style={{ padding: '0.75rem', textAlign: 'left', width: '15%' }}>Tags</th>
+              <th style={{ padding: '0.75rem', textAlign: 'left', width: '20%' }}>IPs</th>
+              <th style={{ padding: '0.75rem', textAlign: 'left', width: '7%' }}>Status</th>
+              <th style={{ padding: '0.75rem', textAlign: 'left', width: '28%' }}>Actions</th>
             </tr>
           </thead>
           <tbody>
@@ -268,7 +326,22 @@ export const NodesPage: React.FC = () => {
                       <option value="">Select...</option>
                       {users.map(u => <option key={u} value={u}>{u}</option>)}
                     </select>
-                  ) : <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', display: 'block' }}>{node.user?.name || 'N/A'}</span>}
+                  ) : (
+                    <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', display: 'block', fontSize: '0.78rem' }}
+                      title={getNodeOwner(node)}>
+                      {getNodeTags(node).length > 0 && <span style={{ color: '#f59e0b', marginRight: '0.25rem' }} title="Tagged node — original owner preserved">🏷</span>}
+                      {getNodeOwner(node)}
+                    </span>
+                  )}
+                </td>
+                <td style={{ padding: '0.75rem' }}>
+                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.2rem' }}>
+                    {getNodeTags(node).map(tag => (
+                      <span key={tag} style={{ backgroundColor: '#1e3a5f', color: '#60a5fa', padding: '0.1rem 0.4rem', borderRadius: '0.25rem', fontSize: '0.68rem', fontWeight: '600', whiteSpace: 'nowrap' }}>
+                        {tag.replace('tag:', '')}
+                      </span>
+                    ))}
+                  </div>
                 </td>
                 <td style={{ padding: '0.75rem', fontSize: '0.72rem', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', maxWidth: 0 }} title={node.ipAddresses?.join(', ')}>{node.ipAddresses?.[0] || 'N/A'}</td>
                 <td style={{ padding: '0.75rem' }}><span style={{ color: node.online ? '#86efac' : '#fca5a5' }}>{node.online ? '🟢' : '🔴'}</span></td>
@@ -288,6 +361,7 @@ export const NodesPage: React.FC = () => {
                         title={!node.availableRoutes || node.availableRoutes.length === 0 ? 'No routes advertised' : 'Manage routes'}
                         style={{ opacity: (!node.availableRoutes || node.availableRoutes.length === 0) ? 0.35 : 1, cursor: (!node.availableRoutes || node.availableRoutes.length === 0) ? 'not-allowed' : 'pointer' }}
                       >Routes</button>
+                      <button className="btn btn-sm btn-secondary" onClick={() => { setTagModal(node); setTagInput(''); }} style={{ fontSize: '0.7rem' }}>🏷 Tags</button>
                       <button className="btn btn-sm btn-error" onClick={() => handleDelete(node.id)}>Delete</button>
                       <button className="btn btn-sm btn-error" onClick={() => handleExpire(node.id)}>Expire</button>
                     </div>
@@ -359,6 +433,99 @@ export const NodesPage: React.FC = () => {
             )}
 
             <button className="btn btn-secondary" onClick={() => { setRoutesModal(null); setModalNode(null); }}>Close</button>
+          </div>
+        </div>
+      )}
+
+
+      {tagModal && (
+        <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(0,0,0,0.7)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000 }}>
+          <div style={{ backgroundColor: '#111827', border: '1px solid #374151', borderRadius: '0.75rem', padding: '2rem', maxWidth: '500px', width: '90%', color: '#d1d5db' }}>
+            <h2 style={{ margin: '0 0 0.25rem', color: '#f3f4f6', fontSize: '1.1rem' }}>🏷 Manage Tags — {tagModal.name}</h2>
+            <div style={{ color: '#9ca3af', fontSize: '0.8rem', marginBottom: '1.25rem' }}>
+              👤 Owner: <span style={{ color: '#10b981', fontWeight: '600' }}>{getNodeOwner(tagModal)}</span>
+              <span style={{ marginLeft: '0.5rem', color: '#6b7280' }}>(preserved even when tagged)</span>
+            </div>
+
+            {/* Current tags */}
+            <div style={{ marginBottom: '1rem' }}>
+              <div style={{ fontSize: '0.75rem', color: '#9ca3af', textTransform: 'uppercase', fontWeight: '600', marginBottom: '0.5rem' }}>Current Tags</div>
+              <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.4rem', minHeight: '2rem' }}>
+                {getNodeTags(tagModal).length === 0
+                  ? <span style={{ color: '#6b7280', fontSize: '0.8rem' }}>No tags</span>
+                  : getNodeTags(tagModal).map(tag => (
+                    <span key={tag} style={{ display: 'inline-flex', alignItems: 'center', gap: '0.3rem', backgroundColor: '#1e3a5f', color: '#60a5fa', padding: '0.25rem 0.6rem', borderRadius: '0.375rem', fontSize: '0.8rem', fontWeight: '600' }}>
+                      {tag}
+                      <button onClick={() => {
+                        const newTags = getNodeTags(tagModal).filter(t => t !== tag);
+                        setTagModal({ ...tagModal, forcedTags: newTags, validTags: [] });
+                      }} style={{ background: 'none', border: 'none', color: '#93c5fd', cursor: 'pointer', fontSize: '0.9rem', lineHeight: 1, padding: 0 }}>✕</button>
+                    </span>
+                  ))
+                }
+              </div>
+            </div>
+
+            {/* Add tag input */}
+            <div style={{ marginBottom: '1rem' }}>
+              <div style={{ fontSize: '0.75rem', color: '#9ca3af', textTransform: 'uppercase', fontWeight: '600', marginBottom: '0.5rem' }}>Add Tag</div>
+              <div style={{ display: 'flex', gap: '0.5rem' }}>
+                <input
+                  type="text"
+                  value={tagInput}
+                  onChange={e => setTagInput(e.target.value)}
+                  onKeyDown={e => {
+                    if (e.key === 'Enter' && tagInput.trim()) {
+                      const t = tagInput.trim().startsWith('tag:') ? tagInput.trim() : `tag:${tagInput.trim()}`;
+                      if (!getNodeTags(tagModal).includes(t)) {
+                        setTagModal({ ...tagModal, forcedTags: [...(tagModal.forcedTags || []), t], validTags: [] });
+                      }
+                      setTagInput('');
+                    }
+                  }}
+                  placeholder="e.g. server or tag:server"
+                  style={{ flex: 1, padding: '0.5rem 0.75rem', backgroundColor: '#1f2937', border: '1px solid #374151', borderRadius: '0.375rem', color: '#f3f4f6', fontSize: '0.875rem' }}
+                />
+                <button onClick={() => {
+                  if (!tagInput.trim()) return;
+                  const t = tagInput.trim().startsWith('tag:') ? tagInput.trim() : `tag:${tagInput.trim()}`;
+                  if (!getNodeTags(tagModal).includes(t)) {
+                    setTagModal({ ...tagModal, forcedTags: [...(tagModal.forcedTags || []), t], validTags: [] });
+                  }
+                  setTagInput('');
+                }} className="btn btn-sm btn-primary">+ Add</button>
+              </div>
+            </div>
+
+            {/* Available tags from ACL */}
+            {availableTags.length > 0 && (
+              <div style={{ marginBottom: '1.25rem' }}>
+                <div style={{ fontSize: '0.75rem', color: '#9ca3af', textTransform: 'uppercase', fontWeight: '600', marginBottom: '0.5rem' }}>From ACL Policy</div>
+                <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.3rem' }}>
+                  {availableTags.map(tag => {
+                    const active = getNodeTags(tagModal).includes(tag);
+                    return (
+                      <button key={tag} onClick={() => {
+                        if (active) {
+                          setTagModal({ ...tagModal, forcedTags: getNodeTags(tagModal).filter(t => t !== tag), validTags: [] });
+                        } else {
+                          setTagModal({ ...tagModal, forcedTags: [...(tagModal.forcedTags || []), tag], validTags: [] });
+                        }
+                      }} style={{ padding: '0.2rem 0.6rem', backgroundColor: active ? '#1e3a5f' : '#1f2937', color: active ? '#60a5fa' : '#9ca3af', border: `1px solid ${active ? '#3b82f6' : '#374151'}`, borderRadius: '0.25rem', fontSize: '0.75rem', cursor: 'pointer', fontWeight: active ? '600' : '400' }}>
+                        {active ? '✓ ' : '+ '}{tag}
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
+
+            <div style={{ display: 'flex', gap: '0.5rem', justifyContent: 'flex-end' }}>
+              <button onClick={() => { setTagModal(null); setTagInput(''); }} className="btn btn-secondary">Cancel</button>
+              <button onClick={() => handleSaveTags(tagModal, getNodeTags(tagModal))} className="btn btn-primary" disabled={tagSaving}>
+                {tagSaving ? 'Saving...' : '✓ Apply Tags'}
+              </button>
+            </div>
           </div>
         </div>
       )}
