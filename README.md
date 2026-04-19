@@ -12,10 +12,6 @@ HS React has reached **v1.0.0** — a fully production-ready, self-hosted Headsc
 
 **[🌐 Website](https://hs.groblers.co.uk/hsreact)** · **[🎭 Live Demo](https://hs.groblers.co.uk/hsreact/demo)** · **[⭐ GitHub](https://github.com/HybridRCG/headscale-admin-react)**
 
-> 🎭 The live demo uses fictional data — no real Headscale instance, no data saved.
-
-**[🌐 Website](https://hs.groblers.co.uk/hsreact)** · **[🎭 Live Demo](https://hs.groblers.co.uk/hsreact/demo)** · **[⭐ GitHub](https://github.com/HybridRCG/headscale-admin-react)**
-
 > 🎭 The live demo uses fictional data and runs entirely in the browser — no real Headscale instance, no data saved.
 
 ---
