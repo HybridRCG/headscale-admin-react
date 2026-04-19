@@ -17,6 +17,7 @@ interface Node {
   availableRoutes?: string[];
   forcedTags?: string[];
   validTags?: string[];
+  lastSeen?: { seconds: number; nanos: number };
 }
 
 interface SimNode extends Node {
@@ -55,7 +56,6 @@ export const NodesPage: React.FC = () => {
   const [tagSaving, setTagSaving] = useState(false);
   const [liveConnected, setLiveConnected] = useState(false);
   const [expandedNode, setExpandedNode] = useState<number | null>(null);
-  const [selectedCard, setSelectedCard] = useState<number | null>(null);
 
   const API_BASE = '/admin/api';
 
@@ -78,10 +78,10 @@ export const NodesPage: React.FC = () => {
       es.addEventListener('ping', () => setLiveConnected(true));
       es.addEventListener('nodes', (e: MessageEvent) => {
         try {
-          const updates: {id: number; online: boolean}[] = JSON.parse(e.data);
+          const updates: {id: number; online: boolean; lastSeen?: {seconds: number; nanos: number}}[] = JSON.parse(e.data);
           setAllNodes(prev => prev.map(node => {
             const u = updates.find(x => x.id === node.id);
-            return u ? { ...node, online: u.online } : node;
+            return u ? { ...node, online: u.online, lastSeen: u.lastSeen || node.lastSeen } : node;
           }));
         } catch {}
       });
@@ -150,6 +150,20 @@ export const NodesPage: React.FC = () => {
   };
 
   const getNodeTags = (node: Node) => [...new Set([...(node.forcedTags || []), ...(node.validTags || [])])];
+
+
+  const getNodeDuration = (node: Node): string => {
+    const ls = node.lastSeen;
+    if (!ls || !ls.seconds) return '';
+    const nowSec = Math.floor(Date.now() / 1000);
+    const diffSec = Math.max(0, nowSec - ls.seconds);
+    const days = Math.floor(diffSec / 86400);
+    const hours = Math.floor((diffSec % 86400) / 3600);
+    const mins = Math.floor((diffSec % 3600) / 60);
+    if (days > 0) return `${days}d ${hours}h ${mins}m`;
+    if (hours > 0) return `${hours}h ${mins}m`;
+    return `${mins}m`;
+  };
 
   const applyFilters = () => {
     setFilteredNodes(allNodes.filter(node => {
@@ -277,10 +291,10 @@ export const NodesPage: React.FC = () => {
           const owner = getNodeOwner(node);
           return (
             <div key={node.id}
-              onClick={() => setSelectedCard(selectedCard === node.id ? null : node.id)}
+              onClick={() => setExpandedNode(expandedNode === node.id ? null : node.id)}
               style={{
                 backgroundColor: '#1f2937',
-                border: `1px solid ${selectedCard === node.id ? '#6366f1' : node.online ? '#1e3a5f' : '#374151'}`,
+                border: `1px solid ${expandedNode === node.id ? '#6366f1' : node.online ? '#1e3a5f' : '#374151'}`,
                 borderRadius: '0.625rem',
                 overflow: 'hidden',
                 display: 'flex',
@@ -310,9 +324,16 @@ export const NodesPage: React.FC = () => {
                     {node.ipAddresses[1]}
                   </div>
                 )}
-                {/* Row 4: owner */}
-                <div style={{ color: '#8b5cf6', fontSize: '0.72rem', fontWeight: '600', marginTop: '0.1rem' }}>
-                  {tags.length > 0 ? '🏷 ' : '👤 '}{owner}
+                {/* Row 4: owner + duration */}
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '0.1rem' }}>
+                  <div style={{ color: '#8b5cf6', fontSize: '0.72rem', fontWeight: '600' }}>
+                    {tags.length > 0 ? '🏷 ' : '👤 '}{owner}
+                  </div>
+                  {getNodeDuration(node) && (
+                    <div style={{ fontSize: '0.65rem', fontWeight: '600', color: node.online ? '#10b981' : '#6b7280', whiteSpace: 'nowrap', marginLeft: '0.25rem' }}>
+                      {node.online ? '⬆' : '⬇'} {getNodeDuration(node)}
+                    </div>
+                  )}
                 </div>
 
                 {/* Tags */}
@@ -336,8 +357,15 @@ export const NodesPage: React.FC = () => {
                 )}
               </div>
 
+              {/* Tap hint — only shown when collapsed */}
+              {expandedNode !== node.id && (
+                <div style={{ padding: '0.2rem', textAlign: 'center', color: '#4b5563', fontSize: '0.62rem', letterSpacing: '0.03em', backgroundColor: '#111827' }}>
+                  tap to manage
+                </div>
+              )}
+
               {/* Card Actions — only shown when card is selected */}
-              {selectedCard === node.id && (
+              {expandedNode === node.id && (
               <div onClick={e => e.stopPropagation()} style={{ padding: '0.5rem', display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '0.3rem', backgroundColor: '#111827', borderTop: '1px solid #374151' }}>
                 <button className="btn btn-sm btn-primary"
                   onClick={() => { setEditModal(node); setEditName(node.name); setEditUser(node.user?.name || ''); }}
