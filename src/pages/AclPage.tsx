@@ -62,8 +62,10 @@ const HistoryTab: React.FC<{ acl: ACL | null; setAcl: (a: ACL) => void }> = ({ s
 
   const formatTs = (ts: string) => {
     try {
-      const clean = ts.replace('T','-').replace(/-/g, (m, i) => i > 9 ? ':' : '-').slice(0,19);
-      return new Date(ts.slice(0,10) + 'T' + ts.slice(11,19).replace(/-/g,':') + 'Z').toLocaleString();
+      // ts format: 2026-04-19T12-30-00 (colons replaced with dashes)
+      const date = ts.slice(0, 10);
+      const time = ts.slice(11, 19).replace(/-/g, ':');
+      return new Date(`${date}T${time}Z`).toLocaleString();
     } catch { return ts; }
   };
 
@@ -301,7 +303,7 @@ export const AclPage: React.FC = () => {
   ];
 
   const userRole = useAuthStore((state) => state.user?.role || 'user');
-  const visibleTabs = userRole === 'super_admin' ? tabs : [tabs[0], tabs[6]].filter(Boolean);
+  const visibleTabs = userRole === 'super_admin' ? tabs : [tabs[0], tabs[6], tabs[7]].filter(Boolean);
   const [acl, setAcl] = useState<ACL | null>(null);
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState(0);
@@ -364,14 +366,14 @@ export const AclPage: React.FC = () => {
       </div>
       {acl && (
         <div className="acl-content">
-          {activeTab === 0 && <UsersTab userEmail={userEmail} />}
-          {activeTab === 1 && <GroupsTab acl={acl} setAcl={setAcl} />}
-          {activeTab === 2 && <HostsTab acl={acl} setAcl={setAcl} />}
-          {activeTab === 3 && <PoliciesTab acl={acl} setAcl={setAcl} />}
-          {activeTab === 4 && <SshTab acl={acl} setAcl={setAcl} />}
-          {activeTab === 5 && <ConfigTab acl={acl} setAcl={setAcl} />}
-          {activeTab === 6 && <AccessCheckTab acl={acl} />}
-          {activeTab === 7 && <HistoryTab acl={acl} setAcl={setAcl} />}
+          {visibleTabs[activeTab]?.label === 'Users' && <UsersTab userEmail={userEmail} />}
+          {visibleTabs[activeTab]?.label === 'Groups' && acl && <GroupsTab acl={acl} setAcl={setAcl} />}
+          {visibleTabs[activeTab]?.label === 'Hosts' && acl && <HostsTab acl={acl} setAcl={setAcl} />}
+          {visibleTabs[activeTab]?.label === 'Policies' && acl && <PoliciesTab acl={acl} setAcl={setAcl} />}
+          {visibleTabs[activeTab]?.label === 'SSH' && acl && <SshTab acl={acl} setAcl={setAcl} />}
+          {visibleTabs[activeTab]?.label === 'Config' && acl && <ConfigTab acl={acl} setAcl={setAcl} />}
+          {visibleTabs[activeTab]?.label === 'Access Check' && <AccessCheckTab acl={acl} />}
+          {visibleTabs[activeTab]?.label === 'History' && acl && <HistoryTab acl={acl} setAcl={setAcl} />}
         </div>
       )}
     </div>
