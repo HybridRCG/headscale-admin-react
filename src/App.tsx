@@ -11,6 +11,7 @@ import { DnsPage } from './pages/DnsPage';
 import { SettingsPage } from './pages/SettingsPage';
 import { PreAuthKeysPage } from './pages/PreAuthKeysPage';
 import { AuditLogPage } from './pages/AuditLogPage';
+import { TopologyPage } from './pages/TopologyPage';
 import { Navigation } from './components/Navigation';
 import { Footer } from './components/Footer';
 import './App.css';
@@ -81,6 +82,7 @@ function App() {
         <Route path="/nodes" element={<PrivateRoute><NodesPage /></PrivateRoute>} />
         <Route path="/routes" element={<PrivateRoute><RoutesPage /></PrivateRoute>} />
         <Route path="/acl" element={<PrivateRoute><AclPage /></PrivateRoute>} />
+        <Route path="/topology" element={<PrivateRoute><TopologyPage /></PrivateRoute>} />
         <Route path="/dns" element={<AdminRoute><DnsPage /></AdminRoute>} />
         <Route path="/settings" element={<AdminRoute><SettingsPage /></AdminRoute>} />
         <Route path="/preauthkeys" element={<PrivateRoute><PreAuthKeysPage /></PrivateRoute>} />
