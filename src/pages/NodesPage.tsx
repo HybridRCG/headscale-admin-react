@@ -17,8 +17,8 @@ interface Node {
   availableRoutes?: string[];
   forcedTags?: string[];
   validTags?: string[];
-  lastSeen?: { seconds: number; nanos: number };
-  last_seen?: { seconds: number; nanos: number };
+  lastSeen?: string | { seconds: number; nanos: number };
+  last_seen?: string | { seconds: number; nanos: number };
 }
 
 interface SimNode extends Node {
@@ -96,13 +96,7 @@ export const NodesPage: React.FC = () => {
     setLoading(true);
     try {
       const r = await axios.get(`${API_BASE}/headscale/api/v1/node`);
-      const nodes = r.data.nodes || [];
-      if (nodes.length > 0) {
-        const n = nodes[0];
-        console.log('[NODES] First node keys:', Object.keys(n));
-        console.log('[NODES] lastSeen:', n.lastSeen, 'last_seen:', n.last_seen, 'online:', n.online);
-      }
-      setAllNodes(nodes);
+      setAllNodes(r.data.nodes || []);
     } catch { } finally { setLoading(false); }
   };
 
@@ -160,17 +154,27 @@ export const NodesPage: React.FC = () => {
 
 
   const getNodeDuration = (node: Node): string => {
-    // Headscale REST API returns camelCase "lastSeen"
-    const ls = (node as any).lastSeen || (node as any).last_seen;
-    if (!ls || !ls.seconds) return '';
-    const nowSec = Math.floor(Date.now() / 1000);
-    const diffSec = Math.max(0, nowSec - ls.seconds);
+    const raw = (node as any).lastSeen || (node as any).last_seen;
+    if (!raw) return '';
+    let epochMs: number;
+    if (typeof raw === 'string') {
+      // ISO string: "2026-04-19T18:02:23.607709216Z"
+      epochMs = new Date(raw).getTime();
+    } else if (raw.seconds) {
+      // Protobuf timestamp: { seconds: 1234567890, nanos: 0 }
+      epochMs = raw.seconds * 1000;
+    } else {
+      return '';
+    }
+    if (!epochMs || isNaN(epochMs)) return '';
+    const diffSec = Math.max(0, Math.floor((Date.now() - epochMs) / 1000));
     const days = Math.floor(diffSec / 86400);
     const hours = Math.floor((diffSec % 86400) / 3600);
     const mins = Math.floor((diffSec % 3600) / 60);
     if (days > 0) return `${days}d ${hours}h ${mins}m`;
     if (hours > 0) return `${hours}h ${mins}m`;
-    return `${mins}m`;
+    if (mins > 0) return `${mins}m`;
+    return 'just now';
   };
 
   const applyFilters = () => {

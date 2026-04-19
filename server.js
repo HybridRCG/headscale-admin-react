@@ -433,7 +433,13 @@ app.post('/api/headscale/acl', authenticateToken, async (req, res) => {
     const userEmail = req.user.email;
     const tokenData = userTokenMap.get(userEmail);
     if (!tokenData) return res.status(401).json({ message: 'Session expired' });
-    const policy = { groups, tagOwners, hosts, acls, ssh };
+    // Strip comment/meta fields (#ha-meta etc) from acl rules — Headscale API rejects them
+    const cleanAcls = (acls || []).map(rule => {
+      const clean = {};
+      Object.keys(rule).forEach(k => { if (!k.startsWith('#')) clean[k] = rule[k]; });
+      return clean;
+    });
+    const policy = { groups, tagOwners, hosts, acls: cleanAcls, ssh };
     const updateResp = await axios.post(`${tokenData.headscaleUrl}/api/v1/policy`, { policy: JSON.stringify(policy) }, { headers: { Authorization: `Bearer ${tokenData.apiKey}` }, timeout: 10000 });
     console.log('[ACL] Policy updated');
     // Save to history
@@ -989,7 +995,11 @@ app.get('/api/headscale/events', authenticateToken, (req, res) => {
       });
       const nodes = nodesResp.data.nodes || [];
       // Send node status snapshot
-      res.write(`event: nodes\ndata: ${JSON.stringify(nodes.map(n => ({ id: n.id, online: n.online, lastSeen: n.last_seen })))}\n\n`);
+      res.write(`event: nodes\ndata: ${JSON.stringify(nodes.map(n => ({
+        id: n.id,
+        online: n.online,
+        lastSeen: n.last_seen?.seconds ? new Date(n.last_seen.seconds * 1000).toISOString() : (n.lastSeen || null)
+      })))}\n\n`);
     } catch (e) {
       res.write(`event: error\ndata: poll_failed\n\n`);
     }
