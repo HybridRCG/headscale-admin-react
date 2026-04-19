@@ -62,11 +62,12 @@ const HistoryTab: React.FC<{ acl: ACL | null; setAcl: (a: ACL) => void }> = ({ s
 
   const formatTs = (ts: string) => {
     try {
-      // ts format: 2026-04-19T12-30-00 (colons replaced with dashes)
+      if (!ts || ts.length < 10) return ts || '?';
       const date = ts.slice(0, 10);
-      const time = ts.slice(11, 19).replace(/-/g, ':');
-      return new Date(`${date}T${time}Z`).toLocaleString();
-    } catch { return ts; }
+      const timePart = ts.length > 11 ? ts.slice(11, 19).replace(/-/g, ':') : '00:00:00';
+      const d = new Date(`${date}T${timePart}Z`);
+      return isNaN(d.getTime()) ? ts : d.toLocaleString();
+    } catch { return ts || '?'; }
   };
 
   return (
@@ -92,8 +93,8 @@ const HistoryTab: React.FC<{ acl: ACL | null; setAcl: (a: ACL) => void }> = ({ s
                   {i === 0 ? 'LATEST' : `v-${versions.length - i}`}
                 </span>
                 <div>
-                  <div style={{ color: '#f3f4f6', fontSize: '0.85rem', fontWeight: '600' }}>{v.timestamp.slice(0,10)} {v.timestamp.slice(11,19).replace(/-/g,':')}</div>
-                  <div style={{ color: '#9ca3af', fontSize: '0.72rem' }}>Saved by: {v.savedBy.replace(/_/g,' ')}</div>
+                  <div style={{ color: '#f3f4f6', fontSize: '0.85rem', fontWeight: '600' }}>{formatTs(v.timestamp || v.filename?.slice(0,19) || '?')}</div>
+                  <div style={{ color: '#9ca3af', fontSize: '0.72rem' }}>Saved by: {(v.savedBy || 'unknown').replace(/_/g,' ')}</div>
                 </div>
               </div>
               <div style={{ display: 'flex', gap: '0.4rem' }}>
@@ -131,11 +132,10 @@ const HistoryTab: React.FC<{ acl: ACL | null; setAcl: (a: ACL) => void }> = ({ s
 // ACCESS CHECK TAB ────────────────────────────────────────────────────────────
 const AccessCheckTab: React.FC<{ acl: ACL | null }> = ({ acl }) => {
   const [nodes, setNodes] = useState<{id: number; name: string; ipAddresses: string[]; user?: {name: string}}[]>([]);
-  const [src, setSrc] = useState('');
-  const [dst, setDst] = useState('');
+  const [srcNode, setSrcNode] = useState('');
+  const [dstNode, setDstNode] = useState('');
   const [dstPort, setDstPort] = useState('*');
-  const [result, setResult] = useState<{allowed: boolean; reason: string; matchedRule?: string} | null>(null);
-  const [loading, setLoading] = useState(false);
+  const [result, setResult] = useState<{allowed: boolean; reason: string; matchedRule?: any} | null>(null);
 
   useEffect(() => {
     axios.get(`${API_BASE}/headscale/api/v1/node`)
@@ -144,144 +144,141 @@ const AccessCheckTab: React.FC<{ acl: ACL | null }> = ({ acl }) => {
   }, []);
 
   const checkAccess = () => {
-    if (!acl || !src || !dst) return;
-    setLoading(true);
+    if (!acl || !srcNode || !dstNode) return;
     setResult(null);
 
-    try {
-      const policies = acl.acls || [];
-      const hosts = acl.hosts || {};
+    const hosts: Record<string, string> = acl.hosts || {};
 
-      // Resolve IP/node name to actual value
-      const resolveTarget = (target: string) => {
-        if (target === '*') return ['*'];
-        // If it's a node selection - get its IPs
-        const node = nodes.find(n => n.name === target || n.ipAddresses?.includes(target));
-        if (node) return node.ipAddresses || [];
-        // If it's a host alias
-        if (hosts[target]) return [hosts[target]];
-        return [target];
-      };
+    // Build full identity sets for src and dst, including host alias resolution
+    const ipToAlias: Record<string, string> = {};
+    Object.entries(hosts).forEach(([alias, ip]) => { ipToAlias[ip as string] = alias; });
 
-      const srcIPs = resolveTarget(src);
-      const dstIPs = resolveTarget(dst);
-
-      // Check each ACL rule
-      for (const policy of policies) {
-        const srcList = Array.isArray(policy.src) ? policy.src : [policy.src];
-        const dstList = Array.isArray(policy.dst) ? policy.dst : [policy.dst];
-
-        const srcMatch = srcList.some((s: string) =>
-          s === '*' || srcIPs.some(ip => s === ip || s === src) ||
-          s.startsWith('tag:') || s.startsWith('group:')
-        );
-
-        const dstMatch = dstList.some((d: string) => {
-          const [dstAddr, dstPorts] = d.split(':');
-          const addrMatch = dstAddr === '*' || dstIPs.some(ip => dstAddr === ip || dstAddr === dst);
-          const portMatch = !dstPorts || dstPorts === '*' || dstPort === '*' || dstPorts === dstPort;
-          return addrMatch && portMatch;
-        });
-
-        if (srcMatch && dstMatch) {
-          const action = policy.action || 'accept';
-          setResult({
-            allowed: action === 'accept',
-            reason: `Matched rule: src=[${srcList.join(', ')}] → dst=[${dstList.join(', ')}]`,
-            matchedRule: JSON.stringify(policy, null, 2)
-          });
-          setLoading(false);
-          return;
-        }
+    const getIdentifiers = (val: string): Set<string> => {
+      const s = new Set<string>();
+      s.add(val);
+      // Add host alias if val is an IP
+      if (ipToAlias[val]) s.add(ipToAlias[val]);
+      // Add IPs if val is a host alias
+      if (hosts[val]) s.add(hosts[val] as string);
+      // Add node name and IPs
+      const matchedNode = nodes.find(n =>
+        n.ipAddresses?.includes(val) || n.name === val ||
+        n.ipAddresses?.includes(hosts[val] as string)
+      );
+      if (matchedNode) {
+        s.add(matchedNode.name);
+        matchedNode.ipAddresses?.forEach(ip => { s.add(ip); if (ipToAlias[ip]) s.add(ipToAlias[ip]); });
       }
+      return s;
+    };
 
-      setResult({
-        allowed: false,
-        reason: 'No matching ACL rule found — traffic is denied by default'
+    const srcIds = getIdentifiers(srcNode);
+    const dstIds = getIdentifiers(dstNode);
+
+    // Resolve a policy selector to its identifiers
+    const selectorIds = (sel: string): Set<string> => {
+      const [addr] = sel.split(':');
+      return getIdentifiers(addr);
+    };
+
+    const policies = acl.acls || [];
+
+    for (const policy of policies) {
+      if (!policy.action || !policy.src || !policy.dst) continue;
+
+      const srcList: string[] = Array.isArray(policy.src) ? policy.src : [policy.src];
+      const dstList: string[] = Array.isArray(policy.dst) ? policy.dst : [policy.dst];
+
+      const srcMatch = srcList.some((s: string) => {
+        if (s === '*') return true;
+        const selIds = selectorIds(s);
+        for (const id of selIds) { if (srcIds.has(id)) return true; }
+        // Also check if srcIds contains something in selIds
+        for (const id of srcIds) { if (selIds.has(id)) return true; }
+        return false;
       });
-    } catch (e: any) {
-      setResult({ allowed: false, reason: 'Error checking ACL: ' + e.message });
+
+      if (!srcMatch) continue;
+
+      const dstMatch = dstList.some((d: string) => {
+        const [dAddr, dPortRule] = d.split(':');
+        const portOk = !dPortRule || dPortRule === '*' || dstPort === '*' || dPortRule === dstPort;
+        if (!portOk) return false;
+        if (dAddr === '*') return true;
+        const selIds = selectorIds(dAddr);
+        for (const id of selIds) { if (dstIds.has(id)) return true; }
+        for (const id of dstIds) { if (selIds.has(id)) return true; }
+        return false;
+      });
+
+      if (dstMatch) {
+        const meta = (policy as any)['#ha-meta'];
+        const ruleName = meta?.name || `${srcList.join(',')} → ${dstList.join(',')}`;
+        setResult({ allowed: policy.action === 'accept', reason: `Matched: "${ruleName}"`, matchedRule: policy });
+        return;
+      }
     }
-    setLoading(false);
+
+    setResult({ allowed: false, reason: 'No matching rule found — denied by default' });
   };
 
-  const nodeOptions = nodes.map(n => ({
-    value: n.ipAddresses?.[0] || n.name,
-    label: `${n.name} (${n.ipAddresses?.[0] || 'no IP'}) — ${n.user?.name || 'unowned'}`
-  }));
+  const nodeOptions = nodes.map(n => ({ value: n.ipAddresses?.[0] || n.name, label: `${n.name} (${n.ipAddresses?.[0] || 'no IP'}) — ${n.user?.name || 'unowned'}` }));
+  const hostOptions = Object.entries(acl?.hosts || {}).map(([alias, ip]) => ({ value: ip as string, label: `${alias} → ${ip}` }));
 
   return (
     <div>
       <div style={{ marginBottom: '1.5rem' }}>
         <h3 style={{ color: '#f3f4f6', fontWeight: '700', fontSize: '1rem', marginBottom: '0.25rem' }}>🔍 ACL Access Check</h3>
-        <p style={{ color: '#9ca3af', fontSize: '0.85rem', margin: 0 }}>
-          Verify whether your ACL policy allows traffic between two nodes.
-        </p>
+        <p style={{ color: '#9ca3af', fontSize: '0.85rem', margin: 0 }}>Resolves host aliases automatically. Select nodes or aliases to check.</p>
       </div>
-
       <div style={{ display: 'grid', gridTemplateColumns: '1fr auto 1fr', gap: '1rem', alignItems: 'end', marginBottom: '1rem' }}>
         <div>
           <label style={{ display: 'block', color: '#9ca3af', fontSize: '0.75rem', fontWeight: '600', textTransform: 'uppercase', marginBottom: '0.4rem' }}>Source</label>
-          <select value={src} onChange={e => setSrc(e.target.value)}
-            style={{ width: '100%', padding: '0.6rem 0.75rem', backgroundColor: '#1f2937', border: '1px solid #374151', borderRadius: '0.375rem', color: '#f3f4f6', fontSize: '0.875rem' }}>
-            <option value="">Select source node...</option>
+          <select value={srcNode} onChange={e => setSrcNode(e.target.value)}
+            style={{ width: '100%', padding: '0.6rem 0.75rem', backgroundColor: '#1f2937', border: '1px solid #374151', borderRadius: '0.375rem', color: '#f3f4f6', fontSize: '0.85rem' }}>
+            <option value="">Select source...</option>
             <option value="*">* (Any)</option>
-            {nodeOptions.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
+            <optgroup label="── Nodes ──">{nodeOptions.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}</optgroup>
+            <optgroup label="── Host Aliases ──">{hostOptions.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}</optgroup>
           </select>
         </div>
-
-        <div style={{ textAlign: 'center', color: '#6b7280', fontSize: '1.2rem', paddingBottom: '0.5rem' }}>→</div>
-
+        <div style={{ textAlign: 'center', color: '#6b7280', fontSize: '1.25rem', paddingBottom: '0.4rem' }}>→</div>
         <div>
           <label style={{ display: 'block', color: '#9ca3af', fontSize: '0.75rem', fontWeight: '600', textTransform: 'uppercase', marginBottom: '0.4rem' }}>Destination</label>
-          <select value={dst} onChange={e => setDst(e.target.value)}
-            style={{ width: '100%', padding: '0.6rem 0.75rem', backgroundColor: '#1f2937', border: '1px solid #374151', borderRadius: '0.375rem', color: '#f3f4f6', fontSize: '0.875rem' }}>
-            <option value="">Select destination node...</option>
+          <select value={dstNode} onChange={e => setDstNode(e.target.value)}
+            style={{ width: '100%', padding: '0.6rem 0.75rem', backgroundColor: '#1f2937', border: '1px solid #374151', borderRadius: '0.375rem', color: '#f3f4f6', fontSize: '0.85rem' }}>
+            <option value="">Select destination...</option>
             <option value="*">* (Any)</option>
-            {nodeOptions.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
+            <optgroup label="── Nodes ──">{nodeOptions.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}</optgroup>
+            <optgroup label="── Host Aliases ──">{hostOptions.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}</optgroup>
           </select>
         </div>
       </div>
-
-      <div style={{ display: 'flex', gap: '1rem', alignItems: 'flex-end', marginBottom: '1.5rem' }}>
+      <div style={{ display: 'flex', gap: '1rem', alignItems: 'flex-end', marginBottom: '1.5rem', flexWrap: 'wrap' }}>
         <div>
-          <label style={{ display: 'block', color: '#9ca3af', fontSize: '0.75rem', fontWeight: '600', textTransform: 'uppercase', marginBottom: '0.4rem' }}>Port (optional)</label>
-          <input
-            type="text" value={dstPort} onChange={e => setDstPort(e.target.value)}
-            placeholder="* or 22, 80, 443..."
-            style={{ padding: '0.6rem 0.75rem', backgroundColor: '#1f2937', border: '1px solid #374151', borderRadius: '0.375rem', color: '#f3f4f6', fontSize: '0.875rem', width: '160px' }}
-          />
+          <label style={{ display: 'block', color: '#9ca3af', fontSize: '0.75rem', fontWeight: '600', textTransform: 'uppercase', marginBottom: '0.4rem' }}>Port</label>
+          <input type="text" value={dstPort} onChange={e => setDstPort(e.target.value)} placeholder="* or 22, 80..."
+            style={{ padding: '0.6rem 0.75rem', backgroundColor: '#1f2937', border: '1px solid #374151', borderRadius: '0.375rem', color: '#f3f4f6', fontSize: '0.875rem', width: '120px' }} />
         </div>
-        <button onClick={checkAccess} disabled={!src || !dst || loading} className="btn btn-primary" style={{ height: '38px' }}>
-          {loading ? 'Checking...' : '🔍 Check Access'}
+        <button onClick={checkAccess} disabled={!srcNode || !dstNode} className="btn btn-primary" style={{ height: '40px' }}>
+          🔍 Check Access
         </button>
       </div>
-
       {result && (
         <div style={{ padding: '1.25rem 1.5rem', borderRadius: '0.5rem', border: `2px solid ${result.allowed ? '#10b981' : '#ef4444'}`, backgroundColor: result.allowed ? 'rgba(16,185,129,0.08)' : 'rgba(239,68,68,0.08)' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', marginBottom: '0.5rem' }}>
-            <span style={{ fontSize: '1.75rem' }}>{result.allowed ? '✅' : '🚫'}</span>
+            <span style={{ fontSize: '2rem' }}>{result.allowed ? '✅' : '🚫'}</span>
             <div>
-              <div style={{ color: result.allowed ? '#10b981' : '#ef4444', fontWeight: '800', fontSize: '1rem' }}>
-                {result.allowed ? 'ACCESS ALLOWED' : 'ACCESS DENIED'}
-              </div>
-              <div style={{ color: '#9ca3af', fontSize: '0.8rem', marginTop: '0.1rem' }}>{result.reason}</div>
+              <div style={{ color: result.allowed ? '#10b981' : '#ef4444', fontWeight: '800', fontSize: '1.05rem' }}>{result.allowed ? 'ACCESS ALLOWED' : 'ACCESS DENIED'}</div>
+              <div style={{ color: '#9ca3af', fontSize: '0.82rem', marginTop: '0.15rem' }}>{result.reason}</div>
             </div>
           </div>
           {result.matchedRule && (
             <details style={{ marginTop: '0.75rem' }}>
               <summary style={{ color: '#6b7280', fontSize: '0.75rem', cursor: 'pointer' }}>View matched rule</summary>
-              <pre style={{ marginTop: '0.5rem', padding: '0.75rem', backgroundColor: '#0f172a', borderRadius: '0.375rem', fontSize: '0.75rem', color: '#86efac', overflow: 'auto' }}>
-                {result.matchedRule}
-              </pre>
+              <pre style={{ marginTop: '0.5rem', padding: '0.75rem', backgroundColor: '#0f172a', borderRadius: '0.375rem', fontSize: '0.75rem', color: '#86efac', overflow: 'auto', maxHeight: '200px' }}>{JSON.stringify(result.matchedRule, null, 2)}</pre>
             </details>
           )}
-        </div>
-      )}
-
-      {!acl && (
-        <div style={{ color: '#9ca3af', fontSize: '0.875rem', textAlign: 'center', padding: '2rem' }}>
-          Loading ACL policy...
         </div>
       )}
     </div>
@@ -373,7 +370,7 @@ export const AclPage: React.FC = () => {
           {visibleTabs[activeTab]?.label === 'SSH' && acl && <SshTab acl={acl} setAcl={setAcl} />}
           {visibleTabs[activeTab]?.label === 'Config' && acl && <ConfigTab acl={acl} setAcl={setAcl} />}
           {visibleTabs[activeTab]?.label === 'Access Check' && <AccessCheckTab acl={acl} />}
-          {visibleTabs[activeTab]?.label === 'History' && acl && <HistoryTab acl={acl} setAcl={setAcl} />}
+          {visibleTabs[activeTab]?.label === 'History' && <HistoryTab acl={acl} setAcl={setAcl} />}
         </div>
       )}
     </div>

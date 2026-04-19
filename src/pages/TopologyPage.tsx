@@ -61,6 +61,11 @@ export const TopologyPage: React.FC = () => {
   const [hoveredNode, setHoveredNode] = useState<SimNode | null>(null);
   const [, setSimTick] = useState(0);
 
+  // Refs so draw() always reads current values without stale closure
+  const showLabelsRef = useRef(true);
+  const showOfflineRef = useRef(true);
+  const filterUserRef = useRef('all');
+
   const userColorMap = useRef<Record<string, string>>({});
 
   const getUserColor = (user: string) => {
@@ -246,7 +251,7 @@ export const TopologyPage: React.FC = () => {
       const src = nodes.find(n => n.id === link.source);
       const tgt = nodes.find(n => n.id === link.target);
       if (!src || !tgt) return;
-      if (!showOffline && (!src.online || !tgt.online)) return;
+      if (!showOfflineRef.current && (!src.online || !tgt.online)) return;
 
       ctx.beginPath();
       ctx.moveTo(src.x, src.y);
@@ -281,7 +286,8 @@ export const TopologyPage: React.FC = () => {
 
     // Draw nodes
     nodes.forEach(n => {
-      const isFiltered = filterUser !== 'all' && n.user !== filterUser;
+      if (!showOfflineRef.current && !n.online) return;
+      const isFiltered = filterUserRef.current !== 'all' && n.user !== filterUserRef.current;
       const alpha = isFiltered ? 0.2 : 1;
 
       // Glow for online nodes
@@ -326,7 +332,7 @@ export const TopologyPage: React.FC = () => {
       }
 
       // Label
-      if (showLabels && !isFiltered) {
+      if (showLabelsRef.current && !isFiltered) {
         ctx.font = `bold 11px Plus Jakarta Sans, sans-serif`;
         ctx.fillStyle = '#f3f4f6';
         ctx.textAlign = 'center';
@@ -345,7 +351,7 @@ export const TopologyPage: React.FC = () => {
     });
 
     ctx.restore();
-  }, [showLabels, showOffline, filterUser]);
+  }, []); // refs used instead of state — no stale closures
 
   // Animation loop
   useEffect(() => {
@@ -494,15 +500,15 @@ export const TopologyPage: React.FC = () => {
 
         {/* Controls */}
         <label style={{ display: 'flex', alignItems: 'center', gap: '0.35rem', color: '#9ca3af', fontSize: '0.78rem', cursor: 'pointer' }}>
-          <input type="checkbox" checked={showLabels} onChange={e => setShowLabels(e.target.checked)} />
+          <input type="checkbox" checked={showLabels} onChange={e => { setShowLabels(e.target.checked); showLabelsRef.current = e.target.checked; }} />
           Labels
         </label>
         <label style={{ display: 'flex', alignItems: 'center', gap: '0.35rem', color: '#9ca3af', fontSize: '0.78rem', cursor: 'pointer' }}>
-          <input type="checkbox" checked={showOffline} onChange={e => setShowOffline(e.target.checked)} />
+          <input type="checkbox" checked={showOffline} onChange={e => { setShowOffline(e.target.checked); showOfflineRef.current = e.target.checked; }} />
           Offline
         </label>
 
-        <select value={filterUser} onChange={e => setFilterUser(e.target.value)}
+        <select value={filterUser} onChange={e => { setFilterUser(e.target.value); filterUserRef.current = e.target.value; }}
           style={{ padding: '0.3rem 0.6rem', backgroundColor: '#1f2937', border: '1px solid #374151', borderRadius: '0.375rem', color: '#f3f4f6', fontSize: '0.78rem' }}>
           <option value="all">All Users</option>
           {allUsers.map(u => <option key={u} value={u}>{u}</option>)}

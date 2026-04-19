@@ -21,7 +21,7 @@ export const Navigation: React.FC<NavigationProps> = ({ isDarkMode, setIsDarkMod
         </a>
 
         {/* Hamburger menu button */}
-        <button className="hamburger" onClick={() => setMenuOpen(!menuOpen)}>
+        <button className={`hamburger ${menuOpen ? "open" : ""}`} onClick={() => setMenuOpen(!menuOpen)}>
           <span></span>
           <span></span>
           <span></span>

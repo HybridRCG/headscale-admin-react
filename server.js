@@ -646,6 +646,12 @@ app.get('/api/headscale/instances', authenticateToken, (req, res) => {
 
 // ── Audit Log ──────────────────────────────────────────────────────────────
 const AUDIT_LOG_PATH = '/etc/headscale/audit-log.json';
+const ACL_HISTORY_DIR = '/etc/headscale/acl-history';
+
+function ensureAclHistoryDir() {
+  try { fs.mkdirSync(ACL_HISTORY_DIR, { recursive: true }); } catch {}
+}
+
 
 function readAuditLog() {
   try {
@@ -998,6 +1004,44 @@ app.get('/api/headscale/events', authenticateToken, (req, res) => {
     clearInterval(interval);
     sseClients.delete(client);
   });
+});
+
+
+// ── ACL Version History ────────────────────────────────────────────────────
+app.get('/api/headscale/acl/history', authenticateToken, (req, res) => {
+  if (req.user?.role !== 'super_admin') return res.status(403).json({ message: 'Forbidden' });
+  ensureAclHistoryDir();
+  try {
+    const files = fs.readdirSync(ACL_HISTORY_DIR)
+      .filter(f => f.endsWith('.json'))
+      .sort()
+      .reverse()
+      .slice(0, 20);
+
+    const versions = files.map(f => {
+      const parts = f.replace('.json', '').split('_');
+      // Format: 2026-04-19T12-30-00_username
+      const timestamp = parts.slice(0, 2).join('_'); // date_time
+      const savedBy = parts.slice(2).join('_') || 'unknown';
+      return { filename: f, timestamp, savedBy };
+    });
+    res.json(versions);
+  } catch (e) {
+    res.status(500).json({ message: e.message });
+  }
+});
+
+app.get('/api/headscale/acl/history/:filename', authenticateToken, (req, res) => {
+  if (req.user?.role !== 'super_admin') return res.status(403).json({ message: 'Forbidden' });
+  ensureAclHistoryDir();
+  try {
+    const safe = req.params.filename.replace(/[^a-zA-Z0-9._-]/g, '');
+    const filePath = `${ACL_HISTORY_DIR}/${safe}`;
+    if (!fs.existsSync(filePath)) return res.status(404).json({ message: 'Version not found' });
+    res.json(JSON.parse(fs.readFileSync(filePath, 'utf8')));
+  } catch (e) {
+    res.status(404).json({ message: 'Version not found' });
+  }
 });
 
 app.use('/api/headscale', authenticateToken, async (req, res) => {

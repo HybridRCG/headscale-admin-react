@@ -6,7 +6,10 @@
   top: 0;
   z-index: 1000;
   box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+  overflow: visible;
 }
+
+
 
 .navbar-container {
   max-width: 1200px;
@@ -174,8 +177,8 @@ input:focus + .slider {
   }
 
   .navbar-menu {
-    position: absolute;
-    top: 70px;
+    position: fixed;
+    top: 64px;
     left: 0;
     right: 0;
     flex-direction: column;
@@ -185,8 +188,9 @@ input:focus + .slider {
     margin: 0;
     max-height: 0;
     overflow: hidden;
-    transition: max-height 0.3s ease, padding 0.3s ease;
-    z-index: 999;
+    transition: max-height 0.35s ease;
+    z-index: 9999;
+    box-shadow: 0 6px 20px rgba(0,0,0,0.5);
   }
 
   .navbar-menu.open {

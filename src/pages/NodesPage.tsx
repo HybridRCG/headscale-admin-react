@@ -54,6 +54,8 @@ export const NodesPage: React.FC = () => {
   const [availableTags, setAvailableTags] = useState<string[]>([]);
   const [tagSaving, setTagSaving] = useState(false);
   const [liveConnected, setLiveConnected] = useState(false);
+  const [expandedNode, setExpandedNode] = useState<number | null>(null);
+  const [selectedCard, setSelectedCard] = useState<number | null>(null);
 
   const API_BASE = '/admin/api';
 
@@ -274,35 +276,43 @@ export const NodesPage: React.FC = () => {
           const tags = getNodeTags(node);
           const owner = getNodeOwner(node);
           return (
-            <div key={node.id} style={{
-              backgroundColor: '#1f2937',
-              border: `1px solid ${node.online ? '#1e3a5f' : '#374151'}`,
-              borderRadius: '0.625rem',
-              overflow: 'hidden',
-              display: 'flex',
-              flexDirection: 'column',
-            }}>
+            <div key={node.id}
+              onClick={() => setSelectedCard(selectedCard === node.id ? null : node.id)}
+              style={{
+                backgroundColor: '#1f2937',
+                border: `1px solid ${selectedCard === node.id ? '#6366f1' : node.online ? '#1e3a5f' : '#374151'}`,
+                borderRadius: '0.625rem',
+                overflow: 'hidden',
+                display: 'flex',
+                flexDirection: 'column',
+                cursor: 'pointer',
+                transition: 'border-color 0.15s',
+              }}>
               {/* Card Header */}
               <div style={{ padding: '0.875rem 1rem 0.625rem', borderBottom: '1px solid #374151' }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: '0.5rem' }}>
-                  <div style={{ minWidth: 0 }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', marginBottom: '0.2rem' }}>
-                      <span style={{ fontSize: '0.8rem' }}>{node.online ? '🟢' : '🔴'}</span>
-                      <span style={{ color: '#f3f4f6', fontWeight: '700', fontSize: '0.9rem', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }} title={node.name}>
-                        {node.name}
-                      </span>
-                    </div>
-                    <div style={{ color: '#6b7280', fontSize: '0.72rem', fontFamily: 'monospace' }}>
-                      {node.ipAddresses?.[0] || 'No IP'}
-                      {node.ipAddresses?.[1] && <span style={{ marginLeft: '0.4rem', color: '#4b5563' }}>{node.ipAddresses[1].slice(0,20)}…</span>}
-                    </div>
-                  </div>
-                  <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: '0.2rem', flexShrink: 0 }}>
-                    <span style={{ color: '#9ca3af', fontSize: '0.7rem' }}>ID: {node.id}</span>
-                    <span style={{ color: '#6366f1', fontSize: '0.72rem', fontWeight: '600' }}>
-                      {tags.length > 0 ? '🏷 ' : '👤 '}{owner}
+                {/* Row 1: status + name + ID */}
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.3rem' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', minWidth: 0 }}>
+                    <span style={{ fontSize: '0.8rem', flexShrink: 0 }}>{node.online ? '🟢' : '🔴'}</span>
+                    <span style={{ color: '#f3f4f6', fontWeight: '700', fontSize: '0.9rem', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }} title={node.name}>
+                      {node.name}
                     </span>
                   </div>
+                  <span style={{ color: '#6b7280', fontSize: '0.68rem', flexShrink: 0, marginLeft: '0.5rem' }}>#{node.id}</span>
+                </div>
+                {/* Row 2: IPv4 */}
+                <div style={{ color: '#60a5fa', fontSize: '0.72rem', fontFamily: 'monospace', marginBottom: '0.15rem' }}>
+                  {node.ipAddresses?.[0] || 'No IP'}
+                </div>
+                {/* Row 3: IPv6 */}
+                {node.ipAddresses?.[1] && (
+                  <div style={{ color: '#4b5563', fontSize: '0.68rem', fontFamily: 'monospace', marginBottom: '0.15rem', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                    {node.ipAddresses[1]}
+                  </div>
+                )}
+                {/* Row 4: owner */}
+                <div style={{ color: '#8b5cf6', fontSize: '0.72rem', fontWeight: '600', marginTop: '0.1rem' }}>
+                  {tags.length > 0 ? '🏷 ' : '👤 '}{owner}
                 </div>
 
                 {/* Tags */}
@@ -326,8 +336,9 @@ export const NodesPage: React.FC = () => {
                 )}
               </div>
 
-              {/* Card Actions — full width buttons at bottom */}
-              <div style={{ padding: '0.5rem', display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '0.3rem', backgroundColor: '#111827' }}>
+              {/* Card Actions — only shown when card is selected */}
+              {selectedCard === node.id && (
+              <div onClick={e => e.stopPropagation()} style={{ padding: '0.5rem', display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '0.3rem', backgroundColor: '#111827', borderTop: '1px solid #374151' }}>
                 <button className="btn btn-sm btn-primary"
                   onClick={() => { setEditModal(node); setEditName(node.name); setEditUser(node.user?.name || ''); }}
                   style={{ fontSize: '0.72rem', padding: '0.4rem 0', textAlign: 'center' }}>
@@ -360,6 +371,7 @@ export const NodesPage: React.FC = () => {
                   🗑 Delete
                 </button>
               </div>
+              )}
             </div>
           );
         })}
