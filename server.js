@@ -443,8 +443,10 @@ app.post('/api/headscale/acl', authenticateToken, async (req, res) => {
       })
       .filter(rule => rule.action && rule.src && rule.dst); // must have required fields
     const policy = { groups, tagOwners, hosts, acls: cleanAcls, ssh };
-    const updateResp = await axios.put(`${tokenData.headscaleUrl}/api/v1/policy`, { policy: JSON.stringify(policy) }, { headers: { Authorization: `Bearer ${tokenData.apiKey}` }, timeout: 10000 });
-    console.log('[ACL] Policy updated');
+    console.log('[ACL] Sending policy - groups:', Object.keys(groups||{}).length, 'hosts:', Object.keys(hosts||{}).length, 'acls:', cleanAcls.length);
+    const policyStr = JSON.stringify(policy);
+    const updateResp = await axios.put(`${tokenData.headscaleUrl}/api/v1/policy`, { policy: policyStr }, { headers: { Authorization: `Bearer ${tokenData.apiKey}` }, timeout: 10000 });
+    console.log('[ACL] Policy updated successfully');
     // Save to history
     try {
       ensureAclHistoryDir();
@@ -457,8 +459,9 @@ app.post('/api/headscale/acl', authenticateToken, async (req, res) => {
     } catch (he) { console.error('[ACL-HISTORY] Save failed:', he.message); }
     res.json({ message: 'ACL updated', policy });
   } catch (error) {
-    console.error('Failed to update ACL:', error.message);
-    res.status(500).json({ message: error.message });
+    const errMsg = error.response?.data?.message || error.response?.data || error.message;
+    console.error('[ACL] Failed to update - Status:', error.response?.status, 'Error:', JSON.stringify(errMsg));
+    res.status(500).json({ message: typeof errMsg === 'string' ? errMsg : JSON.stringify(errMsg) });
   }
 });
 
