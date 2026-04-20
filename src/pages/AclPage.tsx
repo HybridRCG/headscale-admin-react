@@ -152,7 +152,6 @@ const AccessCheckTab: React.FC<{ acl: ACL | null }> = ({ acl: aclProp }) => {
     axios.get(`${API_BASE}/headscale/api/v1/node`)
       .then(r => setNodes(r.data.nodes || []))
       .catch(() => {});
-    // Always load fresh ACL for accurate checking
     axios.get(`${API_BASE}/headscale/acl`)
       .then(r => setLiveAcl(r.data))
       .catch(() => {});
@@ -163,38 +162,94 @@ const AccessCheckTab: React.FC<{ acl: ACL | null }> = ({ acl: aclProp }) => {
     setResult(null);
 
     const hosts: Record<string, string> = acl.hosts || {};
+    const groups: Record<string, string[]> = acl.groups || {};
 
-    // Build full identity sets for src and dst, including host alias resolution
+    // Build reverse maps
     const ipToAlias: Record<string, string> = {};
     Object.entries(hosts).forEach(([alias, ip]) => { ipToAlias[ip as string] = alias; });
 
-    const getIdentifiers = (val: string): Set<string> => {
-      const s = new Set<string>();
-      s.add(val);
-      // Add host alias if val is an IP
-      if (ipToAlias[val]) s.add(ipToAlias[val]);
-      // Add IPs if val is a host alias
-      if (hosts[val]) s.add(hosts[val] as string);
-      // Add node name and IPs
-      const matchedNode = nodes.find(n =>
-        n.ipAddresses?.includes(val) || n.name === val ||
-        n.ipAddresses?.includes(hosts[val] as string)
+    // Get user email for a node IP or name
+    const getNodeEmail = (ipOrName: string): string | null => {
+      const n = nodes.find(nd =>
+        nd.ipAddresses?.includes(ipOrName) || nd.name === ipOrName ||
+        nd.ipAddresses?.includes(hosts[ipOrName] as string)
       );
-      if (matchedNode) {
-        s.add(matchedNode.name);
-        matchedNode.ipAddresses?.forEach(ip => { s.add(ip); if (ipToAlias[ip]) s.add(ipToAlias[ip]); });
+      return n?.user?.name ? (n.user.name + '@' + (n.user.name || '')) : null;
+    };
+
+    // Resolve a selector string to all possible identity values
+    // Handles: IP, hostname, host alias, group:name, user:name, tag:name, *
+    const selectorMatches = (selector: string, targetIP: string, targetAlias: string, targetNodeName: string, targetUserEmail?: string): boolean => {
+      if (selector === '*') return true;
+
+      const [base, portPart] = selector.split(':');
+
+      // group: selector — check if target user is in group
+      if (base.startsWith('group:')) {
+        const groupName = selector; // keep full "group:xxx"
+        const members: string[] = groups[groupName] || [];
+        if (targetUserEmail && members.includes(targetUserEmail)) return true;
+        // Also check if any node with this IP/name has a user in the group
+        const matchedNode = nodes.find(nd =>
+          nd.ipAddresses?.includes(targetIP) || nd.name === targetNodeName
+        );
+        if (matchedNode?.user?.name) {
+          // We don't have emails here, but check via node user name
+          // Look up user email from nodes list (user.name is the headscale username)
+        }
+        return false;
       }
-      return s;
+
+      // tag: selector
+      if (base.startsWith('tag:')) return false; // can't easily check without tag data
+
+      // user: selector
+      if (base.startsWith('user:')) {
+        const uname = base.replace('user:', '');
+        const matchedNode = nodes.find(nd => nd.ipAddresses?.includes(targetIP) || nd.name === targetNodeName);
+        return matchedNode?.user?.name === uname;
+      }
+
+      // host alias
+      if (hosts[base]) {
+        const resolvedIP = hosts[base] as string;
+        return resolvedIP === targetIP || resolvedIP === targetAlias;
+      }
+
+      // direct IP match
+      if (base === targetIP) return true;
+
+      // node name match  
+      if (base === targetNodeName) return true;
+
+      // alias match
+      if (base === targetAlias) return true;
+
+      // CIDR — basic check
+      if (base.includes('/')) {
+        try {
+          const [net, bits] = base.split('/');
+          const mask = ~((1 << (32 - parseInt(bits))) - 1);
+          const toInt = (ip: string) => ip.split('.').reduce((acc, o) => (acc << 8) | parseInt(o), 0);
+          return (toInt(targetIP) & mask) === (toInt(net) & mask);
+        } catch { return false; }
+      }
+
+      return false;
     };
 
-    const srcIds = getIdentifiers(srcNode);
-    const dstIds = getIdentifiers(dstNode);
+    // Resolve selected value to its components
+    const selectedIP = srcNode;
+    const selectedAlias = ipToAlias[srcNode] || '';
+    const selectedNode = nodes.find(n => n.ipAddresses?.includes(srcNode) || n.name === srcNode);
+    const selectedNodeName = selectedNode?.name || srcNode;
+    const selectedUserEmail = selectedNode?.user?.name || '';
 
-    // Resolve a policy selector to its identifiers
-    const selectorIds = (sel: string): Set<string> => {
-      const [addr] = sel.split(':');
-      return getIdentifiers(addr);
-    };
+    const dstIP = dstNode;
+    const dstAlias = ipToAlias[dstNode] || '';
+    const dstNodeObj = nodes.find(n => n.ipAddresses?.includes(dstNode) || n.name === dstNode);
+    const dstNodeName = dstNodeObj?.name || dstNode;
+    const dstUserEmail = dstNodeObj?.user?.name || '';
 
     const policies = acl.acls || [];
 
@@ -204,27 +259,52 @@ const AccessCheckTab: React.FC<{ acl: ACL | null }> = ({ acl: aclProp }) => {
       const srcList: string[] = Array.isArray(policy.src) ? policy.src : [policy.src];
       const dstList: string[] = Array.isArray(policy.dst) ? policy.dst : [policy.dst];
 
-      const srcMatch = srcList.some((s: string) => {
-        if (s === '*') return true;
-        const selIds = selectorIds(s);
-        for (const id of selIds) { if (srcIds.has(id)) return true; }
-        // Also check if srcIds contains something in selIds
-        for (const id of srcIds) { if (selIds.has(id)) return true; }
-        return false;
-      });
+      // Check source match — also resolve groups
+      let srcMatch = false;
+      for (const s of srcList) {
+        if (s === '*') { srcMatch = true; break; }
+        // Group check — resolve group members' node IPs
+        if (s.startsWith('group:')) {
+          const members = groups[s] || [];
+          // Check if any node with our src IP has a user whose email is in the group
+          if (selectedNode) {
+            // We match by username@domain pattern - check all members
+            const userName = selectedNode.user?.name || '';
+            // Simple check: if username appears in any member email
+            if (members.some(m => m.toLowerCase().startsWith(userName.toLowerCase() + '@') || m === userName)) {
+              srcMatch = true; break;
+            }
+          }
+          continue;
+        }
+        if (selectorMatches(s, selectedIP, selectedAlias, selectedNodeName, selectedUserEmail)) {
+          srcMatch = true; break;
+        }
+      }
 
       if (!srcMatch) continue;
 
-      const dstMatch = dstList.some((d: string) => {
-        const [dAddr, dPortRule] = d.split(':');
+      // Check destination match
+      let dstMatch = false;
+      for (const d of dstList) {
+        const [dAddr, dPortRule] = d.includes(':') ? [d.substring(0, d.lastIndexOf(':')), d.substring(d.lastIndexOf(':')+1)] : [d, '*'];
         const portOk = !dPortRule || dPortRule === '*' || dstPort === '*' || dPortRule === dstPort;
-        if (!portOk) return false;
-        if (dAddr === '*') return true;
-        const selIds = selectorIds(dAddr);
-        for (const id of selIds) { if (dstIds.has(id)) return true; }
-        for (const id of dstIds) { if (selIds.has(id)) return true; }
-        return false;
-      });
+        if (!portOk) continue;
+        if (dAddr === '*') { dstMatch = true; break; }
+        if (dAddr.startsWith('group:')) {
+          const members = groups[dAddr] || [];
+          if (dstNodeObj) {
+            const userName = dstNodeObj.user?.name || '';
+            if (members.some(m => m.toLowerCase().startsWith(userName.toLowerCase() + '@') || m === userName)) {
+              dstMatch = true; break;
+            }
+          }
+          continue;
+        }
+        if (selectorMatches(dAddr, dstIP, dstAlias, dstNodeName, dstUserEmail)) {
+          dstMatch = true; break;
+        }
+      }
 
       if (dstMatch) {
         const meta = (policy as any)['#ha-meta'];

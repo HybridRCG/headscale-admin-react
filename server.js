@@ -444,9 +444,17 @@ app.post('/api/headscale/acl', authenticateToken, async (req, res) => {
       .filter(rule => rule.action && rule.src && rule.dst); // must have required fields
     const policy = { groups, tagOwners, hosts, acls: cleanAcls, ssh };
     console.log('[ACL] Sending policy - groups:', Object.keys(groups||{}).length, 'hosts:', Object.keys(hosts||{}).length, 'acls:', cleanAcls.length);
+
+    // Safety: never save a completely empty/broken policy
+    const hasContent = Object.keys(groups||{}).length > 0 || Object.keys(hosts||{}).length > 0 || cleanAcls.length > 0;
+    if (!hasContent) {
+      console.error('[ACL] Refusing to save empty policy — this would wipe all rules');
+      return res.status(400).json({ message: 'Cannot save empty policy — all groups, hosts and rules are empty. Check your ACL editor.' });
+    }
+
     const policyStr = JSON.stringify(policy);
     const updateResp = await axios.put(`${tokenData.headscaleUrl}/api/v1/policy`, { policy: policyStr }, { headers: { Authorization: `Bearer ${tokenData.apiKey}` }, timeout: 10000 });
-    console.log('[ACL] Policy updated successfully');
+    console.log('[ACL] Policy updated successfully - groups:', Object.keys(groups||{}).length, 'hosts:', Object.keys(hosts||{}).length, 'acls:', cleanAcls.length);
     // Save to history
     try {
       ensureAclHistoryDir();
@@ -1005,7 +1013,7 @@ app.get('/api/headscale/events', authenticateToken, (req, res) => {
       res.write(`event: nodes\ndata: ${JSON.stringify(nodes.map(n => ({
         id: n.id,
         online: n.online,
-        lastSeen: n.last_seen?.seconds ? new Date(n.last_seen.seconds * 1000).toISOString() : (n.lastSeen || null)
+        lastSeen: n.lastSeen || (n.last_seen?.seconds ? new Date(n.last_seen.seconds * 1000).toISOString() : null)
       })))}\n\n`);
     } catch (e) {
       res.write(`event: error\ndata: poll_failed\n\n`);
