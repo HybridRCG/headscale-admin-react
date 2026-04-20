@@ -434,19 +434,23 @@ app.post('/api/headscale/acl', authenticateToken, async (req, res) => {
     const tokenData = userTokenMap.get(userEmail);
     if (!tokenData) return res.status(401).json({ message: 'Session expired' });
     // Strip comment/meta fields (#ha-meta etc) from acl rules — Headscale API rejects them
-    const cleanAcls = (acls || []).map(rule => {
-      const clean = {};
-      Object.keys(rule).forEach(k => { if (!k.startsWith('#')) clean[k] = rule[k]; });
-      return clean;
-    });
+    // Also filter out empty objects that result from stripping
+    const cleanAcls = (acls || [])
+      .map(rule => {
+        const clean = {};
+        Object.keys(rule).forEach(k => { if (!k.startsWith('#')) clean[k] = rule[k]; });
+        return clean;
+      })
+      .filter(rule => rule.action && rule.src && rule.dst); // must have required fields
     const policy = { groups, tagOwners, hosts, acls: cleanAcls, ssh };
     const updateResp = await axios.put(`${tokenData.headscaleUrl}/api/v1/policy`, { policy: JSON.stringify(policy) }, { headers: { Authorization: `Bearer ${tokenData.apiKey}` }, timeout: 10000 });
     console.log('[ACL] Policy updated');
     // Save to history
     try {
       ensureAclHistoryDir();
-      const ts = new Date().toISOString().replace(/[:.]/g, '-').slice(0, 19);
-      const uname = (req.user?.username || req.user?.email || 'unknown').replace(/[^a-zA-Z0-9]/g, '_');
+      const now = new Date();
+      const ts = now.toISOString().replace(/[:.]/g, '-').slice(0, 19);
+      const uname = (req.user?.username || req.user?.email || 'unknown').replace(/[^a-zA-Z0-9]/g, '_').slice(0, 30);
       fs.writeFileSync(`${ACL_HISTORY_DIR}/${ts}_${uname}.json`, JSON.stringify(policy, null, 2));
       const allFiles = fs.readdirSync(ACL_HISTORY_DIR).filter(f => f.endsWith('.json')).sort();
       if (allFiles.length > 20) allFiles.slice(0, allFiles.length - 20).forEach(f => { try { fs.unlinkSync(`${ACL_HISTORY_DIR}/${f}`); } catch {} });
@@ -1029,10 +1033,12 @@ app.get('/api/headscale/acl/history', authenticateToken, (req, res) => {
       .slice(0, 20);
 
     const versions = files.map(f => {
-      const parts = f.replace('.json', '').split('_');
-      // Format: 2026-04-19T12-30-00_username
-      const timestamp = parts.slice(0, 2).join('_'); // date_time
-      const savedBy = parts.slice(2).join('_') || 'unknown';
+      const base = f.replace('.json', '');
+      // Format: 2026-04-19T20-20-54_Username
+      // Split on first underscore after the timestamp (which ends with seconds HH-MM-SS)
+      const firstUnderscore = base.indexOf('_');
+      const timestamp = firstUnderscore > 0 ? base.slice(0, firstUnderscore) : base;
+      const savedBy = firstUnderscore > 0 ? base.slice(firstUnderscore + 1).replace(/_/g, ' ') : 'unknown';
       return { filename: f, timestamp, savedBy };
     });
     res.json(versions);
