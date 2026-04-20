@@ -16,30 +16,32 @@ export const Navigation: React.FC<NavigationProps> = ({ isDarkMode, setIsDarkMod
   return (
     <nav className="navbar">
       <div className="navbar-container">
-        <a href="https://github.com/HybridRCG/headscale-admin-react" target="_blank" rel="noopener noreferrer" className="navbar-logo">
-          🔗 HS-React
-        </a>
 
-        {/* Hamburger menu button */}
+        {/* Hamburger — leftmost on mobile */}
         <button className={`hamburger ${menuOpen ? "open" : ""}`} onClick={() => setMenuOpen(!menuOpen)}>
           <span></span>
           <span></span>
           <span></span>
         </button>
 
-        {/* Menu */}
+        {/* Logo */}
+        <a href="https://github.com/HybridRCG/headscale-admin-react" target="_blank" rel="noopener noreferrer" className="navbar-logo">
+          🔗 HS-React
+        </a>
+
+        {/* Desktop Menu */}
         <ul className={`navbar-menu ${menuOpen ? 'open' : ''}`}>
           <li><NavLink to="/dashboard" className={({ isActive }) => `navbar-link ${isActive ? "active" : ""}`} onClick={() => setMenuOpen(false)}>Home</NavLink></li>
           <li><NavLink to="/users" className={({ isActive }) => `navbar-link ${isActive ? "active" : ""}`} onClick={() => setMenuOpen(false)}>Users</NavLink></li>
           <li><NavLink to="/nodes" className={({ isActive }) => `navbar-link ${isActive ? "active" : ""}`} onClick={() => setMenuOpen(false)}>Nodes</NavLink></li>
           <li><NavLink to="/topology" className={({ isActive }) => `navbar-link ${isActive ? "active" : ""}`} onClick={() => setMenuOpen(false)}>🗺 Topology</NavLink></li>
           {isSuperAdmin && <li><NavLink to="/routes" className={({ isActive }) => `navbar-link ${isActive ? "active" : ""}`} onClick={() => setMenuOpen(false)}>Routes</NavLink></li>}
-          <li><NavLink to="/acl" className={({ isActive }) => `navbar-link ${isActive ? "active" : ""}`} onClick={() => setMenuOpen(false)}>ACL Editor</NavLink></li>
+          <li><NavLink to="/acl" className={({ isActive }) => `navbar-link ${isActive ? "active" : ""}`} onClick={() => setMenuOpen(false)}>ACL</NavLink></li>
           {isSuperAdmin && <li><NavLink to="/dns" className={({ isActive }) => `navbar-link ${isActive ? "active" : ""}`} onClick={() => setMenuOpen(false)}>DNS</NavLink></li>}
           {isSuperAdmin && <li><NavLink to="/settings" className={({ isActive }) => `navbar-link ${isActive ? "active" : ""}`} onClick={() => setMenuOpen(false)}>Settings</NavLink></li>}
         </ul>
 
-                {/* Theme toggle */}
+        {/* Right side — theme toggle */}
         <div className="theme-toggle-wrapper">
           <span className="toggle-label">☀️</span>
           <label className="toggle-switch">

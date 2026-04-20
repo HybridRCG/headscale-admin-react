@@ -1047,6 +1047,17 @@ app.get('/api/headscale/acl/history', authenticateToken, (req, res) => {
   }
 });
 
+app.delete('/api/headscale/acl/history/:filename', authenticateToken, (req, res) => {
+  if (req.user?.role !== 'super_admin') return res.status(403).json({ message: 'Forbidden' });
+  try {
+    const safe = req.params.filename.replace(/[^a-zA-Z0-9._-]/g, '');
+    const filePath = `${ACL_HISTORY_DIR}/${safe}`;
+    if (!fs.existsSync(filePath)) return res.status(404).json({ message: 'Not found' });
+    fs.unlinkSync(filePath);
+    res.json({ success: true });
+  } catch (e) { res.status(500).json({ message: e.message }); }
+});
+
 app.get('/api/headscale/acl/history/:filename', authenticateToken, (req, res) => {
   if (req.user?.role !== 'super_admin') return res.status(403).json({ message: 'Forbidden' });
   ensureAclHistoryDir();

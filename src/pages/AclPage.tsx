@@ -44,6 +44,14 @@ const HistoryTab: React.FC<{ acl: ACL | null; setAcl: (a: ACL) => void }> = ({ s
     } catch { alert('Failed to load version'); }
   };
 
+  const handleDelete = async (filename: string) => {
+    if (!window.confirm(`Delete history entry ${filename.replace('.json','')}?`)) return;
+    try {
+      await axios.delete(`${API_BASE}/headscale/acl/history/${filename}`);
+      fetchHistory();
+    } catch (e: any) { alert('Failed to delete: ' + (e.response?.data?.message || e.message)); }
+  };
+
   const handleRestore = async (filename: string) => {
     if (!window.confirm(`Restore ACL policy from ${filename.replace('.json','')}? This will overwrite the current policy.`)) return;
     setRestoring(filename);
@@ -102,6 +110,7 @@ const HistoryTab: React.FC<{ acl: ACL | null; setAcl: (a: ACL) => void }> = ({ s
                 <button onClick={() => handleRestore(v.filename)} disabled={restoring === v.filename || i === 0} className="btn btn-sm btn-primary" style={{ fontSize: '0.75rem', opacity: i === 0 ? 0.4 : 1 }} title={i === 0 ? 'This is the current version' : 'Restore this version'}>
                   {restoring === v.filename ? '...' : '↩ Restore'}
                 </button>
+                <button onClick={() => handleDelete(v.filename)} className="btn btn-sm btn-error" style={{ fontSize: '0.75rem' }} title="Delete this version">🗑</button>
               </div>
             </div>
           ))}
@@ -130,8 +139,10 @@ const HistoryTab: React.FC<{ acl: ACL | null; setAcl: (a: ACL) => void }> = ({ s
 
 
 // ACCESS CHECK TAB ────────────────────────────────────────────────────────────
-const AccessCheckTab: React.FC<{ acl: ACL | null }> = ({ acl }) => {
+const AccessCheckTab: React.FC<{ acl: ACL | null }> = ({ acl: aclProp }) => {
   const [nodes, setNodes] = useState<{id: number; name: string; ipAddresses: string[]; user?: {name: string}}[]>([]);
+  const [liveAcl, setLiveAcl] = useState<ACL | null>(null);
+  const acl = liveAcl || aclProp;
   const [srcNode, setSrcNode] = useState('');
   const [dstNode, setDstNode] = useState('');
   const [dstPort, setDstPort] = useState('*');
@@ -140,6 +151,10 @@ const AccessCheckTab: React.FC<{ acl: ACL | null }> = ({ acl }) => {
   useEffect(() => {
     axios.get(`${API_BASE}/headscale/api/v1/node`)
       .then(r => setNodes(r.data.nodes || []))
+      .catch(() => {});
+    // Always load fresh ACL for accurate checking
+    axios.get(`${API_BASE}/headscale/acl`)
+      .then(r => setLiveAcl(r.data))
       .catch(() => {});
   }, []);
 
@@ -701,8 +716,10 @@ const PoliciesTab: React.FC<{ acl: ACL; setAcl: (a: ACL) => void }> = ({ acl, se
   const [expandedPolicy, setExpandedPolicy] = useState<number | null>(null);
   const [creating, setCreating] = useState(false);
   const [editingPolicy, setEditingPolicy] = useState<number | null>(null);
+  const [policySearch, setPolicySearch] = useState('');
 
   // New policy state
+  const [policyName, setPolicyName] = useState('');
   const [proto, setProto] = useState('');
   const [srcType, setSrcType] = useState<'custom'|'user'|'host'|'group'>('custom');
   const [srcInput, setSrcInput] = useState('');
@@ -750,7 +767,8 @@ const PoliciesTab: React.FC<{ acl: ACL; setAcl: (a: ACL) => void }> = ({ acl, se
   const handleCreate = () => {
     if (srcItems.length === 0 || dstItems.length === 0) return;
     const newAcl = { ...acl };
-    const entry = {
+    const entry: any = {
+      ...(policyName.trim() ? { '#ha-meta': { name: policyName.trim(), open: false } } : {}),
       action,
       src: srcItems,
       dst: dstItems.map(d => d.ports && d.ports !== '*' ? `${d.obj}:${d.ports}` : d.obj),
@@ -766,6 +784,7 @@ const PoliciesTab: React.FC<{ acl: ACL; setAcl: (a: ACL) => void }> = ({ acl, se
     setProto(''); setSrcItems([]); setDstItems([]);
     setSrcInput(''); setDstInput(''); setDstPort('');
     setSrcType('custom'); setDstType('custom');
+    setPolicyName('');
     setAction('accept'); setCreating(false); setEditingPolicy(null);
   };
 
@@ -775,6 +794,7 @@ const PoliciesTab: React.FC<{ acl: ACL; setAcl: (a: ACL) => void }> = ({ acl, se
     setCreating(true);
     setAction(p.action);
     setProto(p.proto || '');
+    setPolicyName((p as any)['#ha-meta']?.name || '');
     // Parse src items
     setSrcItems(p.src);
     setSrcType('custom');
@@ -836,6 +856,14 @@ const PoliciesTab: React.FC<{ acl: ACL; setAcl: (a: ACL) => void }> = ({ acl, se
       {/* Create Policy Form */}
       {creating && (
         <div style={{ backgroundColor: '#111827', border: '1px solid #374151', borderRadius: '0.5rem', padding: '1.25rem', marginBottom: '1.5rem' }}>
+
+          {/* Friendly Name */}
+          <div style={{ marginBottom: '1.25rem' }}>
+            <div style={{ color: '#9ca3af', fontSize: '0.7rem', fontWeight: '700', textTransform: 'uppercase', marginBottom: '0.5rem' }}>Friendly Name (optional)</div>
+            <input type="text" value={policyName} onChange={e => setPolicyName(e.target.value)}
+              placeholder="e.g. Dyna Access, MvSolar, Exit Node..."
+              style={{ width: '100%', padding: '0.5rem 0.75rem', backgroundColor: '#374151', border: '1px solid #4b5563', borderRadius: '0.375rem', color: '#f3f4f6', fontSize: '0.875rem', boxSizing: 'border-box' }} />
+          </div>
 
           {/* Action + Protocol row */}
           <div style={{ display: 'flex', gap: '1.5rem', marginBottom: '1.25rem', flexWrap: 'wrap' }}>
@@ -952,23 +980,39 @@ const PoliciesTab: React.FC<{ acl: ACL; setAcl: (a: ACL) => void }> = ({ acl, se
         </div>
       )}
 
+      {/* Search bar */}
+      {acl.acls.length > 0 && (
+        <input type="text" value={policySearch} onChange={e => setPolicySearch(e.target.value)}
+          placeholder="🔍 Search by name, source or destination..."
+          style={{ width: '100%', padding: '0.5rem 0.75rem', backgroundColor: '#1f2937', border: '1px solid #374151', borderRadius: '0.375rem', color: '#f3f4f6', fontSize: '0.85rem', marginBottom: '0.75rem', boxSizing: 'border-box' }} />
+      )}
+
       {/* Policy list */}
       {acl.acls.length === 0 ? (
         <p style={{ color: '#9ca3af', textAlign: 'center', padding: '2rem' }}>No policies configured yet</p>
       ) : (
         <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
-          {acl.acls.map((p, idx) => (
+          {acl.acls.map((p, idx) => {
+            const meta = (p as any)['#ha-meta'];
+            const friendlyName = meta?.name || '';
+            const searchLower = policySearch.toLowerCase();
+            if (policySearch && !friendlyName.toLowerCase().includes(searchLower) &&
+                !p.src.join(' ').toLowerCase().includes(searchLower) &&
+                !p.dst.join(' ').toLowerCase().includes(searchLower) &&
+                !p.action.toLowerCase().includes(searchLower)) return null;
+            return (
             <div key={idx} className="policy-card">
               <div className="accordion-header" onClick={() => setExpandedPolicy(expandedPolicy === idx ? null : idx)}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', flex: 1 }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', flex: 1, flexWrap: 'wrap', minWidth: 0 }}>
                   <span style={{ fontSize: '0.7rem', fontWeight: '700', color: '#6b7280' }}>#{idx + 1}</span>
+                  {friendlyName && <span style={{ fontSize: '0.75rem', fontWeight: '700', color: '#FFDD00', backgroundColor: '#1c1f00', padding: '0.1rem 0.5rem', borderRadius: '0.25rem', whiteSpace: 'nowrap' }}>📛 {friendlyName}</span>}
                   <span style={{ fontSize: '0.75rem', padding: '0.15rem 0.5rem', borderRadius: '0.25rem', backgroundColor: p.action === 'accept' ? '#065f46' : '#7f1d1d', color: p.action === 'accept' ? '#6ee7b7' : '#fca5a5', fontWeight: '700' }}>
                     {p.action.toUpperCase()}
                   </span>
                   {p.proto && <span style={{ fontSize: '0.7rem', color: '#818cf8', fontWeight: '600', backgroundColor: '#1e1b4b', padding: '0.1rem 0.4rem', borderRadius: '0.25rem' }}>{p.proto.toUpperCase()}</span>}
-                  <span style={{ fontSize: '0.8rem', color: '#93c5fd', fontFamily: 'monospace' }}>{p.src.join(', ')}</span>
+                  <span style={{ fontSize: '0.8rem', color: '#93c5fd', fontFamily: 'monospace', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{p.src.join(', ')}</span>
                   <span style={{ color: '#6b7280' }}>→</span>
-                  <span style={{ fontSize: '0.8rem', color: '#86efac', fontFamily: 'monospace' }}>{p.dst.join(', ')}</span>
+                  <span style={{ fontSize: '0.8rem', color: '#86efac', fontFamily: 'monospace', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{p.dst.join(', ')}</span>
                 </div>
                 <div style={{ display: 'flex', gap: '0.25rem', alignItems: 'center' }}>
                   <button onClick={e => { e.stopPropagation(); handleMove(idx, 'up'); }} disabled={idx === 0} style={{ background: 'none', border: 'none', color: idx === 0 ? '#374151' : '#9ca3af', cursor: idx === 0 ? 'default' : 'pointer', fontSize: '0.8rem' }}>⬆</button>
@@ -991,14 +1035,15 @@ const PoliciesTab: React.FC<{ acl: ACL; setAcl: (a: ACL) => void }> = ({ acl, se
                 </div>
               )}
             </div>
-          ))}
+          );
+          })}
         </div>
       )}
     </div>
   );
 };
 
-// SSH TAB// SSH TAB
+// SSH TAB
 const SshTab: React.FC<{ acl: ACL; setAcl: (a: ACL) => void }> = ({ acl, setAcl }) => {
   const [newSsh, setNewSsh] = useState({ action: 'accept', src: '', dst: '' });
 
