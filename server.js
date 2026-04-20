@@ -435,14 +435,8 @@ app.post('/api/headscale/acl', authenticateToken, async (req, res) => {
     const userEmail = req.user.email;
     const tokenData = userTokenMap.get(userEmail);
     if (!tokenData) return res.status(401).json({ message: 'Session expired' });
-    // Strip comment/meta fields (#ha-meta etc) from acl rules — Headscale API rejects them
-    // Also filter out empty objects that result from stripping
+    // Keep #ha-meta fields (Headscale accepts them) — only filter rules missing required fields
     const cleanAcls = (acls || [])
-      .map(rule => {
-        const clean = {};
-        Object.keys(rule).forEach(k => { if (!k.startsWith('#')) clean[k] = rule[k]; });
-        return clean;
-      })
       .filter(rule => rule.action && rule.src && rule.dst); // must have required fields
     // Only send fields Headscale accepts — strip 'users' and any other extra fields
     const policy = { groups: groups || {}, tagOwners: tagOwners || {}, hosts: hosts || {}, acls: cleanAcls, ssh: ssh || [] };

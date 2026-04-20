@@ -235,8 +235,8 @@ const AccessCheckTab: React.FC<{ acl: ACL | null }> = ({ acl: aclProp }) => {
     setResult({ allowed: false, reason: 'No matching ACL rule — traffic denied by default' });
   };
 
-  const nodeOpts = nodes.map(n => ({ value: n.ipAddresses?.[0] || n.name, label: `\${n.name} (\${n.ipAddresses?.[0] || 'no IP'}) — \${n.user?.name || 'unowned'}` }));
-  const hostOpts = Object.entries(acl?.hosts || {}).map(([alias, ip]) => ({ value: ip as string, label: `\${alias} → \${ip}` }));
+  const nodeOpts = nodes.map(n => ({ value: n.ipAddresses?.[0] || n.name, label: `${n.name} (${n.ipAddresses?.[0] || 'no IP'}) — ${n.user?.name || 'unowned'}` }));
+  const hostOpts = Object.entries(acl?.hosts || {}).map(([alias, ip]) => ({ value: ip as string, label: `${alias} → ${ip}` }));
 
   const selStyle = { width: '100%', padding: '0.6rem 0.75rem', backgroundColor: '#1f2937', border: '1px solid #374151', borderRadius: '0.375rem', color: '#f3f4f6', fontSize: '0.85rem' };
 
