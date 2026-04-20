@@ -8,38 +8,25 @@ A production-ready, role-based administration dashboard for [Headscale](https://
 
 ## 📋 Changelog
 
-### v1.0.12 — Latest
-- ✅ **Node Tags UI** — manage tags per node, owner preserved via `node_owners` map
-- ✅ **SSH Command Generator** — 4 ready-to-copy commands per node
-- ✅ **ACL Access Check** — verify source→destination with full host alias resolution
-- ✅ **ACL Version History** — auto-saved on every Apply, restore any version
-- ✅ **Real-time SSE** — live node online/offline updates, 🟢 Live indicator
-- ✅ **Network Topology** — canvas force-directed graph, drag/zoom/pan, ACL rule arrows
-- ✅ **Node Cards** — redesigned card layout, click to expand actions, 3×2 button grid
-- ✅ **Online/Offline duration** — `⬆ 2h 14m` / `⬇ 8h 32m` per node card
-- ✅ **Mobile navigation** — fixed hamburger dropdown positioning
-- ✅ **History tab crash** — tab rendering by label identity, bulletproof date parsing
-- ✅ **ACL restore 500** — strips `#ha-meta` comment fields before POSTing to Headscale
-- ✅ **Delete/Rename user** — syncs `users-mapping.json` automatically
-- ✅ **Registration callout** — explains Buy Me a Coffee → license key benefits
-- ✅ **Server migration** — moved from RackNerd to Contabo, backup script added
+### v1.0.24 — Latest
+- ✅ **ACL History in Settings** — view, restore and delete ACL versions from Settings page
+- ✅ **Access Check in Policies** — 🔍 Access Check button opens modal inside Policies tab
+- ✅ **Friendly policy names** — add a name to any ACL rule, shown as yellow badge, persists correctly
+- ✅ **Policy search** — filter policies by name, source or destination
+- ✅ **Mobile ACL tabs** — tab bar wraps/shrinks on mobile, shows icons only on small screens
+- ✅ **Save ACL 500 fix** — dst always uses `host:port` format, `users` field stripped
+- ✅ **SSE live updates fix** — JWT passed as query param (EventSource can't send headers)
+- ✅ **Node online/offline duration** — `⬆ 2h 14m` / `⬇ 8h 32m` per card from `lastSeen`
+- ✅ **Node cards click-to-expand** — buttons hidden until card tapped
+- ✅ **Network Topology** — canvas force graph, offline checkbox, drag/zoom/pan
+- ✅ **ACL Access Check** — full group email resolution, host aliases, CIDR support
 
 ### v1.0.0 — First Stable Release
 - Role-based access (super_admin, group_admin, user)
-- Deploy wizard, Pre-Auth Keys, Nodes, Routes, ACL Editor, DNS
+- Deploy wizard, Pre-Auth Keys, Nodes, Routes, ACL Editor (6 tabs), DNS
 - Audit Log — view, filter, search, export CSV
 - Registration/licensing system
-
-
-## 🎉 v1.0.12 — First Stable Release
-
-HS React has reached **v1.0.12** — a fully production-ready, self-hosted Headscale admin dashboard.
-
-**[🌐 Website](https://hs.groblers.co.uk/hsreact)** · **[🎭 Live Demo](https://hs.groblers.co.uk/hsreact/demo)** · **[⭐ GitHub](https://github.com/HybridRCG/headscale-admin-react)**
-
-> 🎭 The live demo uses fictional data and runs entirely in the browser — no real Headscale instance, no data saved.
-
----
+- Update checker in footer
 
 ## Quick Start — Docker Only
 
@@ -233,25 +220,25 @@ All install files in [`resources/`](resources/):
 
 | Version | Changes |
 |---------|---------|
-| v1.0.12 | Update checker in footer — amber button when newer version available on GitHub |
-| v1.0.12 | Create user form — fixed heights, clear spacing between fields |
-| v1.0.12 | Create user — role selector + add to login mapping checkbox in one step |
-| v1.0.12 | Home page 3x2 grid; Users/Nodes cards name-only |
-| v1.0.12 | Registration/licensing system — license key hides Buy Me a Coffee |
-| v1.0.12 | Nodes move-owner modal with Copy Command/Copy Key; Pre-Auth Keys auto-refresh |
-| v1.0.12 | Unregister button in Settings |
-| v1.0.12 | Buy Me a Coffee in footer; version on login page links to GitHub |
-| v1.0.12 | ACL Tag Owners tab removed; tab indices fixed |
-| v1.0.12 | Pre-Auth Keys: Clear Expired button; Tag type removed from policy builder |
-| v1.0.12 | Version number bottom-right of login card |
-| v1.0.12 | Deploy modal sticky header; pre-auth key generation fixed for v0.28 |
-| v1.0.12 | GitHub Actions auto-build to ghcr.io; Docker-only install; resources folder |
-| v1.0.12 | Security: rate limiting, shell injection validation, dead code removed |
-| v1.0.12 | Renamed to HS React throughout |
-| v1.0.12 | ACL Policies visual builder with protocol/type buttons, edit in-place |
-| v1.0.12 | ACL tabs sticky; Hosts node dropdown + auto IP; Config syntax validator |
-| v1.0.12 | Routes page table; DNS sticky toolbar, compact dark theme |
-| v1.0.12 | Domain filtering for Nodes, Users, Routes |
+| v1.0.24 | Update checker in footer — amber button when newer version available on GitHub |
+| v1.0.24 | Create user form — fixed heights, clear spacing between fields |
+| v1.0.24 | Create user — role selector + add to login mapping checkbox in one step |
+| v1.0.24 | Home page 3x2 grid; Users/Nodes cards name-only |
+| v1.0.24 | Registration/licensing system — license key hides Buy Me a Coffee |
+| v1.0.24 | Nodes move-owner modal with Copy Command/Copy Key; Pre-Auth Keys auto-refresh |
+| v1.0.24 | Unregister button in Settings |
+| v1.0.24 | Buy Me a Coffee in footer; version on login page links to GitHub |
+| v1.0.24 | ACL Tag Owners tab removed; tab indices fixed |
+| v1.0.24 | Pre-Auth Keys: Clear Expired button; Tag type removed from policy builder |
+| v1.0.24 | Version number bottom-right of login card |
+| v1.0.24 | Deploy modal sticky header; pre-auth key generation fixed for v0.28 |
+| v1.0.24 | GitHub Actions auto-build to ghcr.io; Docker-only install; resources folder |
+| v1.0.24 | Security: rate limiting, shell injection validation, dead code removed |
+| v1.0.24 | Renamed to HS React throughout |
+| v1.0.24 | ACL Policies visual builder with protocol/type buttons, edit in-place |
+| v1.0.24 | ACL tabs sticky; Hosts node dropdown + auto IP; Config syntax validator |
+| v1.0.24 | Routes page table; DNS sticky toolbar, compact dark theme |
+| v1.0.24 | Domain filtering for Nodes, Users, Routes |
 | v0.1 | Initial React rewrite from Svelte fork |
 
 ---
