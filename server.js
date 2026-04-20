@@ -9,6 +9,7 @@ const path = require('path');
 const { execSync } = require('child_process');
 
 const app = express();
+app.set('trust proxy', 1); // Trust Traefik reverse proxy
 const PORT = process.env.PORT || 3000;
 const JWT_SECRET = process.env.JWT_SECRET || 'dev-secret-change-in-prod';
 const HEADSCALE_URL = process.env.HEADSCALE_URL || 'http://headscale:8080';
