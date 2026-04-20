@@ -70,27 +70,75 @@ export const NodesPage: React.FC = () => {
 
   useEffect(() => { applyFilters(); }, [allNodes, searchTerm, filterStatus, selectedUser, selectedGroup, groupUsers, userEmailMap]);
 
-  // SSE real-time
+  // SSE real-time — robust with token refresh and exponential backoff
   useEffect(() => {
     let es: EventSource | null = null;
     let retryTimeout: ReturnType<typeof setTimeout>;
+    let retryDelay = 5000;
+    let mounted = true;
+
     const connect = () => {
+      if (!mounted) return;
+      // Always get fresh token at connection time
       const token = useAuthStore.getState().sessionToken || '';
+      if (!token) {
+        // Not logged in — retry later
+        retryTimeout = setTimeout(connect, 10000);
+        return;
+      }
+
       es = new EventSource(`/admin/api/headscale/events?token=${encodeURIComponent(token)}`);
-      es.addEventListener('ping', () => setLiveConnected(true));
+
+      es.addEventListener('ping', () => {
+        setLiveConnected(true);
+        retryDelay = 5000; // Reset backoff on successful connection
+      });
+
       es.addEventListener('nodes', (e: MessageEvent) => {
         try {
-          const updates: {id: number; online: boolean; lastSeen?: {seconds: number; nanos: number}}[] = JSON.parse(e.data);
+          const updates: {id: number; online: boolean; lastSeen?: string}[] = JSON.parse(e.data);
           setAllNodes(prev => prev.map(node => {
             const u = updates.find(x => x.id === node.id);
-            return u ? { ...node, online: u.online, lastSeen: u.lastSeen || node.lastSeen } : node;
+            if (!u) return node;
+            return { ...node, online: u.online, ...(u.lastSeen ? { lastSeen: u.lastSeen } : {}) };
           }));
         } catch {}
       });
-      es.onerror = () => { setLiveConnected(false); es?.close(); retryTimeout = setTimeout(connect, 10000); };
+
+      es.addEventListener('error', () => {
+        setLiveConnected(false);
+      });
+
+      es.onerror = () => {
+        setLiveConnected(false);
+        es?.close();
+        es = null;
+        if (mounted) {
+          // Exponential backoff — max 30s
+          retryTimeout = setTimeout(connect, retryDelay);
+          retryDelay = Math.min(retryDelay * 1.5, 30000);
+        }
+      };
     };
+
     connect();
-    return () => { es?.close(); clearTimeout(retryTimeout); setLiveConnected(false); };
+
+    // Reconnect when tab becomes visible again (handles phone screen-off/on)
+    const handleVisibility = () => {
+      if (document.visibilityState === 'visible' && !es) {
+        retryDelay = 5000;
+        connect();
+      }
+    };
+    document.addEventListener('visibilitychange', handleVisibility);
+
+    return () => {
+      mounted = false;
+      es?.close();
+      clearTimeout(retryTimeout);
+      setLiveConnected(false);
+      document.removeEventListener('visibilitychange', handleVisibility);
+    };
   }, []);
 
   const fetchNodes = async () => {

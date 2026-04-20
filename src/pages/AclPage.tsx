@@ -351,6 +351,29 @@ export const AclPage: React.FC = () => {
 
   const saveAcl = async () => {
     if (!acl) return;
+
+    // Warn if policy looks empty or broken — prevent accidental wipe
+    const hasGroups = Object.keys(acl.groups || {}).length > 0;
+    const hasHosts = Object.keys(acl.hosts || {}).length > 0;
+    const hasRules = (acl.acls || []).length > 0;
+
+    if (!hasGroups && !hasHosts && !hasRules) {
+      const ok = window.confirm(
+        '⚠️ WARNING: Your ACL policy appears to be empty (no groups, hosts or rules).\n\n' +
+        'Saving this will WIPE your entire ACL policy.\n\n' +
+        'Are you sure you want to continue?'
+      );
+      if (!ok) return;
+    } else if (!hasRules) {
+      const ok = window.confirm(
+        '⚠️ Warning: You have no ACL rules defined.\n\n' +
+        'This will remove all traffic rules from your policy.\n' +
+        'Groups and hosts will be preserved.\n\n' +
+        'Continue?'
+      );
+      if (!ok) return;
+    }
+
     setLoading(true);
     try {
       await axios.post(`${API_BASE}/headscale/acl`, acl);
