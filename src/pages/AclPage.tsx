@@ -142,223 +142,155 @@ const HistoryTab: React.FC<{ acl: ACL | null; setAcl: (a: ACL) => void }> = ({ s
 const AccessCheckTab: React.FC<{ acl: ACL | null }> = ({ acl: aclProp }) => {
   const [nodes, setNodes] = useState<{id: number; name: string; ipAddresses: string[]; user?: {name: string}}[]>([]);
   const [liveAcl, setLiveAcl] = useState<ACL | null>(null);
+  const [userEmailMap, setUserEmailMap] = useState<Record<string, string>>({});
   const acl = liveAcl || aclProp;
-  const [srcNode, setSrcNode] = useState('');
-  const [dstNode, setDstNode] = useState('');
+  const [srcSel, setSrcSel] = useState('');
+  const [dstSel, setDstSel] = useState('');
   const [dstPort, setDstPort] = useState('*');
   const [result, setResult] = useState<{allowed: boolean; reason: string; matchedRule?: any} | null>(null);
 
   useEffect(() => {
-    axios.get(`${API_BASE}/headscale/api/v1/node`)
-      .then(r => setNodes(r.data.nodes || []))
-      .catch(() => {});
-    axios.get(`${API_BASE}/headscale/acl`)
-      .then(r => setLiveAcl(r.data))
-      .catch(() => {});
+    axios.get(`${API_BASE}/headscale/api/v1/node`).then(r => setNodes(r.data.nodes || [])).catch(() => {});
+    axios.get(`${API_BASE}/headscale/acl`).then(r => setLiveAcl(r.data)).catch(() => {});
+    axios.get(`${API_BASE}/headscale/user-emails`).then(r => {
+      const users = r.data?.users || {};
+      const m: Record<string, string> = {};
+      Object.entries(users).forEach(([uname, udata]: any) => { m[uname] = udata.email || udata || ''; });
+      setUserEmailMap(m);
+    }).catch(() => {});
   }, []);
 
+  const getNodeByIP = (ip: string) => nodes.find(n => n.ipAddresses?.includes(ip));
+
   const checkAccess = () => {
-    if (!acl || !srcNode || !dstNode) return;
+    if (!acl || !srcSel || !dstSel) return;
     setResult(null);
 
     const hosts: Record<string, string> = acl.hosts || {};
     const groups: Record<string, string[]> = acl.groups || {};
 
-    // Build reverse maps
-    const ipToAlias: Record<string, string> = {};
-    Object.entries(hosts).forEach(([alias, ip]) => { ipToAlias[ip as string] = alias; });
 
-    // Get user email for a node IP or name
-    const getNodeEmail = (ipOrName: string): string | null => {
-      const n = nodes.find(nd =>
-        nd.ipAddresses?.includes(ipOrName) || nd.name === ipOrName ||
-        nd.ipAddresses?.includes(hosts[ipOrName] as string)
-      );
-      return n?.user?.name ? (n.user.name + '@' + (n.user.name || '')) : null;
-    };
+    // Check if a policy selector matches our source or destination
+    // srcIP = IP of the selected source node
+    // dstIP = IP of the selected destination node
+    const srcNode = getNodeByIP(srcSel);
+    const dstNode = getNodeByIP(dstSel);
 
-    // Resolve a selector string to all possible identity values
-    // Handles: IP, hostname, host alias, group:name, user:name, tag:name, *
-    const selectorMatches = (selector: string, targetIP: string, targetAlias: string, targetNodeName: string, targetUserEmail?: string): boolean => {
-      if (selector === '*') return true;
+    const srcAlias = Object.entries(hosts).find(([, ip]) => ip === srcSel)?.[0];
+    const dstAlias = Object.entries(hosts).find(([, ip]) => ip === dstSel)?.[0];
+    const srcEmail = srcNode?.user?.name ? userEmailMap[srcNode.user.name] : undefined;
+    const dstEmail = dstNode?.user?.name ? userEmailMap[dstNode.user.name] : undefined;
 
-      const [base, portPart] = selector.split(':');
-
-      // group: selector — check if target user is in group
-      if (base.startsWith('group:')) {
-        const groupName = selector; // keep full "group:xxx"
-        const members: string[] = groups[groupName] || [];
-        if (targetUserEmail && members.includes(targetUserEmail)) return true;
-        // Also check if any node with this IP/name has a user in the group
-        const matchedNode = nodes.find(nd =>
-          nd.ipAddresses?.includes(targetIP) || nd.name === targetNodeName
-        );
-        if (matchedNode?.user?.name) {
-          // We don't have emails here, but check via node user name
-          // Look up user email from nodes list (user.name is the headscale username)
-        }
-        return false;
+    const matchesSrc = (sel: string): boolean => {
+      if (sel === '*') return true;
+      // group:xxx — check if src user email is in group
+      if (sel.startsWith('group:')) {
+        const members = groups[sel] || [];
+        return !!srcEmail && members.includes(srcEmail);
       }
-
-      // tag: selector
-      if (base.startsWith('tag:')) return false; // can't easily check without tag data
-
-      // user: selector
-      if (base.startsWith('user:')) {
-        const uname = base.replace('user:', '');
-        const matchedNode = nodes.find(nd => nd.ipAddresses?.includes(targetIP) || nd.name === targetNodeName);
-        return matchedNode?.user?.name === uname;
-      }
-
+      // user:xxx
+      if (sel.startsWith('user:')) return sel === 'user:' + srcNode?.user?.name;
+      // tag:xxx — skip (no tag data)
+      if (sel.startsWith('tag:')) return false;
       // host alias
-      if (hosts[base]) {
-        const resolvedIP = hosts[base] as string;
-        return resolvedIP === targetIP || resolvedIP === targetAlias;
-      }
-
-      // direct IP match
-      if (base === targetIP) return true;
-
-      // node name match  
-      if (base === targetNodeName) return true;
-
-      // alias match
-      if (base === targetAlias) return true;
-
-      // CIDR — basic check
-      if (base.includes('/')) {
-        try {
-          const [net, bits] = base.split('/');
-          const mask = ~((1 << (32 - parseInt(bits))) - 1);
-          const toInt = (ip: string) => ip.split('.').reduce((acc, o) => (acc << 8) | parseInt(o), 0);
-          return (toInt(targetIP) & mask) === (toInt(net) & mask);
-        } catch { return false; }
-      }
-
-      return false;
+      if (hosts[sel]) return hosts[sel] === srcSel;
+      // direct IP or alias
+      return sel === srcSel || sel === srcAlias || sel === srcNode?.name;
     };
 
-    // Resolve selected value to its components
-    const selectedIP = srcNode;
-    const selectedAlias = ipToAlias[srcNode] || '';
-    const selectedNode = nodes.find(n => n.ipAddresses?.includes(srcNode) || n.name === srcNode);
-    const selectedNodeName = selectedNode?.name || srcNode;
-    const selectedUserEmail = selectedNode?.user?.name || '';
+    const matchesDst = (sel: string): boolean => {
+      const [addr, portRule] = sel.includes(':') ? [sel.substring(0, sel.lastIndexOf(':')), sel.substring(sel.lastIndexOf(':') + 1)] : [sel, '*'];
+      const portOk = portRule === '*' || dstPort === '*' || portRule === dstPort;
+      if (!portOk) return false;
 
-    const dstIP = dstNode;
-    const dstAlias = ipToAlias[dstNode] || '';
-    const dstNodeObj = nodes.find(n => n.ipAddresses?.includes(dstNode) || n.name === dstNode);
-    const dstNodeName = dstNodeObj?.name || dstNode;
-    const dstUserEmail = dstNodeObj?.user?.name || '';
+      if (addr === '*') return true;
+      if (addr.startsWith('group:')) {
+        const members = groups[addr] || [];
+        return !!dstEmail && members.includes(dstEmail);
+      }
+      if (addr.startsWith('user:')) return addr === 'user:' + dstNode?.user?.name;
+      if (addr.startsWith('tag:')) return false;
+      // CIDR 0.0.0.0/0 = any
+      if (addr === '0.0.0.0/0' || addr.endsWith('/0')) return true;
+      if (hosts[addr]) return hosts[addr] === dstSel;
+      return addr === dstSel || addr === dstAlias || addr === dstNode?.name;
+    };
 
     const policies = acl.acls || [];
-
     for (const policy of policies) {
       if (!policy.action || !policy.src || !policy.dst) continue;
-
       const srcList: string[] = Array.isArray(policy.src) ? policy.src : [policy.src];
       const dstList: string[] = Array.isArray(policy.dst) ? policy.dst : [policy.dst];
 
-      // Check source match — also resolve groups
-      let srcMatch = false;
-      for (const s of srcList) {
-        if (s === '*') { srcMatch = true; break; }
-        // Group check — resolve group members' node IPs
-        if (s.startsWith('group:')) {
-          const members = groups[s] || [];
-          // Check if any node with our src IP has a user whose email is in the group
-          if (selectedNode) {
-            // We match by username@domain pattern - check all members
-            const userName = selectedNode.user?.name || '';
-            // Simple check: if username appears in any member email
-            if (members.some(m => m.toLowerCase().startsWith(userName.toLowerCase() + '@') || m === userName)) {
-              srcMatch = true; break;
-            }
-          }
-          continue;
-        }
-        if (selectorMatches(s, selectedIP, selectedAlias, selectedNodeName, selectedUserEmail)) {
-          srcMatch = true; break;
-        }
-      }
-
+      const srcMatch = srcList.some(matchesSrc);
       if (!srcMatch) continue;
-
-      // Check destination match
-      let dstMatch = false;
-      for (const d of dstList) {
-        const [dAddr, dPortRule] = d.includes(':') ? [d.substring(0, d.lastIndexOf(':')), d.substring(d.lastIndexOf(':')+1)] : [d, '*'];
-        const portOk = !dPortRule || dPortRule === '*' || dstPort === '*' || dPortRule === dstPort;
-        if (!portOk) continue;
-        if (dAddr === '*') { dstMatch = true; break; }
-        if (dAddr.startsWith('group:')) {
-          const members = groups[dAddr] || [];
-          if (dstNodeObj) {
-            const userName = dstNodeObj.user?.name || '';
-            if (members.some(m => m.toLowerCase().startsWith(userName.toLowerCase() + '@') || m === userName)) {
-              dstMatch = true; break;
-            }
-          }
-          continue;
-        }
-        if (selectorMatches(dAddr, dstIP, dstAlias, dstNodeName, dstUserEmail)) {
-          dstMatch = true; break;
-        }
-      }
-
+      const dstMatch = dstList.some(matchesDst);
       if (dstMatch) {
         const meta = (policy as any)['#ha-meta'];
-        const ruleName = meta?.name || `${srcList.join(',')} → ${dstList.join(',')}`;
-        setResult({ allowed: policy.action === 'accept', reason: `Matched: "${ruleName}"`, matchedRule: policy });
+        const name = meta?.name || `\${srcList.join(',')} → \${dstList.join(',')}`;
+        setResult({ allowed: policy.action === 'accept', reason: `Matched rule: "\${name}"`, matchedRule: policy });
         return;
       }
     }
-
-    setResult({ allowed: false, reason: 'No matching rule found — denied by default' });
+    setResult({ allowed: false, reason: 'No matching ACL rule — traffic denied by default' });
   };
 
-  const nodeOptions = nodes.map(n => ({ value: n.ipAddresses?.[0] || n.name, label: `${n.name} (${n.ipAddresses?.[0] || 'no IP'}) — ${n.user?.name || 'unowned'}` }));
-  const hostOptions = Object.entries(acl?.hosts || {}).map(([alias, ip]) => ({ value: ip as string, label: `${alias} → ${ip}` }));
+  const nodeOpts = nodes.map(n => ({ value: n.ipAddresses?.[0] || n.name, label: `\${n.name} (\${n.ipAddresses?.[0] || 'no IP'}) — \${n.user?.name || 'unowned'}` }));
+  const hostOpts = Object.entries(acl?.hosts || {}).map(([alias, ip]) => ({ value: ip as string, label: `\${alias} → \${ip}` }));
+
+  const selStyle = { width: '100%', padding: '0.6rem 0.75rem', backgroundColor: '#1f2937', border: '1px solid #374151', borderRadius: '0.375rem', color: '#f3f4f6', fontSize: '0.85rem' };
 
   return (
     <div>
-      <div style={{ marginBottom: '1.5rem' }}>
+      <div style={{ marginBottom: '1.25rem' }}>
         <h3 style={{ color: '#f3f4f6', fontWeight: '700', fontSize: '1rem', marginBottom: '0.25rem' }}>🔍 ACL Access Check</h3>
-        <p style={{ color: '#9ca3af', fontSize: '0.85rem', margin: 0 }}>Resolves host aliases automatically. Select nodes or aliases to check.</p>
+        <p style={{ color: '#9ca3af', fontSize: '0.85rem', margin: 0 }}>Check if a source node can reach a destination. Resolves host aliases and group membership.</p>
       </div>
+
       <div style={{ display: 'grid', gridTemplateColumns: '1fr auto 1fr', gap: '1rem', alignItems: 'end', marginBottom: '1rem' }}>
         <div>
           <label style={{ display: 'block', color: '#9ca3af', fontSize: '0.75rem', fontWeight: '600', textTransform: 'uppercase', marginBottom: '0.4rem' }}>Source</label>
-          <select value={srcNode} onChange={e => setSrcNode(e.target.value)}
-            style={{ width: '100%', padding: '0.6rem 0.75rem', backgroundColor: '#1f2937', border: '1px solid #374151', borderRadius: '0.375rem', color: '#f3f4f6', fontSize: '0.85rem' }}>
-            <option value="">Select source...</option>
+          <select value={srcSel} onChange={e => setSrcSel(e.target.value)} style={selStyle}>
+            <option value="">Select source node...</option>
             <option value="*">* (Any)</option>
-            <optgroup label="── Nodes ──">{nodeOptions.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}</optgroup>
-            <optgroup label="── Host Aliases ──">{hostOptions.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}</optgroup>
+            <optgroup label="── Nodes ──">{nodeOpts.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}</optgroup>
+            <optgroup label="── Host Aliases ──">{hostOpts.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}</optgroup>
           </select>
+          {srcSel && getNodeByIP(srcSel) && (
+            <div style={{ fontSize: '0.72rem', color: '#6b7280', marginTop: '0.3rem' }}>
+              User: <span style={{ color: '#9ca3af' }}>{getNodeByIP(srcSel)?.user?.name}</span>
+              {userEmailMap[getNodeByIP(srcSel)?.user?.name || ''] && (
+                <span style={{ color: '#6b7280' }}> ({userEmailMap[getNodeByIP(srcSel)?.user?.name || '']})</span>
+              )}
+            </div>
+          )}
         </div>
         <div style={{ textAlign: 'center', color: '#6b7280', fontSize: '1.25rem', paddingBottom: '0.4rem' }}>→</div>
         <div>
           <label style={{ display: 'block', color: '#9ca3af', fontSize: '0.75rem', fontWeight: '600', textTransform: 'uppercase', marginBottom: '0.4rem' }}>Destination</label>
-          <select value={dstNode} onChange={e => setDstNode(e.target.value)}
-            style={{ width: '100%', padding: '0.6rem 0.75rem', backgroundColor: '#1f2937', border: '1px solid #374151', borderRadius: '0.375rem', color: '#f3f4f6', fontSize: '0.85rem' }}>
+          <select value={dstSel} onChange={e => setDstSel(e.target.value)} style={selStyle}>
             <option value="">Select destination...</option>
             <option value="*">* (Any)</option>
-            <optgroup label="── Nodes ──">{nodeOptions.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}</optgroup>
-            <optgroup label="── Host Aliases ──">{hostOptions.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}</optgroup>
+            <optgroup label="── Nodes ──">{nodeOpts.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}</optgroup>
+            <optgroup label="── Host Aliases ──">{hostOpts.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}</optgroup>
           </select>
         </div>
       </div>
+
       <div style={{ display: 'flex', gap: '1rem', alignItems: 'flex-end', marginBottom: '1.5rem', flexWrap: 'wrap' }}>
         <div>
           <label style={{ display: 'block', color: '#9ca3af', fontSize: '0.75rem', fontWeight: '600', textTransform: 'uppercase', marginBottom: '0.4rem' }}>Port</label>
           <input type="text" value={dstPort} onChange={e => setDstPort(e.target.value)} placeholder="* or 22, 80..."
             style={{ padding: '0.6rem 0.75rem', backgroundColor: '#1f2937', border: '1px solid #374151', borderRadius: '0.375rem', color: '#f3f4f6', fontSize: '0.875rem', width: '120px' }} />
         </div>
-        <button onClick={checkAccess} disabled={!srcNode || !dstNode} className="btn btn-primary" style={{ height: '40px' }}>
+        <button onClick={checkAccess} disabled={!srcSel || !dstSel} className="btn btn-primary" style={{ height: '40px' }}>
           🔍 Check Access
         </button>
+        {srcSel && !getNodeByIP(srcSel) && dstSel && (
+          <div style={{ color: '#f59e0b', fontSize: '0.78rem', alignSelf: 'center' }}>⚠️ Select from node list for best results</div>
+        )}
       </div>
+
       {result && (
         <div style={{ padding: '1.25rem 1.5rem', borderRadius: '0.5rem', border: `2px solid ${result.allowed ? '#10b981' : '#ef4444'}`, backgroundColor: result.allowed ? 'rgba(16,185,129,0.08)' : 'rgba(239,68,68,0.08)' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', marginBottom: '0.5rem' }}>
@@ -379,7 +311,6 @@ const AccessCheckTab: React.FC<{ acl: ACL | null }> = ({ acl: aclProp }) => {
     </div>
   );
 };
-
 
 export const AclPage: React.FC = () => {
   const userEmail = useAuthStore((state) => state.user?.email || '');
@@ -442,7 +373,7 @@ export const AclPage: React.FC = () => {
   return (
     <div className="page-container">
       {error && <div className="error-box">{error}</div>}
-      <div className="acl-tabs" style={{ display: 'flex', alignItems: 'center', gap: '0.25rem', flexWrap: 'nowrap', overflowX: 'auto', WebkitOverflowScrolling: 'touch', position: 'sticky', top: 0, zIndex: 9, scrollbarWidth: 'none' }}>
+      <div className="acl-tabs" style={{ position: 'sticky', top: 0, zIndex: 9 }}>
         {visibleTabs.map((tab, idx) => (
           <button
             key={idx}
@@ -851,7 +782,7 @@ const PoliciesTab: React.FC<{ acl: ACL; setAcl: (a: ACL) => void }> = ({ acl, se
       ...(policyName.trim() ? { '#ha-meta': { name: policyName.trim(), open: false } } : {}),
       action,
       src: srcItems,
-      dst: dstItems.map(d => d.ports && d.ports !== '*' ? `${d.obj}:${d.ports}` : d.obj),
+      dst: dstItems.map(d => `${d.obj}:${d.ports || '*'}`), // always include :port — Headscale requires it
       ...(proto ? { proto } : {})
     };
     if (editingPolicy !== null) {
