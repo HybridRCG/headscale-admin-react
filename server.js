@@ -420,7 +420,9 @@ app.get('/api/headscale/acl', authenticateToken, async (req, res) => {
     const policyResp = await axios.get(`${tokenData.headscaleUrl}/api/v1/policy`, { headers: { Authorization: `Bearer ${tokenData.apiKey}` }, timeout: 10000 });
     let policy = policyResp.data.policy;
     if (typeof policy === 'string') policy = JSON.parse(policy);
-    res.json(policy);
+    // Strip fields Headscale includes in GET but rejects on PUT (e.g. 'users')
+    const { groups, tagOwners, hosts, acls, ssh } = policy;
+    res.json({ groups: groups || {}, tagOwners: tagOwners || {}, hosts: hosts || {}, acls: acls || [], ssh: ssh || [] });
   } catch (error) {
     console.error('Failed to get ACL:', error.message);
     res.status(500).json({ message: error.message });
@@ -442,7 +444,8 @@ app.post('/api/headscale/acl', authenticateToken, async (req, res) => {
         return clean;
       })
       .filter(rule => rule.action && rule.src && rule.dst); // must have required fields
-    const policy = { groups, tagOwners, hosts, acls: cleanAcls, ssh };
+    // Only send fields Headscale accepts — strip 'users' and any other extra fields
+    const policy = { groups: groups || {}, tagOwners: tagOwners || {}, hosts: hosts || {}, acls: cleanAcls, ssh: ssh || [] };
     console.log('[ACL] Sending policy - groups:', Object.keys(groups||{}).length, 'hosts:', Object.keys(hosts||{}).length, 'acls:', cleanAcls.length);
 
     // Safety: never save a completely empty/broken policy
@@ -985,9 +988,35 @@ app.post('/api/headscale/node/tags', authenticateToken, async (req, res) => {
 // ── SSE — Real-time node status updates ──────────────────────────────────────
 const sseClients = new Set();
 
-app.get('/api/headscale/events', authenticateToken, (req, res) => {
-  const userEmail = req.user?.email;
-  const tokenData = userTokenMap.get(userEmail);
+app.get('/api/headscale/events', (req, res) => {
+  // SSE can't send headers — accept token from query param OR Authorization header
+  let userEmail = null;
+  let tokenData = null;
+
+  // Try query param first (EventSource)
+  const qToken = req.query.token;
+  if (qToken) {
+    try {
+      const jwt = require('jsonwebtoken');
+      const decoded = jwt.verify(qToken, process.env.JWT_SECRET || 'changeme');
+      userEmail = decoded.email;
+      tokenData = userTokenMap.get(userEmail);
+    } catch (e) { /* invalid token */ }
+  }
+
+  // Fallback to Authorization header
+  if (!tokenData) {
+    const authHeader = req.headers['authorization'];
+    if (authHeader?.startsWith('Bearer ')) {
+      try {
+        const jwt = require('jsonwebtoken');
+        const decoded = jwt.verify(authHeader.slice(7), process.env.JWT_SECRET || 'changeme');
+        userEmail = decoded.email;
+        tokenData = userTokenMap.get(userEmail);
+      } catch (e) { /* invalid token */ }
+    }
+  }
+
   if (!tokenData) return res.status(401).json({ message: 'Session expired' });
 
   res.setHeader('Content-Type', 'text/event-stream');

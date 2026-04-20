@@ -34,7 +34,7 @@ export const NodesPage: React.FC = () => {
   const [groupUsers, setGroupUsers] = useState<Record<string, string[]>>({});
   const [userEmailMap, setUserEmailMap] = useState<Record<string, string>>({});
   const [loading, setLoading] = useState(true);
-  const { user: authUser } = useAuthStore();
+  const { user: authUser, sessionToken } = useAuthStore();
   const manageableDomains: string[] = (authUser as any)?.manageable_domains || [];
   const shouldFilter = authUser?.role !== 'super_admin' && !manageableDomains.includes('*');
   const [searchTerm, setSearchTerm] = useState('');
@@ -75,7 +75,8 @@ export const NodesPage: React.FC = () => {
     let es: EventSource | null = null;
     let retryTimeout: ReturnType<typeof setTimeout>;
     const connect = () => {
-      es = new EventSource('/admin/api/headscale/events');
+      const token = useAuthStore.getState().sessionToken || '';
+      es = new EventSource(`/admin/api/headscale/events?token=${encodeURIComponent(token)}`);
       es.addEventListener('ping', () => setLiveConnected(true));
       es.addEventListener('nodes', (e: MessageEvent) => {
         try {
