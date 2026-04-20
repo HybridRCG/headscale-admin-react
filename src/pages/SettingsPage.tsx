@@ -33,6 +33,7 @@ export const SettingsPage: React.FC = () => {
   const [instances, setInstances] = useState<{payload: string; registeredAt: string; domain: string}[]>([]);
   const [showInstances, setShowInstances] = useState(false);
   const [aclHistory, setAclHistory] = useState<{filename: string; timestamp: string; savedBy: string}[]>([]);
+  const [aclHistoryError, setAclHistoryError] = useState('');
   const [showAclHistory, setShowAclHistory] = useState(false);
   const [aclHistoryLoading, setAclHistoryLoading] = useState(false);
   const [aclPreview, setAclPreview] = useState<{filename: string; data: any} | null>(null);
@@ -40,10 +41,14 @@ export const SettingsPage: React.FC = () => {
 
   const fetchAclHistory = async () => {
     setAclHistoryLoading(true);
+    setAclHistoryError('');
     try {
       const r = await axios.get(`${API}/headscale/acl/history`);
-      setAclHistory(r.data || []);
-    } catch { setAclHistory([]); }
+      setAclHistory(Array.isArray(r.data) ? r.data : []);
+    } catch (e: any) {
+      setAclHistoryError(e.response?.data?.message || e.message || 'Failed to load');
+      setAclHistory([]);
+    }
     finally { setAclHistoryLoading(false); }
   };
 
@@ -55,7 +60,7 @@ export const SettingsPage: React.FC = () => {
   };
 
   const handleAclRestore = async (filename: string) => {
-    if (!window.confirm(`Restore ACL policy from ${filename.replace('.json','')}?\nThis will overwrite the current policy.`)) return;
+    if (!window.confirm(`Restore ACL policy from ${filename.replace('.json','')}? This will overwrite the current policy.`)) return;
     setAclRestoring(filename);
     try {
       const r = await axios.get(`${API}/headscale/acl/history/${filename}`);
@@ -75,7 +80,8 @@ export const SettingsPage: React.FC = () => {
     } catch (e: any) { alert('Failed to delete: ' + (e.response?.data?.message || e.message)); }
   };
 
-  const formatAclTs = (ts: string) => {
+  const formatAclTs = (ts: string | undefined): string => {
+    if (!ts) return '?';
     try {
       const date = ts.slice(0, 10);
       const time = ts.length > 11 ? ts.slice(11, 19).replace(/-/g, ':') : '00:00:00';
@@ -292,6 +298,8 @@ export const SettingsPage: React.FC = () => {
               </div>
               {aclHistoryLoading ? (
                 <div style={{ color: '#9ca3af', fontSize: '0.875rem', textAlign: 'center', padding: '1rem' }}>Loading...</div>
+              ) : aclHistoryError ? (
+                <div style={{ color: '#ef4444', fontSize: '0.875rem', padding: '0.5rem 0' }}>❌ {aclHistoryError}</div>
               ) : aclHistory.length === 0 ? (
                 <div style={{ color: '#6b7280', fontSize: '0.875rem', textAlign: 'center', padding: '1rem' }}>No history yet. Apply an ACL policy to start tracking.</div>
               ) : (
