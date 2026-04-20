@@ -32,6 +32,57 @@ export const SettingsPage: React.FC = () => {
   const [showInput, setShowInput] = useState(false);
   const [instances, setInstances] = useState<{payload: string; registeredAt: string; domain: string}[]>([]);
   const [showInstances, setShowInstances] = useState(false);
+  const [aclHistory, setAclHistory] = useState<{filename: string; timestamp: string; savedBy: string}[]>([]);
+  const [showAclHistory, setShowAclHistory] = useState(false);
+  const [aclHistoryLoading, setAclHistoryLoading] = useState(false);
+  const [aclPreview, setAclPreview] = useState<{filename: string; data: any} | null>(null);
+  const [aclRestoring, setAclRestoring] = useState<string | null>(null);
+
+  const fetchAclHistory = async () => {
+    setAclHistoryLoading(true);
+    try {
+      const r = await axios.get(`${API}/headscale/acl/history`);
+      setAclHistory(r.data || []);
+    } catch { setAclHistory([]); }
+    finally { setAclHistoryLoading(false); }
+  };
+
+  const handleAclPreview = async (filename: string) => {
+    try {
+      const r = await axios.get(`${API}/headscale/acl/history/${filename}`);
+      setAclPreview({ filename, data: r.data });
+    } catch { alert('Failed to load version'); }
+  };
+
+  const handleAclRestore = async (filename: string) => {
+    if (!window.confirm(`Restore ACL policy from ${filename.replace('.json','')}?\nThis will overwrite the current policy.`)) return;
+    setAclRestoring(filename);
+    try {
+      const r = await axios.get(`${API}/headscale/acl/history/${filename}`);
+      await axios.post(`${API}/headscale/acl`, r.data);
+      alert('✅ ACL policy restored successfully');
+      setAclPreview(null);
+    } catch (e: any) {
+      alert('Failed to restore: ' + (e.response?.data?.message || e.message));
+    } finally { setAclRestoring(null); }
+  };
+
+  const handleAclDelete = async (filename: string) => {
+    if (!window.confirm(`Delete this history entry?`)) return;
+    try {
+      await axios.delete(`${API}/headscale/acl/history/${filename}`);
+      fetchAclHistory();
+    } catch (e: any) { alert('Failed to delete: ' + (e.response?.data?.message || e.message)); }
+  };
+
+  const formatAclTs = (ts: string) => {
+    try {
+      const date = ts.slice(0, 10);
+      const time = ts.length > 11 ? ts.slice(11, 19).replace(/-/g, ':') : '00:00:00';
+      const d = new Date(`${date}T${time}Z`);
+      return isNaN(d.getTime()) ? ts : d.toLocaleString();
+    } catch { return ts; }
+  };
 
   const fetchData = () => {
     axios.get(`${API}/instances`).then(r => {
@@ -215,6 +266,86 @@ export const SettingsPage: React.FC = () => {
           )}
         </div>
       </div>
+
+      {/* ACL History */}
+      <div style={{ marginBottom: '2rem' }}>
+        <div style={{ color: '#6b7280', fontSize: '0.75rem', fontWeight: '600', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '0.75rem' }}>ACL History</div>
+        <div style={{ padding: '1.25rem 1.5rem', backgroundColor: '#1f2937', borderRadius: '0.5rem', border: '1px solid #374151' }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
+              <span style={{ fontSize: '1.75rem' }}>📜</span>
+              <div>
+                <div style={{ color: '#f3f4f6', fontWeight: '600', fontSize: '0.95rem' }}>ACL Version History</div>
+                <div style={{ color: '#9ca3af', fontSize: '0.8rem', marginTop: '0.2rem' }}>Saved automatically on each Apply. View, restore or delete versions.</div>
+              </div>
+            </div>
+            <button onClick={() => { setShowAclHistory(!showAclHistory); if (!showAclHistory) fetchAclHistory(); }}
+              style={{ padding: '0.5rem 1rem', backgroundColor: '#374151', color: '#d1d5db', border: '1px solid #4b5563', borderRadius: '0.375rem', fontWeight: '600', fontSize: '0.875rem', cursor: 'pointer' }}>
+              {showAclHistory ? 'Hide' : 'View'}
+            </button>
+          </div>
+
+          {showAclHistory && (
+            <div style={{ marginTop: '1rem' }}>
+              <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: '0.5rem' }}>
+                <button onClick={fetchAclHistory} style={{ background: 'none', border: 'none', color: '#9ca3af', cursor: 'pointer', fontSize: '0.8rem' }}>🔄 Refresh</button>
+              </div>
+              {aclHistoryLoading ? (
+                <div style={{ color: '#9ca3af', fontSize: '0.875rem', textAlign: 'center', padding: '1rem' }}>Loading...</div>
+              ) : aclHistory.length === 0 ? (
+                <div style={{ color: '#6b7280', fontSize: '0.875rem', textAlign: 'center', padding: '1rem' }}>No history yet. Apply an ACL policy to start tracking.</div>
+              ) : (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.4rem' }}>
+                  {aclHistory.map((v, i) => (
+                    <div key={v.filename} style={{ padding: '0.6rem 0.75rem', backgroundColor: '#111827', borderRadius: '0.375rem', border: '1px solid #374151', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '0.5rem' }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem' }}>
+                        <span style={{ backgroundColor: i === 0 ? '#1e3a5f' : '#374151', color: i === 0 ? '#60a5fa' : '#9ca3af', padding: '0.1rem 0.4rem', borderRadius: '0.2rem', fontSize: '0.68rem', fontWeight: '700' }}>
+                          {i === 0 ? 'LATEST' : `v-${aclHistory.length - i}`}
+                        </span>
+                        <div>
+                          <div style={{ color: '#f3f4f6', fontSize: '0.82rem', fontWeight: '600' }}>{formatAclTs(v.timestamp || v.filename?.slice(0,19) || '?')}</div>
+                          <div style={{ color: '#9ca3af', fontSize: '0.7rem' }}>Saved by: {(v.savedBy || 'unknown').replace(/_/g, ' ')}</div>
+                        </div>
+                      </div>
+                      <div style={{ display: 'flex', gap: '0.3rem' }}>
+                        <button onClick={() => handleAclPreview(v.filename)}
+                          style={{ padding: '0.25rem 0.6rem', backgroundColor: '#374151', color: '#d1d5db', border: '1px solid #4b5563', borderRadius: '0.25rem', fontSize: '0.75rem', cursor: 'pointer' }}>👁 View</button>
+                        <button onClick={() => handleAclRestore(v.filename)} disabled={aclRestoring === v.filename || i === 0}
+                          style={{ padding: '0.25rem 0.6rem', backgroundColor: i === 0 ? '#374151' : '#1e3a5f', color: i === 0 ? '#6b7280' : '#60a5fa', border: '1px solid #4b5563', borderRadius: '0.25rem', fontSize: '0.75rem', cursor: i === 0 ? 'not-allowed' : 'pointer' }}
+                          title={i === 0 ? 'Already the current version' : 'Restore this version'}>
+                          {aclRestoring === v.filename ? '...' : '↩ Restore'}
+                        </button>
+                        <button onClick={() => handleAclDelete(v.filename)}
+                          style={{ padding: '0.25rem 0.6rem', backgroundColor: '#7f1d1d', color: '#fca5a5', border: 'none', borderRadius: '0.25rem', fontSize: '0.75rem', cursor: 'pointer' }}>🗑</button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          )}
+        </div>
+      </div>
+
+      {/* ACL Preview Modal */}
+      {aclPreview && (
+        <div style={{ position: 'fixed', inset: 0, backgroundColor: 'rgba(0,0,0,0.7)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000, padding: '1rem' }}>
+          <div style={{ backgroundColor: '#111827', border: '1px solid #374151', borderRadius: '0.75rem', padding: '1.5rem', maxWidth: '680px', width: '100%', maxHeight: '80vh', display: 'flex', flexDirection: 'column' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
+              <h3 style={{ color: '#f3f4f6', margin: 0, fontSize: '0.95rem' }}>📜 {aclPreview.filename.replace('.json', '')}</h3>
+              <div style={{ display: 'flex', gap: '0.5rem' }}>
+                <button onClick={() => handleAclRestore(aclPreview.filename)}
+                  style={{ padding: '0.35rem 0.75rem', backgroundColor: '#1e3a5f', color: '#60a5fa', border: '1px solid #3b82f6', borderRadius: '0.375rem', fontSize: '0.8rem', cursor: 'pointer', fontWeight: '600' }}>↩ Restore</button>
+                <button onClick={() => setAclPreview(null)}
+                  style={{ padding: '0.35rem 0.75rem', backgroundColor: '#374151', color: '#d1d5db', border: 'none', borderRadius: '0.375rem', fontSize: '0.8rem', cursor: 'pointer' }}>✕ Close</button>
+              </div>
+            </div>
+            <pre style={{ flex: 1, overflow: 'auto', backgroundColor: '#0f172a', padding: '1rem', borderRadius: '0.375rem', fontSize: '0.75rem', color: '#86efac', margin: 0 }}>
+              {JSON.stringify(aclPreview.data, null, 2)}
+            </pre>
+          </div>
+        </div>
+      )}
 
       {/* System */}
       <div style={{ marginBottom: '2rem' }}>

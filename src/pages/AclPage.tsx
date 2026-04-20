@@ -321,12 +321,11 @@ export const AclPage: React.FC = () => {
     { icon: '🔒', label: 'Policies' },
     { icon: '🔐', label: 'SSH' },
     { icon: '⚙️', label: 'Config' },
-    { icon: '🔍', label: 'Access Check' },
-    { icon: '📜', label: 'History' }
+
   ];
 
   const userRole = useAuthStore((state) => state.user?.role || 'user');
-  const visibleTabs = userRole === 'super_admin' ? tabs : [tabs[0], tabs[6], tabs[7]].filter(Boolean);
+  const visibleTabs = userRole === 'super_admin' ? tabs : [tabs[0]].filter(Boolean);
   const [acl, setAcl] = useState<ACL | null>(null);
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState(0);
@@ -395,10 +394,10 @@ export const AclPage: React.FC = () => {
           {visibleTabs[activeTab]?.label === 'Policies' && acl && <PoliciesTab acl={acl} setAcl={setAcl} />}
           {visibleTabs[activeTab]?.label === 'SSH' && acl && <SshTab acl={acl} setAcl={setAcl} />}
           {visibleTabs[activeTab]?.label === 'Config' && acl && <ConfigTab acl={acl} setAcl={setAcl} />}
-          {visibleTabs[activeTab]?.label === 'Access Check' && <AccessCheckTab acl={acl} />}
-          {visibleTabs[activeTab]?.label === 'History' && <HistoryTab acl={acl} setAcl={setAcl} />}
+
         </div>
       )}
+
     </div>
   );
 };
@@ -728,6 +727,7 @@ const PoliciesTab: React.FC<{ acl: ACL; setAcl: (a: ACL) => void }> = ({ acl, se
   const [creating, setCreating] = useState(false);
   const [editingPolicy, setEditingPolicy] = useState<number | null>(null);
   const [policySearch, setPolicySearch] = useState('');
+  const [showAccessCheck, setShowAccessCheck] = useState(false);
 
   // New policy state
   const [policyName, setPolicyName] = useState('');
@@ -853,12 +853,16 @@ const PoliciesTab: React.FC<{ acl: ACL; setAcl: (a: ACL) => void }> = ({ acl, se
     </div>
   );
 
-  return (
+  return (<>
     <div>
       {/* Toolbar */}
-      <div style={{ display: 'flex', gap: '0.5rem', marginBottom: '1rem', alignItems: 'center' }}>
+      <div style={{ display: 'flex', gap: '0.5rem', marginBottom: '1rem', alignItems: 'center', flexWrap: 'wrap' }}>
         <button className="btn-create" onClick={() => { setCreating(!creating); if (creating) setEditingPolicy(null); }}>
           {creating ? '✕ Cancel' : '➕ Create Policy'}
+        </button>
+        <button onClick={() => setShowAccessCheck(true)}
+          style={{ padding: '0.4rem 0.85rem', backgroundColor: '#1e3a5f', color: '#60a5fa', border: '1px solid #3b82f6', borderRadius: '0.375rem', fontWeight: '600', fontSize: '0.875rem', cursor: 'pointer', whiteSpace: 'nowrap' }}>
+          🔍 Access Check
         </button>
         {creating && editingPolicy !== null && <span style={{ color: '#f59e0b', fontWeight: '700', fontSize: '0.875rem' }}>✏️ Editing Policy #{editingPolicy + 1}</span>}
         {acl.acls.length > 0 && <span style={{ color: '#6b7280', fontSize: '0.8rem' }}>{acl.acls.length} polic{acl.acls.length === 1 ? 'y' : 'ies'}</span>}
@@ -1051,7 +1055,20 @@ const PoliciesTab: React.FC<{ acl: ACL; setAcl: (a: ACL) => void }> = ({ acl, se
         </div>
       )}
     </div>
-  );
+
+      {/* ── Access Check Modal ── */}
+      {showAccessCheck && (
+        <div style={{ position: 'fixed', inset: 0, backgroundColor: 'rgba(0,0,0,0.7)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000, padding: '1rem' }}>
+          <div style={{ backgroundColor: '#111827', border: '1px solid #374151', borderRadius: '0.75rem', padding: '1.5rem', maxWidth: '700px', width: '100%', maxHeight: '85vh', overflowY: 'auto' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
+              <h2 style={{ margin: 0, color: '#f3f4f6', fontSize: '1.05rem' }}>🔍 ACL Access Check</h2>
+              <button onClick={() => setShowAccessCheck(false)} style={{ background: 'none', border: 'none', color: '#9ca3af', cursor: 'pointer', fontSize: '1.2rem' }}>✕</button>
+            </div>
+            <AccessCheckTab acl={acl} />
+          </div>
+        </div>
+      )}
+  </>);
 };
 
 // SSH TAB
