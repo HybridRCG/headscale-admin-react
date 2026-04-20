@@ -43,7 +43,7 @@ export const SettingsPage: React.FC = () => {
     setAclHistoryLoading(true);
     setAclHistoryError('');
     try {
-      const r = await axios.get(`${API}/headscale/acl/history`);
+      const r = await axios.get(`${API}/acl/history`);
       setAclHistory(Array.isArray(r.data) ? r.data : []);
     } catch (e: any) {
       setAclHistoryError(e.response?.data?.message || e.message || 'Failed to load');
@@ -54,7 +54,7 @@ export const SettingsPage: React.FC = () => {
 
   const handleAclPreview = async (filename: string) => {
     try {
-      const r = await axios.get(`${API}/headscale/acl/history/${filename}`);
+      const r = await axios.get(`${API}/acl/history/${filename}`);
       setAclPreview({ filename, data: r.data });
     } catch { alert('Failed to load version'); }
   };
@@ -63,8 +63,8 @@ export const SettingsPage: React.FC = () => {
     if (!window.confirm(`Restore ACL policy from ${filename.replace('.json','')}? This will overwrite the current policy.`)) return;
     setAclRestoring(filename);
     try {
-      const r = await axios.get(`${API}/headscale/acl/history/${filename}`);
-      await axios.post(`${API}/headscale/acl`, r.data);
+      const r = await axios.get(`${API}/acl/history/${filename}`);
+      await axios.post(`${API}/acl`, r.data);
       alert('✅ ACL policy restored successfully');
       setAclPreview(null);
     } catch (e: any) {
@@ -75,7 +75,7 @@ export const SettingsPage: React.FC = () => {
   const handleAclDelete = async (filename: string) => {
     if (!window.confirm(`Delete this history entry?`)) return;
     try {
-      await axios.delete(`${API}/headscale/acl/history/${filename}`);
+      await axios.delete(`${API}/acl/history/${filename}`);
       fetchAclHistory();
     } catch (e: any) { alert('Failed to delete: ' + (e.response?.data?.message || e.message)); }
   };
