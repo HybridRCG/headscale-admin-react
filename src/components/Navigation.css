@@ -95,49 +95,73 @@
   box-shadow: 0 2px 0 rgba(255,255,255,0.5);
 }
 
-/* Theme toggle */
-.theme-toggle-wrapper {
-  display: flex;
+/* ── Theme toggle pill ───────────────────────────────── */
+.theme-pill {
+  position: relative;
+  display: inline-flex;
   align-items: center;
-  gap: 0.35rem;
+  width: 52px;
+  height: 26px;
+  border-radius: 26px;
+  background: rgba(0,0,0,0.25);
+  border: 1.5px solid rgba(255,255,255,0.2);
+  cursor: pointer;
   flex-shrink: 0;
   margin-left: auto;
+  padding: 0;
+  transition: background 0.3s, border-color 0.3s;
+  outline: none;
 }
 
-.toggle-label { font-size: 1rem; user-select: none; }
-
-.toggle-switch {
-  position: relative;
-  display: inline-block;
-  width: 44px;
-  height: 24px;
+.theme-pill:hover {
+  background: rgba(0,0,0,0.35);
+  border-color: rgba(255,255,255,0.35);
 }
 
-.toggle-switch input { opacity: 0; width: 0; height: 0; }
-
-.slider {
+/* Moon icon on left, sun icon on right — always visible in track */
+.theme-pill__moon,
+.theme-pill__sun {
   position: absolute;
-  cursor: pointer;
-  inset: 0;
-  background: rgba(255,255,255,0.3);
-  border-radius: 24px;
-  transition: 0.3s;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: rgba(255,255,255,0.5);
+  pointer-events: none;
+  line-height: 0;
 }
 
-.slider:before {
+.theme-pill__moon { left: 5px; }
+.theme-pill__sun  { right: 5px; }
+
+/* Sliding knob */
+.theme-pill__knob {
   position: absolute;
-  content: "";
-  height: 18px;
-  width: 18px;
-  left: 3px;
-  bottom: 3px;
-  background: white;
+  width: 20px;
+  height: 20px;
   border-radius: 50%;
-  transition: 0.3s;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: transform 0.3s cubic-bezier(0.4,0,0.2,1), background 0.3s;
+  pointer-events: none;
+  top: 2px;
+  left: 2px;
+  box-shadow: 0 1px 4px rgba(0,0,0,0.3);
 }
 
-input:checked + .slider { background: rgba(255,255,255,0.5); }
-input:checked + .slider:before { transform: translateX(20px); }
+/* Light mode: knob slides right, shows sun, yellow bg */
+.theme-pill__knob.light {
+  transform: translateX(26px);
+  background: #FFDD00;
+  color: #92400e;
+}
+
+/* Dark mode: knob stays left, shows moon, indigo bg */
+.theme-pill__knob.dark {
+  transform: translateX(0);
+  background: #4338ca;
+  color: white;
+}
 
 /* ── Mobile (<= 900px) ───────────────────────────────── */
 @media (max-width: 900px) {
@@ -200,16 +224,7 @@ input:checked + .slider:before { transform: translateX(20px); }
     padding-left: 1rem;
   }
 
-  .theme-toggle-wrapper {
-    gap: 0.25rem;
-    margin-left: 0;
-  }
-
-  .toggle-label { font-size: 0.85rem; }
-
-  .toggle-switch { width: 36px; height: 20px; }
-  .slider:before { height: 14px; width: 14px; }
-  input:checked + .slider:before { transform: translateX(16px); }
+  .theme-pill { margin-left: 0; }
 }
 
 /* ── Small phone (<= 480px) ─────────────────────────── */
@@ -228,5 +243,5 @@ input:checked + .slider:before { transform: translateX(20px); }
     top: 48px;
   }
 
-  .toggle-label { display: none; }
+
 }
