@@ -396,10 +396,6 @@ app.get('/api/headscale/user-mapping', authenticateToken, async (req, res) => {
 
 // Move node to different user - proper Headscale workflow
 // This deletes the node and returns instructions for re-registration under new user
-
-
-// Move node to different user - proper Headscale workflow
-// This deletes the node and returns instructions for re-registration under new user
 app.post('/api/headscale/node/move-user', authenticateToken, async (req, res) => {
   const { nodeId, newUser } = req.body;
   if (!nodeId || !newUser) return res.status(400).json({ message: 'nodeId and newUser required' });
@@ -409,18 +405,47 @@ app.post('/api/headscale/node/move-user', authenticateToken, async (req, res) =>
     if (!tokenData) return res.status(401).json({ message: 'Session expired' });
     const usersResp = await axios.get(tokenData.headscaleUrl + '/api/v1/user', { headers: { Authorization: 'Bearer ' + tokenData.apiKey }, timeout: 10000 });
     const targetUser = usersResp.data.users.find(u => u.name === newUser);
-    if (!targetUser) return res.status(400).json({ message: 'User not found' });
+    if (!targetUser) return res.status(400).json({ message: `User '${newUser}' not found` });
     const nodesResp = await axios.get(tokenData.headscaleUrl + '/api/v1/node', { headers: { Authorization: 'Bearer ' + tokenData.apiKey }, timeout: 10000 });
     const node = nodesResp.data.nodes.find(n => n.id.toString() === nodeId.toString());
-    if (!node) return res.status(400).json({ message: 'Node not found' });
-    await axios.delete(tokenData.headscaleUrl + '/api/v1/node/' + nodeId, { headers: { Authorization: 'Bearer ' + tokenData.apiKey }, timeout: 10000 });
-    const preauthResp = await axios.post(tokenData.headscaleUrl + '/api/v1/preauthkey', { user: parseInt(targetUser.id, 10), ephemeral: false, expiration: new Date(Date.now() + 90*24*60*60*1000).toISOString() }, { headers: { Authorization: 'Bearer ' + tokenData.apiKey }, timeout: 10000 });
-    const newKey = preauthResp.data.pre_auth_key.key;
-    console.log('[NODE-MOVE-USER] Node ' + nodeId + ' (' + node.hostname + ') deleted. New pre-auth key created for user ' + newUser);
-    res.json({ message: 'Node deleted and new pre-auth key created', nodeId, hostname: node.hostname, newUser, newKey, instructions: 'Device must reconnect with: tailscale login --auth-key=' + newKey });
+    if (!node) return res.status(400).json({ message: `Node ${nodeId} not found` });
+
+    // 1) Create the new pre-auth key FIRST so we can guarantee a key to return
+    //    even if anything later fails. Avoids the previous "deleted then crashed
+    //    before key returned" failure mode.
+    const preauthResp = await axios.post(
+      tokenData.headscaleUrl + '/api/v1/preauthkey',
+      { user: parseInt(targetUser.id, 10), ephemeral: false, expiration: new Date(Date.now() + 90 * 24 * 60 * 60 * 1000).toISOString() },
+      { headers: { Authorization: 'Bearer ' + tokenData.apiKey }, timeout: 10000 }
+    );
+    // Headscale returns the key under `preAuthKey` (camelCase) in this API version.
+    // The fallback covers older snake_case payloads.
+    const newKey = preauthResp.data?.preAuthKey?.key || preauthResp.data?.pre_auth_key?.key;
+    if (!newKey) {
+      console.error('[NODE-MOVE-USER] Headscale returned no key:', JSON.stringify(preauthResp.data));
+      return res.status(500).json({ message: 'Headscale did not return a pre-auth key. Node has NOT been deleted.' });
+    }
+
+    // 2) Now delete the existing node
+    await axios.delete(
+      tokenData.headscaleUrl + '/api/v1/node/' + nodeId,
+      { headers: { Authorization: 'Bearer ' + tokenData.apiKey }, timeout: 10000 }
+    );
+
+    console.log('[NODE-MOVE-USER] Node ' + nodeId + ' (' + (node.givenName || node.hostname) + ') deleted. New pre-auth key created for user ' + newUser);
+    logAudit(req.user.username, 'move-node-user', `node:${nodeId}`, `to user ${newUser}`);
+    res.json({
+      message: 'Node deleted and new pre-auth key created',
+      nodeId,
+      hostname: node.givenName || node.hostname,
+      newUser,
+      newKey,
+      instructions: 'Device must reconnect with: tailscale login --auth-key=' + newKey,
+    });
   } catch (error) {
-    console.error('Failed to move node to user:', error.message);
-    res.status(500).json({ message: error.message });
+    const upstream = error.response?.data?.message || error.response?.data || error.message;
+    console.error('Failed to move node to user:', upstream);
+    res.status(error.response?.status || 500).json({ message: typeof upstream === 'string' ? upstream : JSON.stringify(upstream) });
   }
 });
 

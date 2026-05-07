@@ -263,21 +263,35 @@ export const NodesPage: React.FC = () => {
 
   const handleMoveUser = async () => {
     if (!editModal || !editUser.trim()) return;
-    const ok = window.confirm(`⚠️ Changing owner requires deleting and re-registering the node.\n\nA new pre-auth key will be shown. Continue?`);
+    const ok = window.confirm(`⚠️ Changing owner requires deleting and re-registering the node.\n\nA new pre-auth key will be shown. The device must be online to reconnect.\n\nContinue?`);
     if (!ok) return;
     try {
       const r = await axios.post(`${API_BASE}/headscale/node/move-user`, { nodeId: editModal.id, newUser: editUser });
       if (r.data.newKey) setMoveKeyModal({ key: r.data.newKey, user: editUser });
-    } catch { alert('Failed to move node'); }
+      else alert('Move succeeded but no auth key was returned. Check server logs.');
+    } catch (e: any) {
+      alert('Failed to move node: ' + (e.response?.data?.message || e.message));
+    }
   };
 
   const handleSaveEdit = async () => {
     if (!editModal) return;
-    if (editName.trim() && editName.trim().toLowerCase() !== editModal.name) {
-      const ok = await handleRename();
-      if (!ok) return; // Don't close the modal — let the user fix the name and try again
+    const wantedName = editName.trim().toLowerCase();
+    const currentName = (editModal.name || '').toLowerCase();
+    const wantedUser = editUser.trim();
+    const renameNeeded = !!wantedName && wantedName !== currentName;
+    const moveNeeded = !!wantedUser && wantedUser !== editModal.user?.name;
+
+    if (!renameNeeded && !moveNeeded) {
+      // Nothing to do — let the user know rather than silently closing.
+      alert('No changes to save.');
+      return;
     }
-    if (editUser.trim() && editUser !== editModal.user?.name) await handleMoveUser();
+    if (renameNeeded) {
+      const ok = await handleRename();
+      if (!ok) return; // Keep modal open so user can fix and retry
+    }
+    if (moveNeeded) await handleMoveUser();
     setEditModal(null);
     await fetchNodes();
   };
