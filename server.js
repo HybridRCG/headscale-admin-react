@@ -304,16 +304,29 @@ app.post('/api/config/dns', authenticateToken, async (req, res) => {
 app.post('/api/headscale/node/rename', authenticateToken, async (req, res) => {
   const { nodeId, newName } = req.body;
   if (!nodeId || !newName) return res.status(400).json({ message: 'nodeId and newName required' });
+  if (!/^[0-9]+$/.test(String(nodeId))) return res.status(400).json({ message: 'Invalid nodeId' });
+  // Headscale requires lowercase DNS-safe names. Validate explicitly so we can return a useful error.
+  const sanitized = String(newName).trim().toLowerCase();
+  if (!/^[a-z0-9][a-z0-9-]{0,62}$/.test(sanitized)) {
+    return res.status(400).json({ message: 'Invalid name. Use lowercase letters, digits, and hyphens (max 63 chars, no leading hyphen).' });
+  }
   try {
     const userEmail = req.user.email;
     const tokenData = userTokenMap.get(userEmail);
     if (!tokenData) return res.status(401).json({ message: 'Session expired' });
-    const response = await axios.post(`${tokenData.headscaleUrl}/api/v1/node/${nodeId}/rename`, { name: newName }, { headers: { Authorization: `Bearer ${tokenData.apiKey}` }, timeout: 10000 });
-    console.log(`[NODE-RENAME] ${nodeId} → ${newName}`);
-    res.json({ message: 'Node renamed', nodeId, newName, node: response.data.node });
+    // Headscale's REST API takes the new name as a URL path segment, not a JSON body.
+    const response = await axios.post(
+      `${tokenData.headscaleUrl}/api/v1/node/${nodeId}/rename/${encodeURIComponent(sanitized)}`,
+      null,
+      { headers: { Authorization: `Bearer ${tokenData.apiKey}` }, timeout: 10000 }
+    );
+    console.log(`[NODE-RENAME] ${nodeId} \u2192 ${sanitized}`);
+    res.json({ message: 'Node renamed', nodeId, newName: sanitized, node: response.data.node });
   } catch (error) {
-    console.error('Failed to rename node:', error.message);
-    res.status(500).json({ message: error.message });
+    // Surface Headscale's underlying error message instead of swallowing it.
+    const upstream = error.response?.data?.message || error.response?.data || error.message;
+    console.error('Failed to rename node:', upstream);
+    res.status(error.response?.status || 500).json({ message: typeof upstream === 'string' ? upstream : JSON.stringify(upstream) });
   }
 });
 

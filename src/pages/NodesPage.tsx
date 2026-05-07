@@ -245,9 +245,20 @@ export const NodesPage: React.FC = () => {
     }));
   };
 
-  const handleRename = async () => {
-    if (!editModal || !editName.trim()) return;
-    try { await axios.post(`${API_BASE}/headscale/node/rename`, { nodeId: editModal.id, newName: editName }); } catch {}
+  const handleRename = async (): Promise<boolean> => {
+    if (!editModal || !editName.trim()) return false;
+    const newName = editName.trim().toLowerCase();
+    if (!/^[a-z0-9][a-z0-9-]{0,62}$/.test(newName)) {
+      alert('Invalid name. Use lowercase letters, digits, and hyphens (max 63 chars, no leading hyphen).');
+      return false;
+    }
+    try {
+      await axios.post(`${API_BASE}/headscale/node/rename`, { nodeId: editModal.id, newName });
+      return true;
+    } catch (e: any) {
+      alert('Rename failed: ' + (e.response?.data?.message || e.message));
+      return false;
+    }
   };
 
   const handleMoveUser = async () => {
@@ -262,7 +273,10 @@ export const NodesPage: React.FC = () => {
 
   const handleSaveEdit = async () => {
     if (!editModal) return;
-    if (editName.trim() && editName !== editModal.name) await handleRename();
+    if (editName.trim() && editName.trim().toLowerCase() !== editModal.name) {
+      const ok = await handleRename();
+      if (!ok) return; // Don't close the modal — let the user fix the name and try again
+    }
     if (editUser.trim() && editUser !== editModal.user?.name) await handleMoveUser();
     setEditModal(null);
     await fetchNodes();
@@ -477,8 +491,10 @@ export const NodesPage: React.FC = () => {
             <h2 style={{ margin: '0 0 1.25rem', color: '#f3f4f6', fontSize: '1.05rem' }}>✏️ Edit — {editModal.name}</h2>
             <div style={{ marginBottom: '1rem' }}>
               <label style={{ display: 'block', color: '#9ca3af', fontSize: '0.75rem', fontWeight: '600', textTransform: 'uppercase', marginBottom: '0.4rem' }}>Node Name</label>
-              <input type="text" value={editName} onChange={e => setEditName(e.target.value)}
+              <input type="text" value={editName} onChange={e => setEditName(e.target.value.toLowerCase())}
+                pattern="[a-z0-9][a-z0-9-]*" maxLength={63}
                 style={{ width: '100%', padding: '0.6rem 0.75rem', backgroundColor: '#1f2937', border: '1px solid #374151', borderRadius: '0.375rem', color: '#f3f4f6', fontSize: '0.875rem', boxSizing: 'border-box' }} />
+              <div style={{ marginTop: '0.3rem', fontSize: '0.7rem', color: '#6b7280' }}>Lowercase letters, digits, and hyphens only (max 63 chars).</div>
             </div>
             <div style={{ marginBottom: '1.25rem' }}>
               <label style={{ display: 'block', color: '#9ca3af', fontSize: '0.75rem', fontWeight: '600', textTransform: 'uppercase', marginBottom: '0.4rem' }}>Move to User</label>

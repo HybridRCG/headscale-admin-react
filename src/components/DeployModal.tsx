@@ -62,10 +62,12 @@ export const DeployModal: React.FC<Props> = ({ onClose, visibleUsers }) => {
 
   // Advertise
   const [advertiseExitNode, setAdvertiseExitNode] = useState(false);
-  const [advertiseTags, setAdvertiseTags] = useState(true);
-  const [advertiseTagsList, setAdvertiseTagsList] = useState<string[]>(['tag:server']);
-  const [advertiseRoutes, setAdvertiseRoutes] = useState(true);
-  const [advertiseRoutesList, setAdvertiseRoutesList] = useState<string[]>(['10.1.1.0/24']);
+  // Tags default OFF — opt-in. Setting tags requires the user owning the preauth key
+  // to be in the tag's owner group; auto-enabling caused registration failures.
+  const [advertiseTags, setAdvertiseTags] = useState(false);
+  const [advertiseTagsList, setAdvertiseTagsList] = useState<string[]>([]);
+  const [advertiseRoutes, setAdvertiseRoutes] = useState(false);
+  const [advertiseRoutesList, setAdvertiseRoutesList] = useState<string[]>([]);
 
   // Accept
   const [acceptDNS, setAcceptDNS] = useState(false);
@@ -105,13 +107,17 @@ export const DeployModal: React.FC<Props> = ({ onClose, visibleUsers }) => {
     try {
       const expDate = new Date();
       expDate.setDate(expDate.getDate() + preAuthKeyExpiry);
-      // Use the server endpoint which handles auth correctly
+      // Only attach tags to the pre-auth key when the user has explicitly enabled
+      // 'Advertise Tags' AND added at least one tag. Sending an empty list, or
+      // sending tags the preauth-key owner can't assert, causes Headscale to
+      // reject the registration with a confusing error.
+      const tagsToSend = (advertiseTags && advertiseTagsList.length > 0) ? advertiseTagsList : [];
       const resp = await axios.post('/admin/api/headscale/preauthkey/create', {
         userId: selectedUser,
         reusable,
         ephemeral,
         expiration: expDate.toISOString(),
-        tags: advertiseTags ? advertiseTagsList : []
+        tags: tagsToSend,
       });
       setGeneratedKey(resp.data.key || '');
     } catch (e: any) {
