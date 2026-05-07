@@ -54,6 +54,9 @@ export const NodesPage: React.FC = () => {
   const [deployModal, setDeployModal] = useState(false);
   const [tagOwners, setTagOwners] = useState<Record<string, string>>({});
   const [availableTags, setAvailableTags] = useState<string[]>([]);
+  // Map of tag -> list of group names that own it (e.g. "tag:server" -> ["group:admin"]).
+  // Used to determine, given a node's owner, which tags they're permitted to assert.
+  const [tagOwnerGroups, setTagOwnerGroups] = useState<Record<string, string[]>>({});
   const [tagSaving, setTagSaving] = useState(false);
   const [liveConnected, setLiveConnected] = useState(false);
   const [expandedNode, setExpandedNode] = useState<number | null>(null);
@@ -188,8 +191,13 @@ export const NodesPage: React.FC = () => {
       const r = await axios.get(`${API_BASE}/headscale/acl`);
       let p = r.data;
       if (typeof p === 'string') p = JSON.parse(p);
-      const keys = Object.keys(p.tagOwners || {});
-      setAvailableTags(keys.map((t: string) => t.startsWith('tag:') ? t : `tag:${t}`));
+      const ownerMap: Record<string, string[]> = {};
+      Object.entries(p.tagOwners || {}).forEach(([k, v]: [string, any]) => {
+        const tagKey = k.startsWith('tag:') ? k : `tag:${k}`;
+        ownerMap[tagKey] = Array.isArray(v) ? v : [];
+      });
+      setTagOwnerGroups(ownerMap);
+      setAvailableTags(Object.keys(ownerMap).sort());
     } catch {}
   };
 
@@ -200,6 +208,24 @@ export const NodesPage: React.FC = () => {
   };
 
   const getNodeTags = (node: Node) => [...new Set([...(node.forcedTags || []), ...(node.validTags || [])])];
+
+  // Whether the given tag can be asserted by the given node's owner. A tag is
+  // assertable if the owner's email belongs to one of the groups listed under
+  // tagOwners[tag] in the policy. Returns true for super_admin or wildcard
+  // ownership ("*"), false otherwise.
+  const canOwnerAssertTag = (node: Node | null, tag: string): boolean => {
+    if (!node) return false;
+    const ownerGroups = tagOwnerGroups[tag] || [];
+    if (ownerGroups.includes('*')) return true;
+    const ownerName = node.user?.name || tagOwners[String(node.id)] || '';
+    if (!ownerName) return false;
+    const ownerEmail = userEmailMap[ownerName] || ownerName;
+    return ownerGroups.some(g => {
+      const stripped = g.replace(/^group:/, '');
+      const members = groupUsers[stripped] || [];
+      return members.includes(ownerEmail) || members.includes(ownerName);
+    });
+  };
 
 
   const getNodeDuration = (node: Node): string => {
@@ -580,19 +606,38 @@ export const NodesPage: React.FC = () => {
       {/* ── Tag Modal ── */}
       {tagModal && (
         <div style={{ position: 'fixed', inset: 0, backgroundColor: 'rgba(0,0,0,0.7)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000, padding: '1rem' }}>
-          <div style={{ backgroundColor: '#111827', border: '1px solid #374151', borderRadius: '0.75rem', padding: '1.5rem', maxWidth: '480px', width: '100%', color: '#d1d5db' }}>
+          <div style={{ backgroundColor: '#111827', border: '1px solid #374151', borderRadius: '0.75rem', padding: '1.5rem', maxWidth: '520px', width: '100%', color: '#d1d5db' }}>
             <h2 style={{ margin: '0 0 0.25rem', color: '#f3f4f6', fontSize: '1.05rem' }}>🏷 Tags — {tagModal.name}</h2>
-            <div style={{ color: '#9ca3af', fontSize: '0.8rem', marginBottom: '1.25rem' }}>
-              👤 <span style={{ color: '#10b981', fontWeight: '600' }}>{getNodeOwner(tagModal)}</span>
-              <span style={{ color: '#6b7280', marginLeft: '0.5rem' }}>(preserved when tagged)</span>
+            <div style={{ color: '#9ca3af', fontSize: '0.8rem', marginBottom: '1rem' }}>
+              👤 Owner: <span style={{ color: '#10b981', fontWeight: 600 }}>{getNodeOwner(tagModal)}</span>
             </div>
+
+            {/* Ownership-transfer warning — shown only when actually adding tags */}
+            {(getNodeTags(tagModal).length > 0 || (availableTags.length > 0 && tagModal !== null)) && (
+              <div style={{
+                marginBottom: '1rem',
+                padding: '0.6rem 0.75rem',
+                backgroundColor: '#451a03',
+                border: '1px solid #92400e',
+                borderRadius: '0.4rem',
+                color: '#fde68a',
+                fontSize: '0.72rem',
+                lineHeight: 1.4,
+              }}>
+                <strong>⚠ Tags transfer node ownership.</strong> A tagged node is owned by Headscale's
+                <code style={{ margin: '0 0.25rem', color: '#fcd34d' }}>tagged-devices</code>
+                user. Domain-based filtering still works because the original owner is preserved separately.
+              </div>
+            )}
+
+            {/* Current tags */}
             <div style={{ marginBottom: '1rem' }}>
-              <div style={{ fontSize: '0.72rem', color: '#9ca3af', textTransform: 'uppercase', fontWeight: '600', marginBottom: '0.4rem' }}>Current Tags</div>
+              <div style={{ fontSize: '0.72rem', color: '#9ca3af', textTransform: 'uppercase', fontWeight: 600, marginBottom: '0.4rem' }}>Current Tags</div>
               <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.35rem', minHeight: '2rem' }}>
                 {getNodeTags(tagModal).length === 0
                   ? <span style={{ color: '#6b7280', fontSize: '0.8rem' }}>No tags</span>
                   : getNodeTags(tagModal).map(tag => (
-                    <span key={tag} style={{ display: 'inline-flex', alignItems: 'center', gap: '0.3rem', backgroundColor: '#1e3a5f', color: '#60a5fa', padding: '0.25rem 0.6rem', borderRadius: '0.375rem', fontSize: '0.8rem', fontWeight: '600' }}>
+                    <span key={tag} style={{ display: 'inline-flex', alignItems: 'center', gap: '0.3rem', backgroundColor: '#1e3a5f', color: '#60a5fa', padding: '0.25rem 0.6rem', borderRadius: '0.375rem', fontSize: '0.8rem', fontWeight: 600 }}>
                       {tag}
                       <button onClick={() => setTagModal({ ...tagModal, forcedTags: getNodeTags(tagModal).filter(t => t !== tag), validTags: [] })}
                         style={{ background: 'none', border: 'none', color: '#93c5fd', cursor: 'pointer', fontSize: '0.9rem', lineHeight: 1, padding: 0 }}>✕</button>
@@ -601,45 +646,59 @@ export const NodesPage: React.FC = () => {
                 }
               </div>
             </div>
-            <div style={{ marginBottom: '1rem' }}>
-              <div style={{ fontSize: '0.72rem', color: '#9ca3af', textTransform: 'uppercase', fontWeight: '600', marginBottom: '0.4rem' }}>Add Tag</div>
-              <div style={{ display: 'flex', gap: '0.5rem' }}>
-                <input type="text" value={tagInput} onChange={e => setTagInput(e.target.value)}
-                  onKeyDown={e => {
-                    if (e.key === 'Enter' && tagInput.trim()) {
-                      const t = tagInput.trim().startsWith('tag:') ? tagInput.trim() : `tag:${tagInput.trim()}`;
-                      if (!getNodeTags(tagModal).includes(t)) setTagModal({ ...tagModal, forcedTags: [...(tagModal.forcedTags || []), t], validTags: [] });
-                      setTagInput('');
-                    }
-                  }}
-                  placeholder="tag:server or server"
-                  style={{ flex: 1, padding: '0.5rem 0.75rem', backgroundColor: '#1f2937', border: '1px solid #374151', borderRadius: '0.375rem', color: '#f3f4f6', fontSize: '0.875rem' }} />
-                <button onClick={() => {
-                  if (!tagInput.trim()) return;
-                  const t = tagInput.trim().startsWith('tag:') ? tagInput.trim() : `tag:${tagInput.trim()}`;
-                  if (!getNodeTags(tagModal).includes(t)) setTagModal({ ...tagModal, forcedTags: [...(tagModal.forcedTags || []), t], validTags: [] });
-                  setTagInput('');
-                }} className="btn btn-sm btn-primary">+ Add</button>
-              </div>
-            </div>
-            {availableTags.length > 0 && (
-              <div style={{ marginBottom: '1.25rem' }}>
-                <div style={{ fontSize: '0.72rem', color: '#9ca3af', textTransform: 'uppercase', fontWeight: '600', marginBottom: '0.4rem' }}>From ACL Policy</div>
-                <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.3rem' }}>
+
+            {/* Available tags from ACL — dropdown-grid with permission checks */}
+            <div style={{ marginBottom: '1.25rem' }}>
+              <div style={{ fontSize: '0.72rem', color: '#9ca3af', textTransform: 'uppercase', fontWeight: 600, marginBottom: '0.4rem' }}>Available Tags (from ACL Policy)</div>
+              {availableTags.length === 0 ? (
+                <div style={{ fontSize: '0.78rem', color: '#6b7280', padding: '0.5rem 0' }}>
+                  No tags defined in <code>tagOwners</code>. Edit the ACL Policy to define tags first.
+                </div>
+              ) : (
+                <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.35rem' }}>
                   {availableTags.map(tag => {
                     const active = getNodeTags(tagModal).includes(tag);
+                    const allowed = canOwnerAssertTag(tagModal, tag);
+                    const owners = (tagOwnerGroups[tag] || []).join(', ');
+                    const tooltip = allowed
+                      ? `Owned by ${owners || '(none)'}`
+                      : `Cannot apply: this node's owner is not in any of the tag's owner groups (${owners || 'none'})`;
+                    const onClick = () => {
+                      if (!allowed && !active) return; // Block adding disallowed tags; allow removing already-applied ones
+                      if (active) {
+                        setTagModal({ ...tagModal, forcedTags: getNodeTags(tagModal).filter(t => t !== tag), validTags: [] });
+                      } else {
+                        setTagModal({ ...tagModal, forcedTags: [...getNodeTags(tagModal), tag], validTags: [] });
+                      }
+                    };
                     return (
-                      <button key={tag} onClick={() => {
-                        if (active) setTagModal({ ...tagModal, forcedTags: getNodeTags(tagModal).filter(t => t !== tag), validTags: [] });
-                        else setTagModal({ ...tagModal, forcedTags: [...(tagModal.forcedTags || []), tag], validTags: [] });
-                      }} style={{ padding: '0.2rem 0.6rem', backgroundColor: active ? '#1e3a5f' : '#1f2937', color: active ? '#60a5fa' : '#9ca3af', border: `1px solid ${active ? '#3b82f6' : '#374151'}`, borderRadius: '0.25rem', fontSize: '0.75rem', cursor: 'pointer', fontWeight: active ? '600' : '400' }}>
-                        {active ? '✓ ' : '+ '}{tag}
+                      <button
+                        key={tag}
+                        onClick={onClick}
+                        title={tooltip}
+                        disabled={!allowed && !active}
+                        style={{
+                          padding: '0.25rem 0.6rem',
+                          backgroundColor: active ? '#1e3a5f' : (allowed ? '#1f2937' : '#171717'),
+                          color: active ? '#60a5fa' : (allowed ? '#d1d5db' : '#4b5563'),
+                          border: `1px solid ${active ? '#3b82f6' : (allowed ? '#374151' : '#262626')}`,
+                          borderRadius: '0.3rem',
+                          fontSize: '0.78rem',
+                          cursor: (allowed || active) ? 'pointer' : 'not-allowed',
+                          fontWeight: active ? 600 : 400,
+                          opacity: (allowed || active) ? 1 : 0.55,
+                        }}>
+                        {active ? '✓ ' : (allowed ? '+ ' : '🔒 ')}{tag}
                       </button>
                     );
                   })}
                 </div>
+              )}
+              <div style={{ marginTop: '0.5rem', fontSize: '0.68rem', color: '#6b7280' }}>
+                🔒 = locked because the node's owner isn't in this tag's owner group.
               </div>
-            )}
+            </div>
+
             <div style={{ display: 'flex', gap: '0.5rem' }}>
               <button onClick={() => { setTagModal(null); setTagInput(''); }} className="btn btn-secondary" style={{ flex: 1 }}>Cancel</button>
               <button onClick={() => handleSaveTags(tagModal, getNodeTags(tagModal))} className="btn btn-primary" style={{ flex: 1 }} disabled={tagSaving}>

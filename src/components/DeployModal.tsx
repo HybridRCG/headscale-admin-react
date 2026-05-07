@@ -64,10 +64,11 @@ export const DeployModal: React.FC<Props> = ({ onClose, visibleUsers }) => {
 
   // Advertise
   const [advertiseExitNode, setAdvertiseExitNode] = useState(false);
-  // Tags default OFF — opt-in. Setting tags requires the user owning the preauth key
-  // to be in the tag's owner group; auto-enabling caused registration failures.
-  const [advertiseTags, setAdvertiseTags] = useState(false);
-  const [advertiseTagsList, setAdvertiseTagsList] = useState<string[]>([]);
+  // Tags are intentionally NOT a deploy-time option. Applying tags transfers
+  // node ownership to Headscale's `tagged-devices` user, and requires the
+  // preauth-key owner to be in the tag's owner group. Both of those concerns
+  // are easier to manage post-registration via the Tags button on the node card,
+  // which uses a validated dropdown and updates `node_owners` correctly.
   const [advertiseRoutes, setAdvertiseRoutes] = useState(false);
   const [advertiseRoutesList, setAdvertiseRoutesList] = useState<string[]>([]);
 
@@ -83,7 +84,7 @@ export const DeployModal: React.FC<Props> = ({ onClose, visibleUsers }) => {
     buildCommand();
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [shieldsUp, generateQR, reset, operator, forceReauth, sshServer, hostname, usePreAuthKey,
-      generatedKey, advertiseExitNode, advertiseTags, advertiseTagsList,
+      generatedKey, advertiseExitNode,
       advertiseRoutes, advertiseRoutesList, acceptDNS, acceptRoutes, exitNode]);
 
   const buildCommand = () => {
@@ -97,7 +98,6 @@ export const DeployModal: React.FC<Props> = ({ onClose, visibleUsers }) => {
     // Only included when set AND valid — invalid values would make the device fail to register.
     if (hostname && !hostnameError) parts.push(`--hostname=${hostname}`);
     if (advertiseExitNode) parts.push('--advertise-exit-node');
-    if (advertiseTags && advertiseTagsList.length > 0) parts.push(`--advertise-tags=${advertiseTagsList.join(',')}`);
     if (advertiseRoutes && advertiseRoutesList.length > 0) parts.push(`--advertise-routes=${advertiseRoutesList.join(',')}`);
     if (acceptDNS) parts.push('--accept-dns');
     if (acceptRoutes) parts.push('--accept-routes');
@@ -125,17 +125,13 @@ export const DeployModal: React.FC<Props> = ({ onClose, visibleUsers }) => {
     try {
       const expDate = new Date();
       expDate.setDate(expDate.getDate() + preAuthKeyExpiry);
-      // Only attach tags to the pre-auth key when the user has explicitly enabled
-      // 'Advertise Tags' AND added at least one tag. Sending an empty list, or
-      // sending tags the preauth-key owner can't assert, causes Headscale to
-      // reject the registration with a confusing error.
-      const tagsToSend = (advertiseTags && advertiseTagsList.length > 0) ? advertiseTagsList : [];
+      // Tags intentionally omitted — applied post-registration via the Tags
+      // button on the node card. See note next to advertiseRoutes state.
       const resp = await axios.post('/admin/api/headscale/preauthkey/create', {
         userId: selectedUser,
         reusable,
         ephemeral,
         expiration: expDate.toISOString(),
-        tags: tagsToSend,
       });
       setGeneratedKey(resp.data.key || '');
     } catch (e: any) {
@@ -304,27 +300,22 @@ export const DeployModal: React.FC<Props> = ({ onClose, visibleUsers }) => {
             )}
           </div>
 
-          {/* Advertise */}
+          {/* Advertise — tags removed; manage tags post-registration via the Tags
+              button on the node card. */}
           <div style={{ marginBottom: '1.5rem' }}>
             <div style={{ color: '#9ca3af', fontSize: '0.8rem', fontWeight: '700', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: '0.75rem' }}>Advertise</div>
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))', gap: '0.75rem', marginBottom: '0.75rem' }}>
               <CheckRow label="Advertise Exit Node" checked={advertiseExitNode} onChange={setAdvertiseExitNode} tip="Make this node available as an exit node for the network" />
-              <CheckRow label="Advertise Tags" checked={advertiseTags} onChange={setAdvertiseTags} tip="Apply ACL tags to this node" />
               <CheckRow label="Advertise Routes" checked={advertiseRoutes} onChange={setAdvertiseRoutes} tip="Share subnet routes with the network" />
             </div>
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.75rem' }}>
-              {advertiseTags && (
-                <div>
-                  <label style={{ display: 'block', fontSize: '0.75rem', color: '#9ca3af', marginBottom: '0.25rem' }}>Tags (press Enter to add):</label>
-                  <TagInput tags={advertiseTagsList} onChange={setAdvertiseTagsList} placeholder="e.g. tag:server" />
-                </div>
-              )}
-              {advertiseRoutes && (
-                <div>
-                  <label style={{ display: 'block', fontSize: '0.75rem', color: '#9ca3af', marginBottom: '0.25rem' }}>Routes (press Enter to add):</label>
-                  <TagInput tags={advertiseRoutesList} onChange={setAdvertiseRoutesList} placeholder="e.g. 10.1.1.0/24" />
-                </div>
-              )}
+            {advertiseRoutes && (
+              <div>
+                <label style={{ display: 'block', fontSize: '0.75rem', color: '#9ca3af', marginBottom: '0.25rem' }}>Routes (press Enter to add):</label>
+                <TagInput tags={advertiseRoutesList} onChange={setAdvertiseRoutesList} placeholder="e.g. 10.1.1.0/24" />
+              </div>
+            )}
+            <div style={{ marginTop: '0.6rem', fontSize: '0.7rem', color: '#6b7280' }}>
+              💡 To apply tags, deploy the node first, then use the 🏷 Tags button on its card.
             </div>
           </div>
 
