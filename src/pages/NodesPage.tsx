@@ -61,6 +61,13 @@ export const NodesPage: React.FC = () => {
   const [liveConnected, setLiveConnected] = useState(false);
   const [expandedNode, setExpandedNode] = useState<number | null>(null);
 
+  // Lightweight toast for success/info feedback. Auto-dismisses.
+  const [toast, setToast] = useState<{ kind: 'success' | 'info' | 'error'; message: string } | null>(null);
+  const showToast = (kind: 'success' | 'info' | 'error', message: string) => {
+    setToast({ kind, message });
+    setTimeout(() => setToast(null), 3500);
+  };
+
   const API_BASE = '/admin/api';
 
   useEffect(() => {
@@ -148,7 +155,16 @@ export const NodesPage: React.FC = () => {
     setLoading(true);
     try {
       const r = await axios.get(`${API_BASE}/headscale/api/v1/node`);
-      setAllNodes(r.data.nodes || []);
+      // Headscale returns both `name` (immutable, from device's OS hostname) and
+      // `givenName` (the editable display name set via rename). The UI should
+      // always show the display name — fall back to `name` only when no
+      // givenName has been set yet (fresh registration).
+      const normalized = (r.data.nodes || []).map((n: any) => ({
+        ...n,
+        name: n.givenName || n.name,
+        hostname: n.hostname || n.name,
+      }));
+      setAllNodes(normalized);
     } catch { } finally { setLoading(false); }
   };
 
@@ -280,6 +296,7 @@ export const NodesPage: React.FC = () => {
     }
     try {
       await axios.post(`${API_BASE}/headscale/node/rename`, { nodeId: editModal.id, newName });
+      showToast('success', `Renamed to "${newName}"`);
       return true;
     } catch (e: any) {
       alert('Rename failed: ' + (e.response?.data?.message || e.message));
@@ -324,12 +341,20 @@ export const NodesPage: React.FC = () => {
 
   const handleDelete = async (node: Node) => {
     if (!window.confirm(`Delete node "${node.name}"?`)) return;
-    try { await axios.post(`${API_BASE}/headscale/node/delete`, { nodeId: node.id }); await fetchNodes(); } catch { alert('Failed to delete'); }
+    try {
+      await axios.post(`${API_BASE}/headscale/node/delete`, { nodeId: node.id });
+      showToast('success', `Deleted "${node.name}"`);
+      await fetchNodes();
+    } catch { alert('Failed to delete'); }
   };
 
   const handleExpire = async (node: Node) => {
     if (!window.confirm(`Expire node "${node.name}"?`)) return;
-    try { await axios.post(`${API_BASE}/headscale/node/expire`, { nodeId: node.id }); await fetchNodes(); } catch { alert('Failed to expire'); }
+    try {
+      await axios.post(`${API_BASE}/headscale/node/expire`, { nodeId: node.id });
+      showToast('success', `Expired "${node.name}"`);
+      await fetchNodes();
+    } catch { alert('Failed to expire'); }
   };
 
   const handleApproveRoute = async (route: string) => {
@@ -355,6 +380,7 @@ export const NodesPage: React.FC = () => {
     try {
       await axios.post(`${API_BASE}/headscale/node/tags`, { nodeId: node.id, tags, originalOwner: node.user?.name || tagOwners[String(node.id)] || '' });
       await fetchNodes(); await fetchTagOwners(); setTagModal(null); setTagInput('');
+      showToast('success', tags.length === 0 ? `Cleared tags on "${node.name}"` : `Tags updated on "${node.name}"`);
     } catch (e: any) { alert('Failed to update tags: ' + (e.response?.data?.message || e.message)); }
     finally { setTagSaving(false); }
   };
@@ -363,6 +389,30 @@ export const NodesPage: React.FC = () => {
 
   return (
     <div className="page-container">
+
+      {/* ── Toast (auto-dismissing success/info banner) ── */}
+      {toast && (
+        <div style={{
+          position: 'fixed',
+          top: '1rem',
+          right: '1rem',
+          zIndex: 2000,
+          backgroundColor: toast.kind === 'success' ? '#064e3b' : toast.kind === 'error' ? '#7f1d1d' : '#1e3a5f',
+          color: toast.kind === 'success' ? '#86efac' : toast.kind === 'error' ? '#fecaca' : '#bfdbfe',
+          border: `1px solid ${toast.kind === 'success' ? '#10b981' : toast.kind === 'error' ? '#dc2626' : '#3b82f6'}`,
+          borderRadius: '0.5rem',
+          padding: '0.65rem 1rem',
+          fontSize: '0.85rem',
+          fontWeight: 600,
+          boxShadow: '0 6px 20px rgba(0,0,0,0.4)',
+          maxWidth: '420px',
+          display: 'flex', alignItems: 'center', gap: '0.5rem',
+        }}>
+          <span>{toast.kind === 'success' ? '✓' : toast.kind === 'error' ? '✕' : 'ℹ'}</span>
+          <span style={{ flex: 1 }}>{toast.message}</span>
+          <button onClick={() => setToast(null)} style={{ background: 'none', border: 'none', color: 'inherit', cursor: 'pointer', fontSize: '1rem', padding: 0 }}>×</button>
+        </div>
+      )}
 
       {/* ── Toolbar ── */}
       <div style={{ marginBottom: '1rem', display: 'flex', gap: '0.4rem', flexWrap: 'wrap', alignItems: 'center' }}>
