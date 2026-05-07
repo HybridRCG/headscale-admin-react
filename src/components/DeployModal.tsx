@@ -52,6 +52,8 @@ export const DeployModal: React.FC<Props> = ({ onClose, visibleUsers }) => {
   const [operator, setOperator] = useState(false);
   const [forceReauth, setForceReauth] = useState(true);
   const [sshServer, setSshServer] = useState(true);
+  const [hostname, setHostname] = useState('');
+  const [hostnameError, setHostnameError] = useState('');
   const [usePreAuthKey, setUsePreAuthKey] = useState(false);
   const [selectedUser, setSelectedUser] = useState('');
   const [preAuthKeyExpiry, setPreAuthKeyExpiry] = useState(90);
@@ -80,7 +82,7 @@ export const DeployModal: React.FC<Props> = ({ onClose, visibleUsers }) => {
   useEffect(() => {
     buildCommand();
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [shieldsUp, generateQR, reset, operator, forceReauth, sshServer, usePreAuthKey,
+  }, [shieldsUp, generateQR, reset, operator, forceReauth, sshServer, hostname, usePreAuthKey,
       generatedKey, advertiseExitNode, advertiseTags, advertiseTagsList,
       advertiseRoutes, advertiseRoutesList, acceptDNS, acceptRoutes, exitNode]);
 
@@ -91,6 +93,9 @@ export const DeployModal: React.FC<Props> = ({ onClose, visibleUsers }) => {
     if (sshServer) parts.push('--ssh');
     if (shieldsUp) parts.push('--shields-up');
     if (operator) parts.push('--operator=$USER');
+    // Hostname overrides the OS-reported name when registering with Headscale.
+    // Only included when set AND valid — invalid values would make the device fail to register.
+    if (hostname && !hostnameError) parts.push(`--hostname=${hostname}`);
     if (advertiseExitNode) parts.push('--advertise-exit-node');
     if (advertiseTags && advertiseTagsList.length > 0) parts.push(`--advertise-tags=${advertiseTagsList.join(',')}`);
     if (advertiseRoutes && advertiseRoutesList.length > 0) parts.push(`--advertise-routes=${advertiseRoutesList.join(',')}`);
@@ -99,6 +104,19 @@ export const DeployModal: React.FC<Props> = ({ onClose, visibleUsers }) => {
     if (exitNode) parts.push('--exit-node-allow-lan-access');
     if (usePreAuthKey && generatedKey) parts.push(`--auth-key=${generatedKey}`);
     setCommand(parts.join(' '));
+  };
+
+  // Validate the hostname against Headscale's DNS-safe name rules
+  // (same regex as the rename endpoint).
+  const handleHostnameChange = (raw: string) => {
+    const value = raw.toLowerCase();
+    setHostname(value);
+    if (!value) { setHostnameError(''); return; }
+    if (!/^[a-z0-9][a-z0-9-]{0,62}$/.test(value)) {
+      setHostnameError('Lowercase letters, digits, and hyphens only (max 63, no leading hyphen).');
+    } else {
+      setHostnameError('');
+    }
   };
 
   const handleGeneratePreAuthKey = async () => {
@@ -182,6 +200,37 @@ export const DeployModal: React.FC<Props> = ({ onClose, visibleUsers }) => {
             <CheckRow label="Force Reauthentication" checked={forceReauth} onChange={setForceReauth} tip="Force device to re-authenticate" />
             <CheckRow label="SSH Server" checked={sshServer} onChange={setSshServer} tip="Enable Tailscale SSH server on this node" />
           </Section>
+
+          {/* Hostname — overrides the OS-reported hostname at registration so the
+              node lands in Headscale with a clean name and avoids a rename later. */}
+          <div style={{ marginBottom: '1.5rem' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', color: '#9ca3af', fontSize: '0.8rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: '0.5rem' }}>
+              <InfoTip text="Override the device's OS hostname for Headscale registration. Use lowercase letters, digits, and hyphens." />
+              Hostname (optional)
+            </div>
+            <input
+              type="text"
+              value={hostname}
+              onChange={e => handleHostnameChange(e.target.value)}
+              placeholder="e.g. office-laptop or harm-pc (leave blank to use OS hostname)"
+              maxLength={63}
+              style={{
+                width: '100%', padding: '0.55rem 0.75rem',
+                backgroundColor: '#1f2937',
+                border: `1px solid ${hostnameError ? '#dc2626' : '#374151'}`,
+                borderRadius: '0.375rem',
+                color: '#f3f4f6', fontSize: '0.875rem', boxSizing: 'border-box',
+              }}
+            />
+            {hostnameError && (
+              <div style={{ marginTop: '0.3rem', fontSize: '0.72rem', color: '#fca5a5' }}>{hostnameError}</div>
+            )}
+            {!hostnameError && hostname && (
+              <div style={{ marginTop: '0.3rem', fontSize: '0.7rem', color: '#6b7280' }}>
+                Will register as <span style={{ color: '#86efac', fontFamily: 'monospace' }}>{hostname}</span>
+              </div>
+            )}
+          </div>
 
           {/* Pre-Auth Key */}
           <div style={{ marginBottom: '1.5rem' }}>
