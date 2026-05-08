@@ -104,6 +104,19 @@ export const NodesPage: React.FC = () => {
         retryDelay = 5000; // Reset backoff on successful connection
       });
 
+      es.addEventListener('topology', (e: MessageEvent) => {
+        try {
+          const { added, removed } = JSON.parse(e.data);
+          // When nodes are added or removed (registration, deletion, expiry),
+          // refetch the full list so the UI sees new details (hostname, user, etc.)
+          if (added.length > 0 || removed.length > 0) {
+            console.log('[SSE] Topology changed: +' + added.length + ' -' + removed.length);
+            // Small delay so Headscale's DB is settled
+            setTimeout(() => { fetchNodes(); }, 200);
+          }
+        } catch {}
+      });
+
       es.addEventListener('nodes', (e: MessageEvent) => {
         try {
           const updates: {id: number; online: boolean; lastSeen?: string}[] = JSON.parse(e.data);

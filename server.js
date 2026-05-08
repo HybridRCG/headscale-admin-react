@@ -1065,13 +1065,27 @@ app.get('/api/headscale/events', (req, res) => {
   sseClients.add(client);
 
   // Poll Headscale every 15 seconds and push updates
+  // Track the last seen set of node IDs so we can emit explicit add/remove
+  // events when the topology changes (registration, deletion, expiry).
+  let lastNodeIds = new Set();
+
   const poll = async () => {
     try {
       const nodesResp = await axios.get(`${tokenData.headscaleUrl}/api/v1/node`, {
         headers: { Authorization: `Bearer ${tokenData.apiKey}` }, timeout: 8000
       });
       const nodes = nodesResp.data.nodes || [];
-      // Send node status snapshot
+      const currentIds = new Set(nodes.map(n => String(n.id)));
+
+      // Detect adds / removes by diffing against the previous poll
+      const added = [...currentIds].filter(id => !lastNodeIds.has(id));
+      const removed = [...lastNodeIds].filter(id => !currentIds.has(id));
+      if (added.length > 0 || removed.length > 0) {
+        res.write(`event: topology\ndata: ${JSON.stringify({ added, removed })}\n\n`);
+      }
+      lastNodeIds = currentIds;
+
+      // Send routine node status snapshot for online/lastSeen updates
       res.write(`event: nodes\ndata: ${JSON.stringify(nodes.map(n => ({
         id: n.id,
         online: n.online,
