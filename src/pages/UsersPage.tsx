@@ -335,7 +335,7 @@ export const UsersPage: React.FC = () => {
                     ) : (
                       <div style={{ display: 'flex', flexDirection: 'column', gap: '0.2rem', maxHeight: '100px', overflowY: 'auto' }}>
                         {userNodes.slice(0, 3).map(node => (
-                          <div key={node.id} style={{ fontSize: '0.7rem', display: 'flex', alignItems: 'center', gap: '0.3rem', color: '#d1d5db', cursor: 'pointer' }} onClick={() => navigate('/admin/nodes')} title={`Click to view ${node.givenName}`}>
+                          <div key={node.id} style={{ fontSize: '0.7rem', display: 'flex', alignItems: 'center', gap: '0.3rem', color: '#d1d5db', cursor: 'pointer' }} onClick={() => navigate('/nodes')} title={`Click to view ${node.givenName}`}>
                             <span style={{ width: '5px', height: '5px', borderRadius: '50%', backgroundColor: node.online ? '#10b981' : '#6b7280' }} />
                             <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', textDecoration: 'underline', color: '#93c5fd' }}>{node.givenName}</span>
                           </div>
