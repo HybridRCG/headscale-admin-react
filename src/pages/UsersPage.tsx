@@ -77,7 +77,10 @@ export const UsersPage: React.FC = () => {
       (usersResp.data.users || []).forEach((u: User) => { keysByOwner[u.id] = []; });
       
       const labels = labelsResp.data?.labels || {};
+      const now = new Date();
       allKeys.forEach((key: ApiKey) => {
+        // Skip expired keys
+        if (new Date(key.expiration) < now) return;
         const label = labels[key.prefix] || '';
         const matchedUser = (usersResp.data.users || []).find((u: User) => 
           label.toLowerCase().includes(u.name.toLowerCase())
