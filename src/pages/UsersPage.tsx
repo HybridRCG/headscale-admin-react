@@ -39,15 +39,8 @@ export const UsersPage: React.FC = () => {
   const [nodes, setNodes] = useState<Node[]>([]);
   const [apiKeys, setApiKeys] = useState<Map<string, ApiKey[]>>(new Map());
   const [loading, setLoading] = useState(true);
-  const [expandedUserId, setExpandedUserId] = useState<string | null>(null);
-  const [renamingUserId, setRenamingUserId] = useState<string | null>(null);
-  const [_editingEmailUserId, setEditingEmailUserId] = useState<string | null>(null);
-  const [deletingUserId, setDeletingUserId] = useState<string | null>(null);
-  const [newName, setNewName] = useState('');
-  const [newEmail, setNewEmail] = useState('');
-  const [searchQuery, setSearchQuery] = useState('');
-  const [sortMethod, setSortMethod] = useState<'id' | 'name'>('id');
-  const [sortDirection, setSortDirection] = useState<'up' | 'down'>('up');
+  const [apiKeyLabels, setApiKeyLabels] = useState<Record<string, string>>({});
+  const [_apiKeyOwners, setApiKeyOwners] = useState<Record<string, string>>({});
   const [showCreateUser, setShowCreateUser] = useState(false);
   const [newUsername, setNewUsername] = useState('');
   const [newUserEmail, setNewUserEmail] = useState('');
@@ -56,11 +49,14 @@ export const UsersPage: React.FC = () => {
   const [loadingApiKeys, setLoadingApiKeys] = useState<Set<string>>(new Set());
   const [showApiKeyModal, setShowApiKeyModal] = useState(false);
   const [apiKeyModalContent, setApiKeyModalContent] = useState('');
-  const [apiKeyLabels, setApiKeyLabels] = useState<Record<string, string>>({});
-  const [_apiKeyOwners, setApiKeyOwners] = useState<Record<string, string>>({});
-  const [editingLabelPrefix, setEditingLabelPrefix] = useState<string | null>(null);
-  const [labelDraft, setLabelDraft] = useState('');
-  const [_showEmailNote, setShowEmailNote] = useState<string | null>(null);
+  const [searchQuery, setSearchQuery] = useState('');
+
+  // Lightweight toast
+  const [toast, setToast] = useState<{ kind: 'success' | 'info' | 'error'; message: string } | null>(null);
+  const showToast = (kind: 'success' | 'info' | 'error', message: string) => {
+    setToast({ kind, message });
+    setTimeout(() => setToast(null), 3500);
+  };
 
   useEffect(() => {
     fetchUsers();
@@ -76,10 +72,27 @@ export const UsersPage: React.FC = () => {
       ]);
       setUsers(usersResp.data.users || []);
       setUserEmailMap(mappingResp.data || {});
+      // Fetch API keys for all users
+      await fetchAllApiKeys();
     } catch (error) {
       console.error('Failed to fetch users:', error);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const fetchAllApiKeys = async () => {
+    try {
+      const [keyResp, labelResp] = await Promise.all([
+        axios.get('/admin/api/headscale/api/v1/apikey'),
+        axios.get('/admin/api/headscale/apikey/labels').catch(() => ({ data: { labels: {}, owners: {} } }))
+      ]);
+      const keys = keyResp.data.apiKeys || [];
+      setApiKeys(new Map([['all', keys]]));
+      setApiKeyLabels(labelResp.data?.labels || {});
+      setApiKeyOwners(labelResp.data?.owners || {});
+    } catch (error) {
+      console.error('Failed to fetch API keys:', error);
     }
   };
 
@@ -92,59 +105,10 @@ export const UsersPage: React.FC = () => {
     }
   };
 
-  const fetchApiKeysForUser = async (userId: string) => {
-    setLoadingApiKeys(prev => new Set(prev).add(userId));
-    try {
-      const [keyResp, labelResp] = await Promise.all([
-        axios.get('/admin/api/headscale/api/v1/apikey'),
-        axios.get('/admin/api/headscale/apikey/labels').catch(() => ({ data: { labels: {}, owners: {} } }))
-      ]);
-      const keys = keyResp.data.apiKeys || [];
-      setApiKeys(prev => new Map(prev).set('all', keys).set(userId, keys));
-      setApiKeyLabels(labelResp.data?.labels || {});
-      setApiKeyOwners(labelResp.data?.owners || {});
-    } catch (error) {
-      console.error('Failed to fetch API keys:', error);
-    } finally {
-      setLoadingApiKeys(prev => {
-        const next = new Set(prev);
-        next.delete(userId);
-        return next;
-      });
-    }
-  };
-
-  const handleCreateKeyForUser = async (targetUsername: string) => {
-    try {
-      const response = await axios.post('/admin/api/headscale/apikey/create-for-user', {
-        targetUsername,
-        expiryDays: 90
-      });
-      setApiKeyModalContent(response.data.apiKey);
-      setShowApiKeyModal(true);
-      // Refresh keys
-      const u = users.find(u => u.name === targetUsername);
-      if (u) fetchApiKeysForUser(u.id);
-    } catch (e: any) {
-      alert('Failed to create key: ' + (e.response?.data?.message || e.message));
-    }
-  };
-
-  const handleSaveLabel = async (prefix: string, label: string) => {
-    try {
-      await axios.post('/admin/api/headscale/apikey/label', { prefix, label });
-      setApiKeyLabels(prev => ({ ...prev, [prefix]: label }));
-      setEditingLabelPrefix(null);
-    } catch (e) {
-      console.error('Failed to save label', e);
-    }
-  };
-
   const handleCreateUser = async () => {
     if (!newUsername.trim()) return;
     try {
       await axios.post('/admin/api/headscale/user/create', { username: newUsername, email: newUserEmail });
-      // Add to users-mapping.json so they can log in immediately
       if (addToMapping) {
         const mapping = await axios.get('/admin/api/headscale/user-emails');
         const current = mapping.data && mapping.data.users
@@ -156,7 +120,6 @@ export const UsersPage: React.FC = () => {
           manageable_domains: newUserRole === 'super_admin' ? ['*'] : newUserRole === 'group_admin' ? [] : []
         };
         await axios.post('/admin/api/headscale/user-emails', current);
-        // Refresh local email map
         setUserEmailMap(current.users);
       }
       await fetchUsers();
@@ -165,90 +128,48 @@ export const UsersPage: React.FC = () => {
       setNewUserEmail('');
       setNewUserRole('user');
       setAddToMapping(true);
+      showToast('success', `Created user "${newUsername}"`);
     } catch (error) {
       console.error('Failed to create user:', error);
       alert('Failed to create user');
     }
   };
 
-  const handleUpdateEmail = async (userId: string, username: string) => {
-    if (!newEmail.trim()) {
-      alert('Email cannot be empty');
-      return;
-    }
+  const handleDeleteUser = async (userId: string, userName: string) => {
+    if (!window.confirm(`Delete user "${userName}"?`)) return;
     try {
-      await axios.post('/admin/api/headscale/user/update-email', { username, email: newEmail });
+      await axios.delete(`/admin/api/headscale/api/v1/user/${userId}`);
       await fetchUsers();
-      setEditingEmailUserId(null);
-      setNewEmail('');
+      showToast('success', `Deleted user "${userName}"`);
     } catch (error) {
-      console.error('Failed to update email:', error);
-      alert('Failed to update email');
+      console.error('Failed to delete user:', error);
+      alert('Failed to delete user');
     }
   };
 
-  const handleCreateApiKey = async (userId: string) => {
+  const handleCreateApiKey = async (userId: string, userName: string) => {
+    setLoadingApiKeys(prev => new Set(prev).add(userId));
     try {
       const date = new Date();
       date.setDate(date.getDate() + 90);
       const response = await axios.post('/admin/api/headscale/api/v1/apikey', {
         expiration: date.toISOString(),
       });
-      
       const fullKey = response.data.apiKey;
       setApiKeyModalContent(fullKey);
       setShowApiKeyModal(true);
-      
       await new Promise(resolve => setTimeout(resolve, 1000));
-      await fetchApiKeysForUser(userId);
+      await fetchAllApiKeys();
+      showToast('success', `Created API key for "${userName}"`);
     } catch (error) {
       console.error('Failed to create API key:', error);
       alert('Failed to create API key');
-    }
-  };
-
-  const handleExpireApiKey = async (userId: string, prefix: string) => {
-    try {
-      await axios.post('/admin/api/headscale/api/v1/apikey/expire', { prefix });
-      await fetchApiKeysForUser(userId);
-    } catch (error) {
-      console.error('Failed to expire API key:', error);
-      alert('Failed to expire API key');
-    }
-  };
-
-  const handleDeleteApiKey = async (userId: string, prefix: string) => {
-    if (!window.confirm(`Delete API key ${prefix}...? This cannot be undone.`)) return;
-    try {
-      await axios.delete(`/admin/api/headscale/api/v1/apikey/${prefix}`);
-      await fetchApiKeysForUser(userId);
-    } catch (error) {
-      console.error('Failed to delete API key:', error);
-      alert('Failed to delete API key');
-    }
-  };
-
-  const handleRenameUser = async (userId: string) => {
-    if (!newName.trim()) return;
-    try {
-      await axios.post(`/admin/api/headscale/api/v1/user/${userId}/rename/${newName}`);
-      await fetchUsers();
-      setRenamingUserId(null);
-      setNewName('');
-    } catch (error) {
-      console.error('Failed to rename user:', error);
-      alert('Failed to rename user');
-    }
-  };
-
-  const handleDeleteUser = async (userId: string) => {
-    try {
-      await axios.delete(`/admin/api/headscale/api/v1/user/${userId}`);
-      await fetchUsers();
-      setDeletingUserId(null);
-    } catch (error) {
-      console.error('Failed to delete user:', error);
-      alert('Failed to delete user');
+    } finally {
+      setLoadingApiKeys(prev => {
+        const next = new Set(prev);
+        next.delete(userId);
+        return next;
+      });
     }
   };
 
@@ -256,44 +177,53 @@ export const UsersPage: React.FC = () => {
     return nodes.filter((n: any) => n.user?.id === userId);
   };
 
-  const getSortedAndFilteredUsers = () => {
-    let filtered = users.filter((u) =>
-      (!shouldFilter || (() => {
-        const email = u.email || userEmailMap[u.name] || '';
-        return manageableDomains.some((d: string) => email.endsWith(d.replace('@','')));
-      })()) &&
-      (
-        u.id.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        u.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        (u.displayName && u.displayName.toLowerCase().includes(searchQuery.toLowerCase())) ||
-        (u.email && u.email.toLowerCase().includes(searchQuery.toLowerCase()))
-      )
-    );
-
-    const sorted = [...filtered].sort((a, b) => {
-      let aVal = sortMethod === 'id' ? a.id : a.name;
-      let bVal = sortMethod === 'id' ? b.id : b.name;
-      const comparison = aVal.localeCompare(bVal);
-      return sortDirection === 'up' ? comparison : -comparison;
-    });
-    return sorted;
+  const getUserApiKeys = (userId: string) => {
+    return (apiKeys.get('all') || []);
   };
 
-  const toggleSort = (method: 'id' | 'name') => {
-    if (sortMethod === method) {
-      setSortDirection(sortDirection === 'up' ? 'down' : 'up');
-    } else {
-      setSortMethod(method);
-      setSortDirection('up');
+  const filteredUsers = users.filter((u) => {
+    if (shouldFilter) {
+      const email = u.email || userEmailMap[u.name] || '';
+      if (!manageableDomains.some((d: string) => email.endsWith(d.replace('@', '')))) return false;
     }
-  };
+    if (searchQuery) {
+      const q = searchQuery.toLowerCase();
+      return u.id.toLowerCase().includes(q) || u.name.toLowerCase().includes(q) || 
+             (u.email && u.email.toLowerCase().includes(q));
+    }
+    return true;
+  });
 
-  const filteredUsers = getSortedAndFilteredUsers();
+  if (loading) return <div className="page-container"><div className="loading">Loading users...</div></div>;
 
   return (
     <div className="page-container">
 
-      {/* API Key Modal */}
+      {/* ── Toast ── */}
+      {toast && (
+        <div style={{
+          position: 'fixed',
+          top: '1rem',
+          right: '1rem',
+          zIndex: 2000,
+          backgroundColor: toast.kind === 'success' ? '#064e3b' : toast.kind === 'error' ? '#7f1d1d' : '#1e3a5f',
+          color: toast.kind === 'success' ? '#86efac' : toast.kind === 'error' ? '#fecaca' : '#bfdbfe',
+          border: `1px solid ${toast.kind === 'success' ? '#10b981' : toast.kind === 'error' ? '#dc2626' : '#3b82f6'}`,
+          borderRadius: '0.5rem',
+          padding: '0.65rem 1rem',
+          fontSize: '0.85rem',
+          fontWeight: 600,
+          boxShadow: '0 6px 20px rgba(0,0,0,0.4)',
+          maxWidth: '420px',
+          display: 'flex', alignItems: 'center', gap: '0.5rem',
+        }}>
+          <span>{toast.kind === 'success' ? '✓' : toast.kind === 'error' ? '✕' : 'ℹ'}</span>
+          <span style={{ flex: 1 }}>{toast.message}</span>
+          <button onClick={() => setToast(null)} style={{ background: 'none', border: 'none', color: 'inherit', cursor: 'pointer', fontSize: '1rem', padding: 0 }}>×</button>
+        </div>
+      )}
+
+      {/* ── API Key Modal ── */}
       {showApiKeyModal && (
         <div style={{
           position: 'fixed',
@@ -338,7 +268,7 @@ export const UsersPage: React.FC = () => {
               onClick={() => {
                 navigator.clipboard.writeText(apiKeyModalContent);
                 setShowApiKeyModal(false);
-                alert('API key copied to clipboard!');
+                showToast('success', 'API key copied to clipboard!');
               }}
               style={{ width: '100%' }}
             >
@@ -348,356 +278,140 @@ export const UsersPage: React.FC = () => {
         </div>
       )}
 
-      {/* Toolbar: Create + Search + Sort all on one line */}
-      <div style={{ marginBottom: '1.5rem', display: 'flex', gap: '0.5rem', flexWrap: 'wrap', alignItems: 'center' }}>
-        <button className="btn btn-success" onClick={() => setShowCreateUser(!showCreateUser)} style={{ whiteSpace: 'nowrap' }}>
+      {/* ── Toolbar ── */}
+      <div style={{ marginBottom: '1.5rem', display: 'flex', gap: '0.4rem', flexWrap: 'wrap', alignItems: 'center' }}>
+        <button className="btn btn-success" onClick={() => setShowCreateUser(!showCreateUser)} style={{ fontSize: '0.8rem', padding: '0.4rem 0.75rem' }}>
           ➕ New User
         </button>
         <input
           type="text"
-          placeholder="🔍 Search users..."
+          placeholder="🔍 Search user..."
           value={searchQuery}
           onChange={(e) => setSearchQuery(e.target.value)}
-          style={{ flex: 1, minWidth: '150px', padding: '0.6rem 0.75rem', backgroundColor: '#1f2937', border: '1px solid #374151', borderRadius: '0.375rem', color: '#f3f4f6', fontSize: '0.95rem' }}
+          style={{ flex: 1, minWidth: '180px', padding: '0.4rem 0.75rem', backgroundColor: '#1f2937', border: '1px solid #374151', borderRadius: '0.375rem', color: '#f3f4f6', fontSize: '0.85rem' }}
         />
-        <button className="btn btn-secondary" onClick={() => toggleSort('id')} style={{ fontWeight: sortMethod === 'id' ? 'bold' : 'normal', whiteSpace: 'nowrap' }}>
-          ID {sortMethod === 'id' ? (sortDirection === 'up' ? '↑' : '↓') : ''}
+        <button className="btn btn-secondary" onClick={fetchUsers} disabled={loading} style={{ fontSize: '0.8rem', padding: '0.4rem 0.75rem' }}>
+          🔄 Refresh
         </button>
-        <button className="btn btn-secondary" onClick={() => toggleSort('name')} style={{ fontWeight: sortMethod === 'name' ? 'bold' : 'normal', whiteSpace: 'nowrap' }}>
-          Name {sortMethod === 'name' ? (sortDirection === 'up' ? '↑' : '↓') : ''}
-        </button>
-        <button className="btn btn-secondary" onClick={fetchUsers} disabled={loading}>🔄</button>
       </div>
 
-      {/* Create User expand form */}
+      {/* ── Create User Form ── */}
       {showCreateUser && (
         <div style={{ marginBottom: '1.5rem', padding: '1rem', backgroundColor: '#1f2937', borderRadius: '0.5rem', border: '1px solid #374151' }}>
-          {/* Row 1: Username | Email | Role | Create | Cancel */}
-          <div style={{ display: 'flex', gap: '0.75rem', alignItems: 'center', flexWrap: 'wrap' }}>
+          <div style={{ display: 'flex', gap: '0.75rem', alignItems: 'flex-end', flexWrap: 'wrap' }}>
             <div style={{ display: 'flex', flexDirection: 'column', gap: '0.25rem' }}>
               <label style={{ fontSize: '0.7rem', color: '#9ca3af', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Username</label>
               <input type="text" value={newUsername} onChange={(e) => setNewUsername(e.target.value)} placeholder="Username..." autoFocus
-                style={{ width: '150px', height: '38px', padding: '0 0.75rem', backgroundColor: '#374151', border: '1px solid #4b5563', borderRadius: '0.375rem', color: '#f3f4f6', fontSize: '0.875rem', boxSizing: 'border-box' }} />
+                style={{ width: '150px', height: '36px', padding: '0 0.75rem', backgroundColor: '#374151', border: '1px solid #4b5563', borderRadius: '0.375rem', color: '#f3f4f6', fontSize: '0.875rem', boxSizing: 'border-box' }} />
             </div>
             <div style={{ display: 'flex', flexDirection: 'column', gap: '0.25rem' }}>
               <label style={{ fontSize: '0.7rem', color: '#9ca3af', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Email</label>
               <input type="email" value={newUserEmail} onChange={(e) => setNewUserEmail(e.target.value)} placeholder="user@example.com"
-                style={{ width: '280px', height: '38px', padding: '0 0.75rem', backgroundColor: '#374151', border: '1px solid #4b5563', borderRadius: '0.375rem', color: '#f3f4f6', fontSize: '0.875rem', boxSizing: 'border-box' }} />
+                style={{ width: '200px', height: '36px', padding: '0 0.75rem', backgroundColor: '#374151', border: '1px solid #4b5563', borderRadius: '0.375rem', color: '#f3f4f6', fontSize: '0.875rem', boxSizing: 'border-box' }} />
             </div>
             <div style={{ display: 'flex', flexDirection: 'column', gap: '0.25rem' }}>
               <label style={{ fontSize: '0.7rem', color: '#9ca3af', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Role</label>
               <select value={newUserRole} onChange={e => setNewUserRole(e.target.value)}
-                style={{ height: '38px', padding: '0 0.75rem', backgroundColor: '#374151', border: '1px solid #4b5563', borderRadius: '0.375rem', color: '#f3f4f6', fontSize: '0.875rem', boxSizing: 'border-box' }}>
+                style={{ height: '36px', padding: '0 0.75rem', backgroundColor: '#374151', border: '1px solid #4b5563', borderRadius: '0.375rem', color: '#f3f4f6', fontSize: '0.875rem', boxSizing: 'border-box' }}>
                 <option value="user">User</option>
                 <option value="group_admin">Group Admin</option>
                 <option value="super_admin">Super Admin</option>
               </select>
             </div>
-            <div style={{ display: 'flex', gap: '0.5rem', alignSelf: 'flex-end' }}>
+            <div style={{ display: 'flex', gap: '0.5rem' }}>
               <button className="btn btn-sm btn-success" onClick={handleCreateUser}>Create</button>
               <button className="btn btn-sm btn-secondary" onClick={() => { setShowCreateUser(false); setNewUsername(''); setNewUserEmail(''); }}>Cancel</button>
             </div>
           </div>
-          {/* Row 2: Add to login mapping checkbox */}
-          <div style={{ marginTop: '0.6rem' }}>
-            <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', color: '#9ca3af', fontSize: '0.8rem', cursor: 'pointer' }}>
+          <div style={{ marginTop: '0.5rem' }}>
+            <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', color: '#9ca3af', fontSize: '0.75rem', cursor: 'pointer' }}>
               <input type="checkbox" checked={addToMapping} onChange={e => setAddToMapping(e.target.checked)} />
-              Add to login mapping — allows this user to log into HS React immediately
+              Add to login mapping
             </label>
           </div>
         </div>
       )}
 
-      {loading ? (
-        <div className="loading">Loading users...</div>
-      ) : filteredUsers.length === 0 ? (
-        <div className="no-results">
-          {searchQuery ? `No users match "${searchQuery}"` : 'No users found'}
-        </div>
+      {/* ── User Cards Grid ── */}
+      {filteredUsers.length === 0 ? (
+        <div className="no-results">{searchQuery ? `No users match "${searchQuery}"` : 'No users found'}</div>
       ) : (
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
-          {filteredUsers.map((user) => (
-            <div
-              key={user.id}
-              style={{
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(320px, 1fr))', gap: '0.75rem' }}>
+          {filteredUsers.map((user) => {
+            const userNodes = getUserNodes(user.id);
+            const userKeys = getUserApiKeys(user.id);
+            const createdDate = new Date(user.createdAt).toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' });
+            const email = user.email || userEmailMap[user.name] || '—';
+
+            return (
+              <div key={user.id} style={{
                 backgroundColor: '#1f2937',
                 border: '1px solid #374151',
-                borderRadius: '0.5rem',
+                borderRadius: '0.625rem',
                 overflow: 'hidden',
-              }}
-            >
-              {/* Header */}
-              <div
-                style={{
-                  padding: '1rem',
-                  display: 'flex',
-                  justifyContent: 'space-between',
-                  alignItems: 'center',
-                  backgroundColor: '#111827',
-                  borderBottom: expandedUserId === user.id ? '1px solid #374151' : 'none',
-                }}
-              >
-                <div
-                  onClick={() => {
-                    const newId = expandedUserId === user.id ? null : user.id;
-                    setExpandedUserId(newId);
-                    if (newId) fetchApiKeysForUser(newId);
-                  }}
-                  style={{
-                    cursor: 'pointer',
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: '1rem',
-                    flex: 1,
-                    userSelect: 'none',
-                  }}
-                >
-                  <div
-                    style={{
-                      fontSize: '1.5rem',
-                      transition: 'transform 0.2s',
-                      transform: expandedUserId === user.id ? 'rotate(180deg)' : 'rotate(0deg)',
-                      minWidth: '24px',
-                    }}
-                  >
-                    ▼
-                  </div>
-                  <div>
-                    <div style={{ fontSize: '1.125rem', fontWeight: '700', color: '#f3f4f6' }}>
-                      {user.name} <span style={{ fontWeight: '400', fontSize: '0.875rem', color: '#9ca3af' }}>— ID {user.id}</span>
+                display: 'flex',
+                flexDirection: 'column',
+              }}>
+                {/* Header */}
+                <div style={{ padding: '0.875rem 1rem 0.625rem', borderBottom: '1px solid #374151' }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '0.3rem' }}>
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                      <div style={{ color: '#f3f4f6', fontWeight: 700, fontSize: '0.95rem', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }} title={user.name}>
+                        {user.name}
+                      </div>
+                      <div style={{ color: '#6b7280', fontSize: '0.68rem', marginTop: '0.1rem' }}>ID {user.id}</div>
                     </div>
+                    <button onClick={() => handleDeleteUser(user.id, user.name)} className="btn btn-sm btn-error" style={{ fontSize: '0.7rem', padding: '0.2rem 0.4rem', flexShrink: 0, marginLeft: '0.5rem' }}>🗑</button>
                   </div>
+                  <div style={{ color: '#9ca3af', fontSize: '0.72rem', marginBottom: '0.2rem' }}>📅 {createdDate}</div>
+                  <div style={{ color: '#93c5fd', fontSize: '0.7rem', fontFamily: 'monospace', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }} title={email}>{email}</div>
                 </div>
 
-                <div style={{ display: 'flex', gap: '0.5rem', marginLeft: '1rem' }}>
-                  {renamingUserId === user.id ? (
-                    <>
-                      <input
-                        type="text"
-                        value={newName}
-                        onChange={(e) => setNewName(e.target.value)}
-                        placeholder="New name..."
-                        autoFocus
-                        style={{
-                          padding: '0.4rem 0.6rem',
-                          backgroundColor: '#374151',
-                          border: '1px solid #4b5563',
-                          borderRadius: '0.25rem',
-                          color: '#f3f4f6',
-                          fontSize: '0.75rem',
-                          minWidth: '120px',
-                        }}
-                      />
-                      <button
-                        className="btn btn-sm btn-success"
-                        onClick={() => handleRenameUser(user.id)}
-                        style={{ padding: '0.3rem 0.6rem', fontSize: '0.75rem' }}
-                      >
-                        ✓
-                      </button>
-                      <button
-                        className="btn btn-sm btn-secondary"
-                        onClick={() => {
-                          setRenamingUserId(null);
-                          setNewName('');
-                        }}
-                        style={{ padding: '0.3rem 0.6rem', fontSize: '0.75rem' }}
-                      >
-                        ✕
-                      </button>
-                    </>
-                  ) : (
-                    <button
-                      className="btn btn-sm btn-primary"
-                      onClick={() => {
-                        setRenamingUserId(user.id);
-                        setNewName(user.name);
-                      }}
-                      style={{ padding: '0.3rem 0.6rem', fontSize: '0.75rem' }}
-                    >
-                      ✏️
-                    </button>
-                  )}
+                {/* Content */}
+                <div style={{ padding: '0.75rem 1rem', flex: 1, display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
 
-                  {deletingUserId === user.id ? (
-                    <>
-                      <button
-                        className="btn btn-sm btn-error"
-                        onClick={() => handleDeleteUser(user.id)}
-                        style={{ padding: '0.3rem 0.6rem', fontSize: '0.75rem' }}
-                      >
-                        Confirm
-                      </button>
-                      <button
-                        className="btn btn-sm btn-secondary"
-                        onClick={() => setDeletingUserId(null)}
-                        style={{ padding: '0.3rem 0.6rem', fontSize: '0.75rem' }}
-                      >
-                        Cancel
-                      </button>
-                    </>
-                  ) : (
-                    <button
-                      className="btn btn-sm btn-error"
-                      onClick={() => setDeletingUserId(user.id)}
-                      style={{ padding: '0.3rem 0.6rem', fontSize: '0.75rem' }}
-                    >
-                      🗑️
-                    </button>
-                  )}
-                </div>
-              </div>
-
-              {/* Expandable Content */}
-              {expandedUserId === user.id && (
-                <div style={{ padding: '1.5rem', borderTop: '1px solid #374151' }}>
-                  {/* Provider */}
-                  <div style={{ marginBottom: '1rem' }}>
-                    <label style={{ display: 'block', fontSize: '0.875rem', fontWeight: '600', marginBottom: '0.5rem', color: '#d1d5db' }}>
-                      Provider:
-                    </label>
-                    <div style={{ color: '#f3f4f6' }}>{user.provider || 'Local'}</div>
-                  </div>
-
-                  {/* Created At */}
-                  <div style={{ marginBottom: '1.5rem' }}>
-                    <label style={{ display: 'block', fontSize: '0.875rem', fontWeight: '600', marginBottom: '0.5rem', color: '#d1d5db' }}>
-                      Created:
-                    </label>
-                    <div style={{ color: '#f3f4f6', fontSize: '0.875rem' }}>
-                      {new Date(user.createdAt).toLocaleString()}
-                    </div>
-                  </div>
-
-                  {/* API Keys Section */}
-                  {authUser?.role === 'super_admin' ? (
-                    // Super admin: full controls
-                    <div style={{ marginBottom: '1.5rem', paddingBottom: '1.5rem', borderBottom: '1px solid #374151' }}>
-                      <label style={{ display: 'block', fontSize: '0.875rem', fontWeight: '600', marginBottom: '0.75rem', color: '#d1d5db' }}>
-                        Login Keys:
-                      </label>
-                      {loadingApiKeys.has(user.id) ? (
-                        <div style={{ color: '#9ca3af', fontSize: '0.875rem' }}>Loading...</div>
-                      ) : (apiKeys.get(user.id) || apiKeys.get('all') || []).length > 0 ? (
-                        <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem', marginBottom: '0.75rem' }}>
-                          {(apiKeys.get(user.id) || apiKeys.get('all') || []).map((key) => (
-                            <div key={key.id} style={{ padding: '0.75rem', backgroundColor: '#374151', borderRadius: '0.25rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '0.875rem' }}>
-                              <div style={{ flex: 1 }}>
-                                <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                                  <span style={{ color: '#f3f4f6', fontFamily: 'monospace', fontSize: '0.8rem' }}>{key.prefix}...</span>
-                                  {editingLabelPrefix === key.prefix ? (
-                                    <>
-                                      <input type='text' value={labelDraft} onChange={(e) => setLabelDraft(e.target.value)}
-                                        onKeyDown={(e) => { if (e.key === 'Enter') handleSaveLabel(key.prefix, labelDraft); if (e.key === 'Escape') setEditingLabelPrefix(null); }}
-                                        autoFocus placeholder='e.g. Marius Login Key'
-                                        style={{ padding: '0.2rem 0.4rem', backgroundColor: '#1f2937', border: '1px solid #4b5563', borderRadius: '0.25rem', color: '#f3f4f6', fontSize: '0.75rem', width: '160px' }} />
-                                      <button className='btn btn-sm btn-success' style={{ padding: '0.2rem 0.4rem', fontSize: '0.7rem' }} onClick={() => handleSaveLabel(key.prefix, labelDraft)}>✓</button>
-                                      <button className='btn btn-sm btn-secondary' style={{ padding: '0.2rem 0.4rem', fontSize: '0.7rem' }} onClick={() => setEditingLabelPrefix(null)}>✕</button>
-                                    </>
-                                  ) : (
-                                    <span onClick={() => { setEditingLabelPrefix(key.prefix); setLabelDraft(apiKeyLabels[key.prefix] || ''); }}
-                                      style={{ color: apiKeyLabels[key.prefix] ? '#10b981' : '#ef4444', fontSize: '0.8rem', cursor: 'pointer', fontWeight: 'bold', fontStyle: apiKeyLabels[key.prefix] ? 'normal' : 'italic' }}
-                                      title='Click to add/edit label'>
-                                      {apiKeyLabels[key.prefix] || '⚠ add label'}
-                                    </span>
-                                  )}
-                                </div>
-                                <div style={{ color: '#9ca3af', fontSize: '0.75rem', marginTop: '0.25rem' }}>Expires: {new Date(key.expiration).toLocaleDateString()}</div>
-                              </div>
-                              <div style={{ display: 'flex', gap: '0.25rem' }}>
-                                <button className="btn btn-sm btn-warning" onClick={() => handleExpireApiKey(user.id, key.prefix)} style={{ padding: '0.3rem 0.6rem', fontSize: '0.75rem' }}>⏱ Expire</button>
-                                <button className="btn btn-sm btn-error" onClick={() => handleDeleteApiKey(user.id, key.prefix)} style={{ padding: '0.3rem 0.6rem', fontSize: '0.75rem' }}>🗑 Delete</button>
-                              </div>
-                            </div>
-                          ))}
-                        </div>
-                      ) : (
-                        <div style={{ color: '#9ca3af', fontSize: '0.875rem', marginBottom: '0.75rem' }}>No API keys</div>
-                      )}
-                      <button className="btn btn-sm btn-success" onClick={() => { setExpandedUserId(user.id); fetchApiKeysForUser(user.id); handleCreateApiKey(user.id); }}>
-                        ➕ Create Login Key
-                      </button>
-                    </div>
-                  ) : (
-                    // Group admin: can create/see keys for users in their domain
-                    // Regular user: read-only own keys only
-                    (() => {
-                      const myKeys = (apiKeys.get(user.id) || apiKeys.get('all') || []).filter(
-                        key => apiKeyLabels[key.prefix] && apiKeyLabels[key.prefix].toLowerCase().includes(user.name.toLowerCase())
-                      );
-                      const userEmail = user.email || userEmailMap[user.name] || '';
-                      const canCreateKey = authUser?.role === 'group_admin' &&
-                        manageableDomains.some((d: string) => userEmail.endsWith(d.replace('@','')));
-                      return (myKeys.length > 0 || canCreateKey) ? (
-                        <div style={{ marginBottom: '1.5rem', paddingBottom: '1.5rem', borderBottom: '1px solid #374151' }}>
-                          <label style={{ display: 'block', fontSize: '0.875rem', fontWeight: '600', marginBottom: '0.75rem', color: '#d1d5db' }}>
-                            Login Keys:
-                          </label>
-                          {myKeys.length > 0 && (
-                            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem', marginBottom: '0.75rem' }}>
-                              {myKeys.map(key => (
-                                <div key={key.id} style={{ padding: '0.75rem', backgroundColor: '#374151', borderRadius: '0.25rem', fontSize: '0.875rem' }}>
-                                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                                    <span style={{ color: '#f3f4f6', fontFamily: 'monospace', fontSize: '0.8rem' }}>{key.prefix}...</span>
-                                    <span style={{ color: '#10b981', fontSize: '0.8rem', fontWeight: 'bold' }}>{apiKeyLabels[key.prefix]}</span>
-                                  </div>
-                                  <div style={{ color: '#9ca3af', fontSize: '0.75rem', marginTop: '0.25rem' }}>Expires: {new Date(key.expiration).toLocaleDateString()}</div>
-                                </div>
-                              ))}
-                            </div>
-                          )}
-                          {canCreateKey && (
-                            <button className='btn btn-sm btn-success' onClick={() => handleCreateKeyForUser(user.name)}>
-                              ➕ Create Login Key for {user.name}
-                            </button>
-                          )}
-                        </div>
-                      ) : null;
-                    })()
-                  )}
-
-                  {/* Associated Nodes */}
+                  {/* API Keys */}
                   <div>
-                    <label style={{ display: 'block', fontSize: '0.875rem', fontWeight: '600', marginBottom: '0.5rem', color: '#d1d5db' }}>
-                      Nodes ({getUserNodes(user.id).length}):
-                    </label>
-                    {getUserNodes(user.id).length > 0 ? (
-                      <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
-                        {getUserNodes(user.id).map((node: any) => (
-                          <div
-                            key={node.id}
-                            style={{
-                              padding: '0.5rem',
-                              backgroundColor: '#374151',
-                              borderRadius: '0.25rem',
-                              display: 'flex',
-                              justifyContent: 'space-between',
-                              alignItems: 'center',
-                              fontSize: '0.875rem',
-                            }}
-                          >
-                            <span>{node.givenName} ({node.name})</span>
-                            <span
-                              style={{
-                                display: 'inline-block',
-                                width: '8px',
-                                height: '8px',
-                                borderRadius: '50%',
-                                backgroundColor: node.online ? '#10b981' : '#6b7280',
-                              }}
-                              title={node.online ? 'Online' : 'Offline'}
-                            />
+                    <div style={{ fontSize: '0.7rem', color: '#9ca3af', textTransform: 'uppercase', fontWeight: 600, marginBottom: '0.3rem' }}>API Keys ({userKeys.length})</div>
+                    {userKeys.length === 0 ? (
+                      <div style={{ fontSize: '0.75rem', color: '#6b7280' }}>None</div>
+                    ) : (
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: '0.25rem', maxHeight: '120px', overflowY: 'auto' }}>
+                        {userKeys.map(key => (
+                          <div key={key.id} style={{ fontSize: '0.7rem', backgroundColor: '#111827', padding: '0.3rem 0.4rem', borderRadius: '0.25rem', color: '#93c5fd', fontFamily: 'monospace', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }} title={`${key.prefix}... (expires ${new Date(key.expiration).toLocaleDateString()})`}>
+                            {key.prefix}...
                           </div>
                         ))}
                       </div>
-                    ) : (
-                      <div style={{ color: '#9ca3af', fontSize: '0.875rem' }}>No nodes</div>
+                    )}
+                    {authUser?.role === 'super_admin' && (
+                      <button className="btn btn-sm btn-success" onClick={() => handleCreateApiKey(user.id, user.name)} disabled={loadingApiKeys.has(user.id)} style={{ marginTop: '0.4rem', fontSize: '0.65rem', padding: '0.25rem 0.5rem', width: '100%' }}>
+                        {loadingApiKeys.has(user.id) ? '...' : '+ Add Key'}
+                      </button>
                     )}
                   </div>
+
+                  {/* Connected Nodes */}
+                  <div>
+                    <div style={{ fontSize: '0.7rem', color: '#9ca3af', textTransform: 'uppercase', fontWeight: 600, marginBottom: '0.3rem' }}>Nodes ({userNodes.length})</div>
+                    {userNodes.length === 0 ? (
+                      <div style={{ fontSize: '0.75rem', color: '#6b7280' }}>None</div>
+                    ) : (
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: '0.25rem', maxHeight: '120px', overflowY: 'auto' }}>
+                        {userNodes.map(node => (
+                          <div key={node.id} style={{ fontSize: '0.7rem', display: 'flex', alignItems: 'center', gap: '0.4rem', backgroundColor: '#111827', padding: '0.3rem 0.4rem', borderRadius: '0.25rem', color: '#d1d5db', overflow: 'hidden' }}>
+                            <span style={{ width: '6px', height: '6px', borderRadius: '50%', backgroundColor: node.online ? '#10b981' : '#6b7280', flexShrink: 0 }} />
+                            <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }} title={node.givenName}>{node.givenName}</span>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+
                 </div>
-              )}
-            </div>
-          ))}
+              </div>
+            );
+          })}
         </div>
       )}
     </div>
