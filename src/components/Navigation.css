@@ -100,89 +100,87 @@
   position: relative;
   display: inline-flex;
   align-items: center;
-  justify-content: space-between;
-  width: 56px;
-  height: 28px;
-  border-radius: 28px;
-  background: #ffffff;
+  width: 90px;
+  height: 36px;
+  border-radius: 36px;
+  background: #e5e7eb;
   border: none;
   cursor: pointer;
   flex-shrink: 0;
   margin-left: auto;
-  padding: 2px;
+  padding: 3px;
   transition: background 0.3s ease;
   outline: none;
-  box-shadow: 0 2px 6px rgba(0,0,0,0.12);
+  box-shadow: 0 2px 8px rgba(0,0,0,0.15);
 }
 
 .theme-pill:hover {
-  box-shadow: 0 3px 8px rgba(0,0,0,0.16);
+  box-shadow: 0 3px 12px rgba(0,0,0,0.2);
 }
 
-/* Track background — left side light (white), right side dark (dark gray) */
+/* Track with labels — light side + dark side */
 .theme-pill__track {
   position: absolute;
   width: 100%;
   height: 100%;
-  border-radius: 28px;
+  border-radius: 36px;
   display: flex;
   pointer-events: none;
   overflow: hidden;
   z-index: 0;
+  font-size: 12px;
+  font-weight: 600;
+  color: white;
 }
 
 .theme-pill__track-light {
   flex: 1;
-  background: #f5f5f5;
+  background: linear-gradient(135deg, #fbbf24 0%, #f59e0b 100%);
   display: flex;
   align-items: center;
   justify-content: center;
-  color: #ffa500;
-  font-size: 12px;
+  color: white;
 }
 
 .theme-pill__track-dark {
   flex: 1;
-  background: #3a3a3a;
+  background: linear-gradient(135deg, #60a5fa 0%, #3b82f6 100%);
   display: flex;
   align-items: center;
   justify-content: center;
-  color: #ffd700;
-  font-size: 12px;
+  color: white;
 }
 
 /* Sliding knob */
 .theme-pill__knob {
-  position: relative;
-  width: 24px;
-  height: 24px;
+  position: absolute;
+  width: 30px;
+  height: 30px;
   border-radius: 50%;
   display: flex;
   align-items: center;
   justify-content: center;
-  transition: transform 0.35s cubic-bezier(0.34,1.56,0.64,1), background 0.35s;
+  transition: transform 0.4s cubic-bezier(0.34,1.56,0.64,1);
   pointer-events: none;
   background: white;
-  box-shadow: 0 2px 4px rgba(0,0,0,0.15);
+  box-shadow: 0 3px 8px rgba(0,0,0,0.2);
   z-index: 1;
+  top: 3px;
 }
 
-/* Light mode: knob slides right, shows sun */
+/* Light mode: knob slides right */
 .theme-pill__knob.light {
-  transform: translateX(28px);
+  transform: translateX(57px);
 }
 
-.theme-pill__knob.light svg {
-  color: #ffa500;
-}
-
-/* Dark mode: knob stays left, shows moon */
+/* Dark mode: knob stays left */
 .theme-pill__knob.dark {
   transform: translateX(0);
 }
 
-.theme-pill__knob.dark svg {
-  color: #ffd700;
+.theme-pill__knob svg {
+  width: 16px;
+  height: 16px;
 }
 
 /* ── Mobile (<= 900px) ───────────────────────────────── */
