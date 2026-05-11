@@ -1220,7 +1220,7 @@ const UsersTab: React.FC<{ userEmail: string }> = ({ userEmail }) => {
 
   const [apiKeys, setApiKeys] = useState<any[]>([]); // eslint-disable-line
   const [selectedUser, setSelectedUser] = useState<string>('');
-  const [apiKeyExpiration, setApiKeyExpiration] = useState<string>('90d');
+  const [apiKeyExpiration, setApiKeyExpiration] = useState<string>('90');
   const [showNewKey, setShowNewKey] = useState<string>('');
   const [loadingApiKeys, setLoadingApiKeys] = useState(false);
   const [newUsername, setNewUsername] = useState('');
@@ -1369,13 +1369,13 @@ const UsersTab: React.FC<{ userEmail: string }> = ({ userEmail }) => {
 
     setLoadingApiKeys(true);
     try {
-      const response = await axios.post(`${API_BASE}/headscale/apikey/create`, {
-        username: selectedUser,
-        expiration: apiKeyExpiration
+      const response = await axios.post(`${API_BASE}/headscale/apikey/create-for-user`, {
+        targetUsername: selectedUser,
+        expiryDays: parseInt(apiKeyExpiration)
       });
       setShowNewKey(response.data.apiKey);
       setSelectedUser('');
-      setApiKeyExpiration('90d');
+      setApiKeyExpiration('90');
       loadApiKeys();
     } catch (err) {
       setError('Failed to create API key: ' + (err instanceof Error ? err.message : 'Unknown error'));
@@ -1521,11 +1521,10 @@ const UsersTab: React.FC<{ userEmail: string }> = ({ userEmail }) => {
               ))}
             </select>
             <select value={apiKeyExpiration} onChange={(e) => setApiKeyExpiration(e.target.value)} style={{ padding: '6px', borderRadius: '4px', border: '1px solid #d1d5db' }}>
-              <option value="30m">30 minutes</option>
-              <option value="24h">24 hours</option>
-              <option value="7d">7 days</option>
-              <option value="30d">30 days</option>
-              <option value="90d">90 days (default)</option>
+              <option value="30">30 days</option>
+              <option value="90">90 days (default)</option>
+              <option value="180">6 months</option>
+              <option value="365">1 year</option>
             </select>
             <button onClick={handleCreateApiKey} disabled={loadingApiKeys} style={{ padding: '6px 12px', backgroundColor: '#3b82f6', color: 'white', border: 'none', borderRadius: '4px', cursor: 'pointer', fontWeight: '600' }}>
               🔐 Generate Key
