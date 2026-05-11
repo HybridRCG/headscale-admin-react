@@ -2,6 +2,7 @@
 /* eslint-disable @typescript-eslint/no-unused-vars */
 import { useAuthStore } from '../store/authStore';
 import React, { useEffect, useRef, useState, useCallback } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import axios from 'axios';
 import '../styles/Pages.css';
 import { DeployModal } from '../components/DeployModal';
@@ -35,11 +36,12 @@ export const NodesPage: React.FC = () => {
   const [userEmailMap, setUserEmailMap] = useState<Record<string, string>>({});
   const [loading, setLoading] = useState(true);
   const { user: authUser, sessionToken } = useAuthStore();
+  const [searchParams] = useSearchParams();
   const manageableDomains: string[] = (authUser as any)?.manageable_domains || [];
   const shouldFilter = authUser?.role !== 'super_admin' && !manageableDomains.includes('*');
   const [searchTerm, setSearchTerm] = useState('');
   const [filterStatus, setFilterStatus] = useState('all');
-  const [selectedUser, setSelectedUser] = useState('all');
+  const [selectedUser, setSelectedUser] = useState(searchParams.get('user') || 'all');
   const [selectedGroup, setSelectedGroup] = useState('all');
 
   // Modals
