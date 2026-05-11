@@ -41,7 +41,7 @@
   gap: 5px;
   padding: 4px;
   flex-shrink: 0;
-  order: -1; /* Always first on mobile */
+  order: -1;
 }
 
 .hamburger span {
@@ -100,87 +100,57 @@
   position: relative;
   display: inline-flex;
   align-items: center;
-  width: 90px;
+  justify-content: flex-start;
+  width: 66px;
   height: 36px;
   border-radius: 36px;
-  background: #e5e7eb;
-  border: none;
+  background: linear-gradient(90deg, #fff5e6 0%, #1a1a2e 100%);
+  border: 2px solid #999;
   cursor: pointer;
   flex-shrink: 0;
   margin-left: auto;
-  padding: 3px;
-  transition: background 0.3s ease;
+  padding: 0;
+  transition: all 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
   outline: none;
   box-shadow: 0 2px 8px rgba(0,0,0,0.15);
 }
 
 .theme-pill:hover {
-  box-shadow: 0 3px 12px rgba(0,0,0,0.2);
+  box-shadow: 0 4px 14px rgba(0,0,0,0.25);
+  transform: scale(1.06);
 }
 
-/* Track with labels — light side + dark side */
-.theme-pill__track {
-  position: absolute;
-  width: 100%;
-  height: 100%;
-  border-radius: 36px;
-  display: flex;
-  pointer-events: none;
-  overflow: hidden;
-  z-index: 0;
-  font-size: 12px;
-  font-weight: 600;
-  color: white;
-}
-
-.theme-pill__track-light {
-  flex: 1;
-  background: linear-gradient(135deg, #fbbf24 0%, #f59e0b 100%);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  color: white;
-}
-
-.theme-pill__track-dark {
-  flex: 1;
-  background: linear-gradient(135deg, #60a5fa 0%, #3b82f6 100%);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  color: white;
-}
-
-/* Sliding knob */
+/* Sliding knob - BIG and OBVIOUS */
 .theme-pill__knob {
   position: absolute;
-  width: 30px;
-  height: 30px;
+  width: 32px;
+  height: 32px;
   border-radius: 50%;
   display: flex;
   align-items: center;
   justify-content: center;
-  transition: transform 0.4s cubic-bezier(0.34,1.56,0.64,1);
+  transition: all 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
   pointer-events: none;
-  background: white;
-  box-shadow: 0 3px 8px rgba(0,0,0,0.2);
-  z-index: 1;
-  top: 3px;
+  font-size: 18px;
+  font-weight: 800;
+  box-shadow: 0 3px 10px rgba(0,0,0,0.3);
+  z-index: 2;
+  border: none;
+  line-height: 0;
 }
 
-/* Light mode: knob slides right */
+/* Light mode: knob slides RIGHT, BRIGHT YELLOW, sun emoji */
 .theme-pill__knob.light {
-  transform: translateX(57px);
+  transform: translateX(32px);
+  background: linear-gradient(135deg, #FFD700, #FFA500);
+  color: #FF8C00;
 }
 
-/* Dark mode: knob stays left */
+/* Dark mode: knob slides LEFT, DARK INDIGO, moon emoji */
 .theme-pill__knob.dark {
-  transform: translateX(0);
-}
-
-.theme-pill__knob svg {
-  width: 16px;
-  height: 16px;
+  transform: translateX(2px);
+  background: linear-gradient(135deg, #0a0a1a, #2d2d5f);
+  color: #FFD700;
 }
 
 /* ── Mobile (<= 900px) ───────────────────────────────── */
@@ -262,6 +232,4 @@
   .navbar-menu {
     top: 48px;
   }
-
-
 }

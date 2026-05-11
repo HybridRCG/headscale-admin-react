@@ -54,21 +54,15 @@ export const Navigation: React.FC<NavigationProps> = ({ isDarkMode, setIsDarkMod
           {isSuperAdmin && <li><NavLink to="/settings" className={({ isActive }) => `navbar-link ${isActive ? "active" : ""}`} onClick={() => setMenuOpen(false)}>Settings</NavLink></li>}
         </ul>
 
-        {/* Theme toggle — labeled toggle switch with gradients */}
+        {/* Theme toggle — big obvious with emoji */}
         <button
           onClick={() => setIsDarkMode(!isDarkMode)}
           className="theme-pill"
           title={isDarkMode ? 'Switch to Light Mode' : 'Switch to Dark Mode'}
           aria-label="Toggle theme"
         >
-          {/* Track with gradient backgrounds and labels */}
-          <div className="theme-pill__track">
-            <div className="theme-pill__track-light">Light</div>
-            <div className="theme-pill__track-dark">Dark</div>
-          </div>
-          {/* Sliding knob with icon */}
           <span className={`theme-pill__knob ${isDarkMode ? 'dark' : 'light'}`}>
-            {isDarkMode ? <MoonIcon /> : <SunIcon />}
+            {isDarkMode ? '🌙' : '☀️'}
           </span>
         </button>
 
