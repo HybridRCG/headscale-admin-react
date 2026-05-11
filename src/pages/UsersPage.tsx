@@ -2,6 +2,7 @@
 /* eslint-disable @typescript-eslint/no-unused-vars */
 import React, { useEffect, useState } from 'react';
 import axios from 'axios';
+import { useNavigate } from 'react-router-dom';
 import { useAuthStore } from '../store/authStore';
 import '../styles/Pages.css';
 
@@ -32,6 +33,7 @@ export const UsersPage: React.FC = () => {
   const [users, setUsers] = useState<User[]>([]);
   const [userEmailMap, setUserEmailMap] = useState<Record<string, string>>({});
   const { user: authUser } = useAuthStore();
+  const navigate = useNavigate();
   const manageableDomains: string[] = (authUser as any)?.manageable_domains || [];
   const shouldFilter = authUser?.role !== 'super_admin' && !manageableDomains.includes('*');
   const [nodes, setNodes] = useState<Node[]>([]);
@@ -333,9 +335,9 @@ export const UsersPage: React.FC = () => {
                     ) : (
                       <div style={{ display: 'flex', flexDirection: 'column', gap: '0.2rem', maxHeight: '100px', overflowY: 'auto' }}>
                         {userNodes.slice(0, 3).map(node => (
-                          <div key={node.id} style={{ fontSize: '0.7rem', display: 'flex', alignItems: 'center', gap: '0.3rem', color: '#d1d5db' }}>
+                          <div key={node.id} style={{ fontSize: '0.7rem', display: 'flex', alignItems: 'center', gap: '0.3rem', color: '#d1d5db', cursor: 'pointer' }} onClick={() => navigate('/admin/nodes')} title={`Click to view ${node.givenName}`}>
                             <span style={{ width: '5px', height: '5px', borderRadius: '50%', backgroundColor: node.online ? '#10b981' : '#6b7280' }} />
-                            <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{node.givenName}</span>
+                            <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', textDecoration: 'underline', color: '#93c5fd' }}>{node.givenName}</span>
                           </div>
                         ))}
                         {userNodes.length > 3 && <div style={{ fontSize: '0.65rem', color: '#6b7280' }}>+{userNodes.length - 3} more</div>}
