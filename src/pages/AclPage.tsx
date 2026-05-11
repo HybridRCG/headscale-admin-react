@@ -3,6 +3,7 @@
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 import { useAuthStore } from '../store/authStore';
+import { TopologyPage } from './TopologyPage';
 import '../styles/AclEditorPage.css';
 
 const API_BASE = process.env.REACT_APP_API_URL || '/admin/api';
@@ -321,7 +322,7 @@ export const AclPage: React.FC = () => {
     { icon: '🔒', label: 'Policies' },
     { icon: '🔐', label: 'SSH' },
     { icon: '⚙️', label: 'Config' },
-
+    { icon: '🗺', label: 'Topology' },
   ];
 
   const userRole = useAuthStore((state) => state.user?.role || 'user');
@@ -417,6 +418,7 @@ export const AclPage: React.FC = () => {
           {visibleTabs[activeTab]?.label === 'Policies' && acl && <PoliciesTab acl={acl} setAcl={setAcl} />}
           {visibleTabs[activeTab]?.label === 'SSH' && acl && <SshTab acl={acl} setAcl={setAcl} />}
           {visibleTabs[activeTab]?.label === 'Config' && acl && <ConfigTab acl={acl} setAcl={setAcl} />}
+          {visibleTabs[activeTab]?.label === 'Topology' && <TopologyTab />}
 
         </div>
       )}
@@ -1532,6 +1534,15 @@ const UsersTab: React.FC<{ userEmail: string }> = ({ userEmail }) => {
         </div>
       )}
 
+    </div>
+  );
+};
+
+// TOPOLOGY TAB
+const TopologyTab: React.FC = () => {
+  return (
+    <div style={{ padding: '1rem' }}>
+      <TopologyPage />
     </div>
   );
 };
